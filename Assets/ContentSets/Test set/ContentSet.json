@@ -1,0 +1,51 @@
+{
+    "contentSet": {
+        "technologies": [],
+        "shipClasses": [
+            {
+                "className": "A2",
+                "engines": [
+                    {
+                        "contentSetName": "Test set",
+                        "componentName": "A",
+                        "numberOfComponents": 1
+                    }
+                ],
+                "reactors": [],
+                "fuelTanks": [],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            }
+        ],
+        "engines": [
+            {
+                "modelName": "A",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 2.0,
+                "engineBoost": 1.0
+            },
+            {
+                "modelName": "B",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 50.0,
+                "engineBoost": 1.5
+            }
+        ],
+        "reactors": [],
+        "fuelTanks": [],
+        "extractionEquipmentSolids": [],
+        "energyGuns": []
+    }
+}

@@ -1,0 +1,123 @@
+{
+    "contentSet": {
+        "technologies": [],
+        "shipClasses": [
+            {
+                "className": "A3",
+                "engines": [
+                    {
+                        "contentSetName": "Test set 2",
+                        "componentName": "AB",
+                        "numberOfComponents": 1
+                    }
+                ],
+                "reactors": [],
+                "fuelTanks": [],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            },
+            {
+                "className": "A4",
+                "engines": [
+                    {
+                        "contentSetName": "Test set",
+                        "componentName": "A",
+                        "numberOfComponents": 1
+                    },
+                    {
+                        "contentSetName": "Test set 2",
+                        "componentName": "SA",
+                        "numberOfComponents": 3
+                    },
+                    {
+                        "contentSetName": "Test set 2",
+                        "componentName": "SHA",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "reactors": [],
+                "fuelTanks": [],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            }
+        ],
+        "engines": [
+            {
+                "modelName": "BA",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 50.0,
+                "engineBoost": 1.5
+            },
+            {
+                "modelName": "AB",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 8.0,
+                "engineBoost": 2.0
+            },
+            {
+                "modelName": "SA",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 100.0,
+                "engineBoost": 1.0
+            },
+            {
+                "modelName": "SHA",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 250.0,
+                "engineBoost": 1.5
+            },
+            {
+                "modelName": "USA 11/0",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 8.0,
+                "engineBoost": 2.0
+            },
+            {
+                "modelName": "0A1",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 8.0,
+                "engineBoost": 2.0
+            }
+        ],
+        "reactors": [],
+        "fuelTanks": [],
+        "extractionEquipmentSolids": [],
+        "energyGuns": []
+    }
+}

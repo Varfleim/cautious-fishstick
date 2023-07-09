@@ -1,0 +1,406 @@
+{
+    "contentSet": {
+        "technologies": [
+            {
+                "technologyName": "AAA",
+                "isBaseTechnology": true,
+                "technologyModifiers": [
+                    {
+                        "modifierName": "designer_min_engine_size",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "designer_max_engine_size",
+                        "modifierValue": 500.0
+                    },
+                    {
+                        "modifierName": "designer_min_engine_boost",
+                        "modifierValue": 0.25
+                    },
+                    {
+                        "modifierName": "designer_max_engine_boost",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "designer_min_reactor_size",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "designer_max_reactor_size",
+                        "modifierValue": 500.0
+                    },
+                    {
+                        "modifierName": "designer_min_reactor_boost",
+                        "modifierValue": 0.25
+                    },
+                    {
+                        "modifierName": "designer_max_reactor_boost",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "designer_min_fuelTank_size",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "designer_max_fuelTank_size",
+                        "modifierValue": 500.0
+                    },
+                    {
+                        "modifierName": "designer_min_extractionEquipmentSolid_size",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "designer_max_extractionEquipmentSolid_size",
+                        "modifierValue": 500.0
+                    },
+                    {
+                        "modifierName": "designer_min_gunEnergy_caliber",
+                        "modifierValue": 2.0
+                    },
+                    {
+                        "modifierName": "designer_max_gunEnergy_caliber",
+                        "modifierValue": 20.0
+                    },
+                    {
+                        "modifierName": "designer_min_gunEnergy_barrelLength",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "designer_max_gunEnergy_barrelLength",
+                        "modifierValue": 25.0
+                    }
+                ],
+                "technologyComponentCoreModifiers": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "reactor_energyPerSize",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "fuelTank_compression",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "extractionEquipmentSolid_speedPerSize",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "gunEnergy_recharge",
+                        "modifierValue": 1.0
+                    }
+                ]
+            },
+            {
+                "technologyName": "BBB",
+                "isBaseTechnology": false,
+                "technologyModifiers": [
+                    {
+                        "modifierName": "designer_min_engine_size",
+                        "modifierValue": 1.0
+                    },
+                    {
+                        "modifierName": "designer_max_engine_size",
+                        "modifierValue": 1000.0
+                    },
+                    {
+                        "modifierName": "designer_min_engine_boost",
+                        "modifierValue": 0.10000000149011612
+                    },
+                    {
+                        "modifierName": "designer_max_engine_boost",
+                        "modifierValue": 10.0
+                    }
+                ],
+                "technologyComponentCoreModifiers": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "reactor_energyPerSize",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "fuelTank_compression",
+                        "modifierValue": 5.0
+                    },
+                    {
+                        "modifierName": "extractionEquipmentSolid_speedPerSize",
+                        "modifierValue": 5.0
+                    }
+                ]
+            }
+        ],
+        "shipClasses": [
+            {
+                "className": "A1",
+                "engines": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "CCC",
+                        "numberOfComponents": 1
+                    }
+                ],
+                "reactors": [],
+                "fuelTanks": [],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            },
+            {
+                "className": "A4",
+                "engines": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "ABB",
+                        "numberOfComponents": 4
+                    },
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "CCC",
+                        "numberOfComponents": 4
+                    },
+                    {
+                        "contentSetName": "Test set 2",
+                        "componentName": "BA",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "reactors": [],
+                "fuelTanks": [],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            },
+            {
+                "className": "Ship class 1",
+                "engines": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "ABA",
+                        "numberOfComponents": 1
+                    },
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "AAC",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "reactors": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "VAA",
+                        "numberOfComponents": 4
+                    }
+                ],
+                "fuelTanks": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "Fuel tank 1",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "extractionEquipmentSolids": [],
+                "energyGuns": []
+            },
+            {
+                "className": "Ship class 2",
+                "engines": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "AAC",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "reactors": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "VAA",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "fuelTanks": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "Fuel tank 1",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "extractionEquipmentSolids": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "EES 1",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "energyGuns": []
+            },
+            {
+                "className": "Ship class 3",
+                "engines": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "AAC",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "reactors": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "VAA",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "fuelTanks": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "Fuel tank 1",
+                        "numberOfComponents": 2
+                    }
+                ],
+                "extractionEquipmentSolids": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "EES 1",
+                        "numberOfComponents": 3
+                    }
+                ],
+                "energyGuns": [
+                    {
+                        "contentSetName": "Base game",
+                        "componentName": "Energy gun 1",
+                        "numberOfComponents": 10
+                    }
+                ]
+            }
+        ],
+        "engines": [
+            {
+                "modelName": "ABB",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 1.0,
+                "engineBoost": 1.0
+            },
+            {
+                "modelName": "ABA",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "engineSize": 100.0,
+                "engineBoost": 2.0
+            },
+            {
+                "modelName": "AAC",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "engineSize": 1.0,
+                "engineBoost": 1.0
+            },
+            {
+                "modelName": "CCC",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "engine_powerPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "engineSize": 100.0,
+                "engineBoost": 1.5
+            }
+        ],
+        "reactors": [
+            {
+                "modelName": "AAA1",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "reactor_energyPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "reactorSize": 500.0,
+                "reactorBoost": 1.0
+            },
+            {
+                "modelName": "VAA",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "reactor_energyPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "reactorSize": 500.0,
+                "reactorBoost": 5.0
+            }
+        ],
+        "fuelTanks": [
+            {
+                "modelName": "Fuel tank 1",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "fuelTank_compression",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "fuelTankSize": 100.0
+            }
+        ],
+        "extractionEquipmentSolids": [
+            {
+                "modelName": "EES 1",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "extractionEquipmentSolid_speedPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "size": 201.0
+            },
+            {
+                "modelName": "A",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "extractionEquipmentSolid_speedPerSize",
+                        "contentSetName": "Base game",
+                        "technologyName": "BBB"
+                    }
+                ],
+                "size": 1.0
+            }
+        ],
+        "energyGuns": [
+            {
+                "modelName": "Energy gun 1",
+                "coreTechnologies": [
+                    {
+                        "modifierName": "gunEnergy_recharge",
+                        "contentSetName": "Base game",
+                        "technologyName": "AAA"
+                    }
+                ],
+                "gunCaliber": 20.0,
+                "gunBarrelLength": 25.0
+            }
+        ]
+    }
+}
