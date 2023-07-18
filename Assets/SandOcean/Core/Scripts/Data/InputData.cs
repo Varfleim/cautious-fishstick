@@ -13,6 +13,7 @@ namespace SandOcean.UI
 {
     public enum MapMode : byte
     {
+        None,
         Default,
         Distance
     }
@@ -30,37 +31,27 @@ namespace SandOcean.UI
 
         public EcsPackedEntity cameraPE;
 
-        public Transform panObject;
-        public Transform rotationObjectX;
-        public Transform rotationObjectZ;
+        public Transform mapCamera;
+        public Transform swiwel;
+        public Transform stick;
         public UnityEngine.Camera camera;
 
-        public float movementSpeed;
-
-        public Vector3 dragStartPosition;
-        public Vector3 dragCurrentPosition;
-
+        public float movementSpeedMinZoom;
+        public float movementSpeedMaxZoom;
 
         public float rotationSpeed;
-
-        public float rotationZ;
-        public float rotationAnglesZ;
-
-        public float rotationX;
-        public float rotationAnglesX;
+        public float rotationAngle;
         public float minAngleX;
         public float maxAngleX;
 
+        public float zoom;
+        public float stickMinZoom;
+        public float stickMaxZoom;
+        public float swiwelMinZoom;
+        public float swiwelMaxZoom;
 
-        public float zoomSpeed;
-        public float zoomAmount;
-        public float maxZoom;
-        public float minZoom;
+        public int currentCenterColumnIndex = -1;
 
-
-
-        public Vector3 cameraFocusPosition = new Vector3(0f, 0f, 0f);
-        public Vector3 cameraFocusMoving;
 
         public EcsPackedEntity playerPE;
         public EcsPackedEntity playerOrganizationPE;
@@ -73,6 +64,13 @@ namespace SandOcean.UI
 
         public EcsPackedEntity searchFromRegion;
         public EcsPackedEntity searchToRegion;
-        public HexCellPriorityQueue searchFrontier;
+        public HexRegionPriorityQueue searchFrontier;
+        public int searchFrontierPhase;
+
+        public EcsPackedEntity currentPathFrom; 
+        public EcsPackedEntity currentPathTo;
+        public bool currentPathExists;
+
+        public EcsPackedEntity currentRegionPE;
     }
 }

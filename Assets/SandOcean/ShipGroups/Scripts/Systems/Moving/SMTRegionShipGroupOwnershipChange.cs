@@ -14,7 +14,7 @@ namespace SandOcean.Ship.Moving
     {
         readonly EcsWorldInject world = default;
 
-        readonly EcsCustomInject<SpaceGenerationData> spaceGenerationData = default;
+        readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
 
         protected override int GetChunkSize(IEcsSystems systems)
         {
@@ -35,7 +35,7 @@ namespace SandOcean.Ship.Moving
         {
             thread.world = world.Value;
 
-            thread.spaceGenerationData = spaceGenerationData.Value;
+            thread.mapGenerationData = mapGenerationData.Value;
         }
     }
 }

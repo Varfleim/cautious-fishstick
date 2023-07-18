@@ -12,33 +12,38 @@ namespace SandOcean.Map
         List<Vector3> vertices = new();
         [NonSerialized]
         List<int> triangles = new();
+
         [NonSerialized]
-        List<Color> colors = new();
+        List<Vector3> regionIndices = new();
+        [NonSerialized]
+        List<Color> regionWeights = new();
+
         [NonSerialized]
         List<Vector2> uvs = new();
         [NonSerialized]
         List<Vector2> uv2s = new();
-        [NonSerialized]
-        List<Vector3> terrainTypes = new();
 
         public Mesh mesh;
         public MeshFilter meshFilter;
         public MeshCollider meshCollider;
 
         public bool useCollider;
-        public bool useColors;
+        public bool useRegionData;
         public bool useUVCoordinates;
         public bool useUV2Coordinates;
-        public bool useTerrainTypes;
 
         public void Clear()
         {
             meshFilter.mesh.Clear();
+
             vertices = ListPool<Vector3>.Get();
-            if (useColors == true)
+
+            if(useRegionData == true)
             {
-                colors = ListPool<Color>.Get();
+                regionWeights = ListPool<Color>.Get();
+                regionIndices = ListPool<Vector3>.Get();
             }
+
             if (useUVCoordinates == true)
             {
                 uvs = ListPool<Vector2>.Get();
@@ -47,10 +52,7 @@ namespace SandOcean.Map
             {
                 uv2s = ListPool<Vector2>.Get();
             }
-            if (useTerrainTypes == true)
-            {
-                terrainTypes = ListPool<Vector3>.Get();
-            }
+
             triangles = ListPool<int>.Get();
         }
 
@@ -58,11 +60,16 @@ namespace SandOcean.Map
         {
             mesh.SetVertices(vertices);
             ListPool<Vector3>.Add(vertices);
-            if (useColors == true)
+
+            if (useRegionData == true)
             {
-                mesh.SetColors(colors);
-                ListPool<Color>.Add(colors);
+                mesh.SetColors(regionWeights);
+                ListPool<Color>.Add(regionWeights);
+
+                mesh.SetUVs(2, regionIndices);
+                ListPool<Vector3>.Add(regionIndices);
             }
+
             if (useUVCoordinates == true)
             {
                 mesh.SetUVs(0, uvs);
@@ -73,11 +80,7 @@ namespace SandOcean.Map
                 mesh.SetUVs(1, uv2s);
                 ListPool<Vector2>.Add(uv2s);
             }
-            if (useTerrainTypes == true)
-            {
-                mesh.SetUVs(2, terrainTypes);
-                ListPool<Vector3>.Add(terrainTypes);
-            }
+
             mesh.SetTriangles(triangles, 0);
             ListPool<int>.Add(triangles);
             mesh.RecalculateNormals();
@@ -96,11 +99,11 @@ namespace SandOcean.Map
 
             //Заносим вершины
             vertices.Add(
-                SpaceGenerationData.Perturb(v1));
+                MapGenerationData.Perturb(v1));
             vertices.Add(
-                SpaceGenerationData.Perturb(v2));
+                MapGenerationData.Perturb(v2));
             vertices.Add(
-                SpaceGenerationData.Perturb(v3));
+                MapGenerationData.Perturb(v3));
 
             //Заносим треугольники
             triangles.Add(
@@ -139,13 +142,13 @@ namespace SandOcean.Map
 
             //Заносим вершины
             vertices.Add(
-                SpaceGenerationData.Perturb(v1));
+                MapGenerationData.Perturb(v1));
             vertices.Add(
-                SpaceGenerationData.Perturb(v2));
+                MapGenerationData.Perturb(v2));
             vertices.Add(
-                SpaceGenerationData.Perturb(v3));
+                MapGenerationData.Perturb(v3));
             vertices.Add(
-                SpaceGenerationData.Perturb(v4));
+                MapGenerationData.Perturb(v4));
 
             //Заносим треугольники
             triangles.Add(
@@ -183,52 +186,60 @@ namespace SandOcean.Map
             triangles.Add(vertexIndex + 3);
         }
 
-        public void AddTriangleColor(
-            Color c)
+        public void AddTriangleCellData(
+            Vector3 indices,
+            Color weights1, Color weights2, Color weights3)
         {
-            //Заносим цвета вершин
-            colors.Add(c);
-            colors.Add(c);
-            colors.Add(c);
+            regionIndices.Add(indices);
+            regionIndices.Add(indices);
+            regionIndices.Add(indices);
+
+            regionWeights.Add(weights1);
+            regionWeights.Add(weights2);
+            regionWeights.Add(weights3);
         }
 
-        public void AddTriangleColor(
-            Color c1, Color c2, Color c3)
+        public void AddTriangleCellData(
+            Vector3 indices,
+            Color weights)
         {
-            //Заносим цвета вершин
-            colors.Add(c1);
-            colors.Add(c2);
-            colors.Add(c3);
+            AddTriangleCellData(
+                indices,
+                weights, weights, weights);
         }
 
-        public void AddQuadColor(
-            Color c1)
+        public void AddQuadCellData(
+            Vector3 indices,
+            Color weights1, Color weights2, Color weights3, Color weights4
+            )
         {
-            //Заносим цвет вершин
-            colors.Add(c1);
-            colors.Add(c1);
-            colors.Add(c1);
-            colors.Add(c1);
+            regionIndices.Add(indices);
+            regionIndices.Add(indices);
+            regionIndices.Add(indices);
+            regionIndices.Add(indices);
+
+            regionWeights.Add(weights1);
+            regionWeights.Add(weights2);
+            regionWeights.Add(weights3);
+            regionWeights.Add(weights4);
         }
 
-        public void AddQuadColor(
-            Color c1, Color c2)
+        public void AddQuadCellData(
+            Vector3 indices, 
+            Color weights1, Color weights2)
         {
-            //Заносим цвета вершин
-            colors.Add(c1);
-            colors.Add(c1);
-            colors.Add(c2);
-            colors.Add(c2);
+            AddQuadCellData(
+                indices, 
+                weights1, weights1, weights2, weights2);
         }
 
-        public void AddQuadColor(
-            Color c1, Color c2, Color c3, Color c4)
+        public void AddQuadCellData(
+            Vector3 indices, 
+            Color weights)
         {
-            //Заносим цвета вершин
-            colors.Add(c1);
-            colors.Add(c2);
-            colors.Add(c3);
-            colors.Add(c4);
+            AddQuadCellData(
+                indices, 
+                weights, weights, weights, weights);
         }
 
         public void AddTriangleUV(
@@ -295,25 +306,6 @@ namespace SandOcean.Map
                 uMin, vMax));
             uv2s.Add(new(
                 uMax, vMax));
-        }
-
-        public void AddTriangleTerrainTypes(
-            Vector3 types)
-        {
-            //Заносим типы местности
-            terrainTypes.Add(types);
-            terrainTypes.Add(types);
-            terrainTypes.Add(types);
-        }
-
-        public void AddQuadTerrainTypes(
-            Vector3 types)
-        {
-            //Заносим типы местности
-            terrainTypes.Add(types);
-            terrainTypes.Add(types);
-            terrainTypes.Add(types);
-            terrainTypes.Add(types);
         }
     }
 }

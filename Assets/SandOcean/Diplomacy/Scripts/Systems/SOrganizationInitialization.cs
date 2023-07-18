@@ -158,8 +158,6 @@ namespace SandOcean.Diplomacy
             organization.contentSetIndex
                 = contentData.Value.contentSets.Length;
 
-            UnityEngine.Debug.LogWarning(organization.contentSetIndex);
-
             //Создаём новый набор контента для данных организации
             DContentSet organizationContentSet 
                 = new(

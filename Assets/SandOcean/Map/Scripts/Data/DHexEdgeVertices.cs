@@ -40,23 +40,23 @@ namespace SandOcean.Map
             DHexEdgeVertices result;
 
             result.v1 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     a.v1, b.v1, 
                     step);
             result.v2 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     a.v2, b.v2, 
                     step);
             result.v3
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     a.v3, b.v3,
                     step);
             result.v4 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     a.v4, b.v4, 
                     step);
             result.v5 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     a.v5, b.v5, 
                     step);
 

@@ -57,7 +57,7 @@ namespace SandOcean.Map
             }
 
             //Берём шум
-            DHexHash hash = SpaceGenerationData.SampleHashGrid(position);
+            DHexHash hash = MapGenerationData.SampleHashGrid(position);
 
             //Берём префабы города и фермы
             Transform prefab = PickPrefab(
@@ -132,7 +132,7 @@ namespace SandOcean.Map
 
             //Перемещаем объект
             position.y += feature.localScale.y * 0.5f;
-            feature.localPosition = SpaceGenerationData.Perturb(position);
+            feature.localPosition = MapGenerationData.Perturb(position);
 
             //Случайно поворачиваем объект
             feature.localRotation = Quaternion.Euler(
@@ -154,7 +154,7 @@ namespace SandOcean.Map
             if (level > 0)
             {
                 //Берём массив порогов
-                float[] tresholds = SpaceGenerationData.GetFeatureThresholds(
+                float[] tresholds = MapGenerationData.GetFeatureThresholds(
                     level - 1);
 
                 //Для каждого порога в массиве
@@ -184,7 +184,7 @@ namespace SandOcean.Map
                 //И ячейки не под водой, и ребро между ними - не обрыв
                 && nearCell.IsUnderwater == false
                 && farCell.IsUnderwater == false
-                && SpaceGenerationData.GetEdgeType(nearCell.Elevation, farCell.Elevation) != HexEdgeType.Cliff)
+                && MapGenerationData.GetEdgeType(nearCell.Elevation, farCell.Elevation) != HexEdgeType.Cliff)
             {
                 //Создаём сегмент стены
                 AddWallSegment(
@@ -285,26 +285,26 @@ namespace SandOcean.Map
             bool addTower = false)
         {
             //Определяем смешение вершин
-            nearLeft = SpaceGenerationData.Perturb(nearLeft);
-            farLeft = SpaceGenerationData.Perturb(farLeft);
-            nearRight = SpaceGenerationData.Perturb(nearRight);
-            farRight = SpaceGenerationData.Perturb(farRight);
+            nearLeft = MapGenerationData.Perturb(nearLeft);
+            farLeft = MapGenerationData.Perturb(farLeft);
+            nearRight = MapGenerationData.Perturb(nearRight);
+            farRight = MapGenerationData.Perturb(farRight);
 
             //Определяем крайние вершины стены
-            Vector3 left = SpaceGenerationData.WallLerp(
+            Vector3 left = MapGenerationData.WallLerp(
                 nearLeft, farLeft);
-            Vector3 right = SpaceGenerationData.WallLerp(
+            Vector3 right = MapGenerationData.WallLerp(
                 nearRight, farRight);
 
             //Определяем смещение вершин
             Vector3 leftThicknessOffset
-                = SpaceGenerationData.WallThicknessOffset(
+                = MapGenerationData.WallThicknessOffset(
                     nearLeft, farLeft);
             Vector3 rightThicknessOffset
-                = SpaceGenerationData.WallThicknessOffset(
+                = MapGenerationData.WallThicknessOffset(
                     nearRight, farRight);
-            float leftTop = left.y + SpaceGenerationData.wallHeight;
-            float rightTop = right.y + SpaceGenerationData.wallHeight;
+            float leftTop = left.y + MapGenerationData.wallHeight;
+            float rightTop = right.y + MapGenerationData.wallHeight;
 
             //Определяем вершины стены
             Vector3 v1, v2, v3, v4;
@@ -368,9 +368,9 @@ namespace SandOcean.Map
 
             //Определяем, есть ли стены у левого и правого соседей
             bool hasLeftWall = !leftCell.IsUnderwater &&
-                SpaceGenerationData.GetEdgeType(pivotCell.Elevation, leftCell.Elevation) != HexEdgeType.Cliff;
+                MapGenerationData.GetEdgeType(pivotCell.Elevation, leftCell.Elevation) != HexEdgeType.Cliff;
             bool hasRighWall = !rightCell.IsUnderwater &&
-                SpaceGenerationData.GetEdgeType(pivotCell.Elevation, rightCell.Elevation) != HexEdgeType.Cliff;
+                MapGenerationData.GetEdgeType(pivotCell.Elevation, rightCell.Elevation) != HexEdgeType.Cliff;
 
             //Если левый сосед имеет стены
             if (hasLeftWall == true)
@@ -384,10 +384,10 @@ namespace SandOcean.Map
                     if (leftCell.Elevation == rightCell.Elevation)
                     {
                         //Берём хэш
-                        DHexHash hash = SpaceGenerationData.SampleHashGrid(
+                        DHexHash hash = MapGenerationData.SampleHashGrid(
                             (pivot + left + right) * (1f / 3f));
 
-                        hasTower = hash.e < SpaceGenerationData.wallTowerTreshhold;
+                        hasTower = hash.e < MapGenerationData.wallTowerTreshhold;
                     }
 
                     //Добавляем сегмент стены
@@ -434,20 +434,20 @@ namespace SandOcean.Map
             Vector3 near, Vector3 far)
         {
             //Смещаем вершины
-            near = SpaceGenerationData.Perturb(near);
-            far = SpaceGenerationData.Perturb(far);
+            near = MapGenerationData.Perturb(near);
+            far = MapGenerationData.Perturb(far);
 
             //Определяем центральную точку стены и толщину
-            Vector3 center = SpaceGenerationData.WallLerp(
+            Vector3 center = MapGenerationData.WallLerp(
                 near, far);
-            Vector3 thickness = SpaceGenerationData.WallThicknessOffset(
+            Vector3 thickness = MapGenerationData.WallThicknessOffset(
                 near, far);
 
             //Определяем вершины
             Vector3 v1, v2, v3, v4;
             v1 = v3 = center - thickness;
             v2 = v4 = center + thickness;
-            v3.y = v4.y = center.y + SpaceGenerationData.wallHeight;
+            v3.y = v4.y = center.y + MapGenerationData.wallHeight;
 
             //Заносим квад в меш
             walls.AddQuadUnperturbed(
@@ -458,14 +458,14 @@ namespace SandOcean.Map
             Vector3 near, Vector3 far, Vector3 point)
         {
             //Смещаем вершины
-            near = SpaceGenerationData.Perturb(near);
-            far = SpaceGenerationData.Perturb(far);
-            point = SpaceGenerationData.Perturb(point);
+            near = MapGenerationData.Perturb(near);
+            far = MapGenerationData.Perturb(far);
+            point = MapGenerationData.Perturb(point);
 
             //Определяем центральную точку стены и толщину
-            Vector3 center = SpaceGenerationData.WallLerp(
+            Vector3 center = MapGenerationData.WallLerp(
                 near, far);
-            Vector3 thickness = SpaceGenerationData.WallThicknessOffset(
+            Vector3 thickness = MapGenerationData.WallThicknessOffset(
                 near, far);
 
             //Определяем вершины
@@ -475,7 +475,7 @@ namespace SandOcean.Map
 
             v1 = v3 = center - thickness;
             v2 = v4 = center + thickness;
-            v3.y = v4.y = pointTop.y = center.y + SpaceGenerationData.wallHeight;
+            v3.y = v4.y = pointTop.y = center.y + MapGenerationData.wallHeight;
 
             //Заносим объекты в меш
             walls.AddQuadUnperturbed(
@@ -490,8 +490,8 @@ namespace SandOcean.Map
             Vector3 roadCenter1, Vector3 roadCenter2)
         {
             //Смещаем вершины
-            roadCenter1 = SpaceGenerationData.Perturb(roadCenter1);
-            roadCenter2 = SpaceGenerationData.Perturb(roadCenter2);
+            roadCenter1 = MapGenerationData.Perturb(roadCenter1);
+            roadCenter2 = MapGenerationData.Perturb(roadCenter2);
 
             //Создаём мост
             Transform bridge = Instantiate(bridgePrefab);
@@ -504,7 +504,7 @@ namespace SandOcean.Map
             float length = Vector3.Distance(roadCenter1, roadCenter2);
             //Изменяем длину моста
             bridge.localScale = new(
-                1f, 1f, length * (1f / SpaceGenerationData.bridgeDesignLength));
+                1f, 1f, length * (1f / MapGenerationData.bridgeDesignLength));
 
             //Прикрепляем мост к контейнеру
             bridge.SetParent(container, false);
@@ -518,10 +518,10 @@ namespace SandOcean.Map
             Transform instance = Instantiate(special[cell.SpecialIndex - 1]);
 
             //Перемещаем объект
-            instance.localPosition = SpaceGenerationData.Perturb(position);
+            instance.localPosition = MapGenerationData.Perturb(position);
 
             //Берём хэш
-            DHexHash hash = SpaceGenerationData.SampleHashGrid(position);
+            DHexHash hash = MapGenerationData.SampleHashGrid(position);
             //Поворачиваем объект
             instance.localRotation = Quaternion.Euler(
                 0f, 360f * hash.e, 0f);

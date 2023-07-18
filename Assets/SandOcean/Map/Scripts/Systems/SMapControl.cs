@@ -39,7 +39,7 @@ namespace SandOcean.Map
         readonly EcsPoolInject<SRMapChunkRefresh> mapChunkRefreshSelfRequestPool = default;
 
         //Данные
-        readonly EcsCustomInject<SpaceGenerationData> spaceGenerationData = default;
+        readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
         readonly EcsCustomInject<UI.InputData> inputData;
 
         public void Run(IEcsSystems systems)
@@ -71,13 +71,23 @@ namespace SandOcean.Map
                 ref CHexChunk chunk = ref chunkPool.Value.Get(refreshChunkEntity);
 
                 //Триангулируем меш чанка
-                //ChunkTriangulate(ref chunk);
-                ChunkSimpleTriangulate(ref chunk);
+                ChunkTriangulate(ref chunk);
+                //ChunkSimpleTriangulate(ref chunk);
 
                 Debug.LogWarning("Chunk refreshed!");
 
                 //Удаляем с сущности чанка самозапрос обновления
                 mapChunkRefreshSelfRequestPool.Value.Del(refreshChunkEntity);
+            }
+
+            //Если данные шейдера карты были изменены
+            if (mapGenerationData.Value.regionShaderData.isChanged == true)
+            {
+                //Обновляем данные шейдера карты
+                mapGenerationData.Value.regionShaderData.Refresh();
+
+                //Указываем, что данные шейдера карты обновлены
+                mapGenerationData.Value.regionShaderData.isChanged = false;
             }
         }
 
@@ -308,7 +318,7 @@ namespace SandOcean.Map
             Vector3 uiPosition
                 = cell.uiRect.rectTransform.localPosition;
             uiPosition.z
-                = cell.Elevation * -SpaceGenerationData.elevationStep;
+                = cell.Elevation * -MapGenerationData.elevationStep;
             cell.uiRect.rectTransform.localPosition
                 = uiPosition;
 
@@ -350,7 +360,7 @@ namespace SandOcean.Map
         {
             //Обновляем положение метки ячейки
             Vector3 uiPosition = cell.uiRect.rectTransform.localPosition;
-            uiPosition.z = cell.Elevation * -SpaceGenerationData.elevationStep;
+            uiPosition.z = cell.Elevation * -MapGenerationData.elevationStep;
             cell.uiRect.rectTransform.localPosition = uiPosition;
 
             //Для каждого треугольника ячейки
@@ -373,9 +383,9 @@ namespace SandOcean.Map
             Vector3 center = cell.Position;
             DHexEdgeVertices e
                 = new(
-                    center + SpaceGenerationData.GetFirstSolidCorner(
+                    center + MapGenerationData.GetFirstSolidCorner(
                         direction),
-                    center + SpaceGenerationData.GetSecondSolidCorner(
+                    center + MapGenerationData.GetSecondSolidCorner(
                         direction));
 
             //Если ячейка имеет реку
@@ -475,8 +485,8 @@ namespace SandOcean.Map
             //Берём основные вершины треугольника
             Vector3 center = cell.Position;
             DHexEdgeVertices e = new(
-                center + SpaceGenerationData.GetFirstCorner(direction),
-                center + SpaceGenerationData.GetSecondCorner(direction));
+                center + MapGenerationData.GetFirstCorner(direction),
+                center + MapGenerationData.GetSecondCorner(direction));
 
             //Триангулируем треугольник без реки
             SimpleTriangulateWithoutRiver(
@@ -499,7 +509,7 @@ namespace SandOcean.Map
                 ref chunk,
                 center,
                 e,
-                cell.TerrainTypeIndex);
+                cell.Index);
 
             //Если ячейка имеет дорогу через данное ребро
             if (cell.HasRoads == true)
@@ -521,7 +531,8 @@ namespace SandOcean.Map
                         center, e.v5,
                         interpolators.y), 
                     e,
-                    cell.HasRoadThroughEdge(direction));
+                    cell.HasRoadThroughEdge(direction),
+                    cell.Index);
             }
         }
 
@@ -538,7 +549,7 @@ namespace SandOcean.Map
             //Если не активен какой-либо режим карты
             if (inputData.Value.mapMode == UI.MapMode.Default)
             {
-                textureIndex = cell.TerrainTypeIndex;
+                textureIndex = cell.Index;
             }
             //Иначе, если активен режим расстояния
             else if (inputData.Value.mapMode == UI.MapMode.Distance)
@@ -569,7 +580,7 @@ namespace SandOcean.Map
 
                 //Берём основные данные квада
                 Vector3 bridge
-                    = SpaceGenerationData.GetBridge(
+                    = MapGenerationData.GetBridge(
                         direction);
                 bridge.y = neighbourCell.Position.y - cell.Position.y;
                 DHexEdgeVertices e2
@@ -587,6 +598,11 @@ namespace SandOcean.Map
                     //Опускаем центральную вершину ребра
                     e2.v3.y = neighbourCell.StreamBedY;
 
+                    //Определяем данные шейдера
+                    Vector3 indices;
+                    indices.x = indices.z = cell.Index;
+                    indices.y = neighbourCell.Index;
+
                     //Если ячейка не находится под водой
                     if (cell.IsUnderwater == false)
                     {
@@ -599,7 +615,8 @@ namespace SandOcean.Map
                                 e1.v2, e1.v4, e2.v2, e2.v4,
                                 cell.RiverSurfaceY, neighbourCell.RiverSurfaceY,
                                 0.8f,
-                                cell.HasIncomingRiver && cell.IncomingRiver == direction);
+                                cell.HasIncomingRiver && cell.IncomingRiver == direction,
+                                indices);
                         }
                         //Иначе
                         else
@@ -609,8 +626,8 @@ namespace SandOcean.Map
                                 ref chunk,
                                 e1.v2, e1.v4, e2.v2, e2.v4,
                                 cell.RiverSurfaceY, neighbourCell.RiverSurfaceY,
-                                neighbourCell.WaterSurfaceY
-                                );
+                                neighbourCell.WaterSurfaceY,
+                                indices);
                         }
                     }
                     //Иначе, если сосед не находится под водой
@@ -623,12 +640,13 @@ namespace SandOcean.Map
                             ref chunk,
                             e2.v4, e2.v2, e1.v4, e1.v2,
                             neighbourCell.RiverSurfaceY, cell.RiverSurfaceY,
-                            cell.WaterSurfaceY);
+                            cell.WaterSurfaceY,
+                            indices);
                     }
                 }
 
                 //Если тип ребра - наклон
-                if (SpaceGenerationData.GetEdgeType(cell.Elevation, neighbourCell.Elevation) == HexEdgeType.Slope)
+                if (MapGenerationData.GetEdgeType(cell.Elevation, neighbourCell.Elevation) == HexEdgeType.Slope)
                 {
                     //Триангулируем террасы ребра
                     TriangulateEdgeTerraces(
@@ -643,8 +661,8 @@ namespace SandOcean.Map
                     //Триангулируем полосу ребра
                     TriangulateEdgeStrip(
                         ref chunk,
-                        e1, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex,
-                        e2, SpaceGenerationData.cellColor2, neighbourCell.TerrainTypeIndex,
+                        e1, MapGenerationData.weights1, cell.Index,
+                        e2, MapGenerationData.weights2, neighbourCell.Index,
                         hasRoad);
                 }
 
@@ -666,7 +684,7 @@ namespace SandOcean.Map
 
                     //Определяем высоту вершины треугольника
                     Vector3 v5 
-                        = e1.v5 + SpaceGenerationData.GetBridge(
+                        = e1.v5 + MapGenerationData.GetBridge(
                             direction.Next());
                     v5.y = nextNeighbourCell.Position.y;
 
@@ -734,10 +752,10 @@ namespace SandOcean.Map
                 //Определяем положения вершин
                 centerL
                     = center 
-                    + SpaceGenerationData.GetFirstSolidCorner(direction.Previous()) * 0.25f;
+                    + MapGenerationData.GetFirstSolidCorner(direction.Previous()) * 0.25f;
                 centerR
                     = center 
-                    + SpaceGenerationData.GetSecondSolidCorner(direction.Next()) * 0.25f;
+                    + MapGenerationData.GetSecondSolidCorner(direction.Next()) * 0.25f;
             }
             //Иначе, если ячейка имеет реку через следующее ребро
             else if(cell.HasRiverThroughEdge(direction.Next()) == true)
@@ -766,8 +784,8 @@ namespace SandOcean.Map
                 centerL = center;
                 centerR 
                     = center 
-                    + SpaceGenerationData.GetSolidEdgeMiddle(direction.Next()) 
-                    * (0.5f * SpaceGenerationData.innerToOuter);
+                    + MapGenerationData.GetSolidEdgeMiddle(direction.Next()) 
+                    * (0.5f * MapGenerationData.innerToOuter);
             }
             //Иначе
             else
@@ -775,8 +793,8 @@ namespace SandOcean.Map
                 //Определяем положения вершин
                 centerL 
                     = center 
-                    + SpaceGenerationData.GetSolidEdgeMiddle(direction.Previous()) 
-                    * (0.5f * SpaceGenerationData.innerToOuter);
+                    + MapGenerationData.GetSolidEdgeMiddle(direction.Previous()) 
+                    * (0.5f * MapGenerationData.innerToOuter);
                 centerR = center;
             }
             //Уточняем положение центральной вершины
@@ -802,8 +820,8 @@ namespace SandOcean.Map
             //Триангулируем русло
             TriangulateEdgeStrip(
                 ref chunk,
-                m, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex,
-                e, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex);
+                m, MapGenerationData.weights1, cell.Index,
+                e, MapGenerationData.weights1, cell.Index);
 
             //Заносим русло в меш
             chunk.terrain.AddTriangle(
@@ -815,21 +833,21 @@ namespace SandOcean.Map
             chunk.terrain.AddTriangle(
                 centerR, m.v4, m.v5);
 
-            chunk.terrain.AddTriangleColor(
-                SpaceGenerationData.cellColor1);
-            chunk.terrain.AddQuadColor(
-                SpaceGenerationData.cellColor1);
-            chunk.terrain.AddQuadColor(
-                SpaceGenerationData.cellColor1);
-            chunk.terrain.AddTriangleColor(
-                SpaceGenerationData.cellColor1);
-
-            Vector3 types;
-            types.x = types.y = types.z = cell.TerrainTypeIndex;
-            chunk.terrain.AddTriangleTerrainTypes(types);
-            chunk.terrain.AddQuadTerrainTypes(types);
-            chunk.terrain.AddQuadTerrainTypes(types);
-            chunk.terrain.AddTriangleTerrainTypes(types);
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.y = indices.z = cell.Index;
+            chunk.terrain.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.terrain.AddQuadCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.terrain.AddQuadCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.terrain.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
 
             //Если ячейка не находится под водой
             if (cell.IsUnderwater == false)
@@ -844,13 +862,15 @@ namespace SandOcean.Map
                     centerL, centerR, m.v2, m.v4,
                     cell.RiverSurfaceY,
                     0.4f,
-                    reversed);
+                    reversed,
+                    indices);
                 TriangulateRiverQuad(
                     ref chunk,
                     m.v2, m.v4, e.v2, e.v4,
                     cell.RiverSurfaceY,
                     0.6f,
-                    reversed);
+                    reversed,
+                    indices);
             }
         }
 
@@ -873,13 +893,13 @@ namespace SandOcean.Map
             //Триангулируем исток
             TriangulateEdgeStrip(
                 ref chunk,
-                m, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex,
-                e, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex);
+                m, MapGenerationData.weights1, cell.Index,
+                e, MapGenerationData.weights1, cell.Index);
             TriangulateEdgeFan(
                 ref chunk,
                 center,
                 m,
-                cell.TerrainTypeIndex);
+                cell.Index);
 
             //Если ячейка не находится под водой
             if (cell.IsUnderwater == false)
@@ -887,13 +907,18 @@ namespace SandOcean.Map
                 //Определяем, должна ли быть развёрнута река
                 bool reversed = cell.HasIncomingRiver;
 
+                //Определяем данные шейдера
+                Vector3 indices;
+                indices.x = indices.y = indices.z = cell.Index;
+
                 //Заносим течение реки в меш
                 TriangulateRiverQuad(
                     ref chunk,
                     m.v2, m.v4, e.v2, e.v4,
                     cell.RiverSurfaceY,
                     0.6f,
-                    reversed);
+                    reversed,
+                    indices);
 
                 //Определяем положене центра течения
                 center.y = m.v2.y = m.v4.y = cell.RiverSurfaceY;
@@ -913,6 +938,11 @@ namespace SandOcean.Map
                     chunk.rivers.AddTriangleUV(
                         new(0.5f, 0.4f), new(0f, 0.6f), new(1f, 0.6f));
                 }
+
+                //Заносим данные шейдера
+                chunk.rivers.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights1);
             }
         }
 
@@ -943,15 +973,15 @@ namespace SandOcean.Map
                 {
                     //Смещаем центр
                     center
-                        += SpaceGenerationData.GetSolidEdgeMiddle(direction)
-                        * (SpaceGenerationData.innerToOuter * 0.5f);
+                        += MapGenerationData.GetSolidEdgeMiddle(direction)
+                        * (MapGenerationData.innerToOuter * 0.5f);
                 }
                 //Иначе, если ячейка имеет реку через дважды предыдущее ребро
                 else if(cell.HasRiverThroughEdge(direction.Previous2()) == true)
                 {
                     //Смещаем центр
                     center
-                        += SpaceGenerationData.GetFirstSolidCorner(direction)
+                        += MapGenerationData.GetFirstSolidCorner(direction)
                         * 0.25f;
                 }
             }
@@ -960,7 +990,7 @@ namespace SandOcean.Map
                 && cell.HasRiverThroughEdge(direction.Next2()))
             {
                 //Смещаем центр
-                center += SpaceGenerationData.GetSecondSolidCorner(direction) * 0.25f;
+                center += MapGenerationData.GetSecondSolidCorner(direction) * 0.25f;
             }
 
             //Определяем среднюю линию
@@ -976,13 +1006,13 @@ namespace SandOcean.Map
             //Триангулируем ребро
             TriangulateEdgeStrip(
                 ref chunk,
-                m, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex, 
-                e, SpaceGenerationData.cellColor1, cell.TerrainTypeIndex);
+                m, MapGenerationData.weights1, cell.Index, 
+                e, MapGenerationData.weights1, cell.Index);
             TriangulateEdgeFan(
                 ref chunk,
                 center, 
                 m,
-                cell.TerrainTypeIndex);
+                cell.Index);
 
             //Если ячейка не под водой и не имеет дороги через ребро
             if (cell.IsUnderwater == false
@@ -999,15 +1029,16 @@ namespace SandOcean.Map
             ref CHexChunk chunk,
             Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
             float y1, float y2, 
-            float waterY)
+            float waterY,
+            Vector3 indices)
         {
             //Определяем вершины водопада
             v1.y = v2.y = y1;
             v3.y = v4.y = y2;
-            v1 = SpaceGenerationData.Perturb(v1);
-            v2 = SpaceGenerationData.Perturb(v2);
-            v3 = SpaceGenerationData.Perturb(v3);
-            v4 = SpaceGenerationData.Perturb(v4);
+            v1 = MapGenerationData.Perturb(v1);
+            v2 = MapGenerationData.Perturb(v2);
+            v3 = MapGenerationData.Perturb(v3);
+            v4 = MapGenerationData.Perturb(v4);
             float t 
                 = (waterY - y2) / (y1 - y2);
             v3 = Vector3.Lerp(
@@ -1020,6 +1051,11 @@ namespace SandOcean.Map
             //Заносим квад в меш
             chunk.rivers.AddQuadUnperturbed(v1, v2, v3, v4);
             chunk.rivers.AddQuadUV(0f, 1f, 0.8f, 1f);
+
+            //Заносим данные шейдера
+            chunk.rivers.AddQuadCellData(
+                indices,
+                MapGenerationData.weights1, MapGenerationData.weights2);
         }
 
         void TriangulateEdgeTerraces(
@@ -1032,47 +1068,47 @@ namespace SandOcean.Map
             DHexEdgeVertices e2 = DHexEdgeVertices.TerraceLerp(
                 begin, end,
                 1);
-            Color c2 = SpaceGenerationData.TerraceLerp(
-                SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2, 
+            Color w2 = MapGenerationData.TerraceLerp(
+                MapGenerationData.weights1, MapGenerationData.weights2, 
                 1);
-            float t1 = beginCell.TerrainTypeIndex;
-            float t2 = endCell.TerrainTypeIndex;
+            float i1 = beginCell.Index;
+            float i2 = endCell.Index;
 
             //Заносим первую полосу в меш
             TriangulateEdgeStrip(
                 ref chunk,
-                begin, SpaceGenerationData.cellColor1, t1,
-                e2, c2, t2,
+                begin, MapGenerationData.weights1, i1,
+                e2, w2, i2,
                 hasRoad);
 
             //Для каждого промежуточного квада
-            for (int a = 2; a < SpaceGenerationData.terraceSteps; a++)
+            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
             {
                 //Определяем начальные данные квада
                 DHexEdgeVertices e1 = e2;
-                Color c1 = c2;
+                Color c1 = w2;
 
                 //Определяем конечные данные квада
                 e2 = DHexEdgeVertices.TerraceLerp(
                     begin, end,
                     a);
-                c2 = SpaceGenerationData.TerraceLerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2,
+                w2 = MapGenerationData.TerraceLerp(
+                    MapGenerationData.weights1, MapGenerationData.weights2,
                     a);
 
                 //Заносим промежуточную полосу в меш
                 TriangulateEdgeStrip(
                     ref chunk,
-                    e1, c1, t1,
-                    e2, c2, t2,
+                    e1, c1, i1,
+                    e2, w2, i2,
                     hasRoad);
             }
 
             //Заносим последнюю полосу в меш
             TriangulateEdgeStrip(
                 ref chunk,
-                e2, c2, t1,
-                end, SpaceGenerationData.cellColor2, t2,
+                e2, w2, i1,
+                end, MapGenerationData.weights2, i2,
                 hasRoad);
         }
 
@@ -1084,10 +1120,10 @@ namespace SandOcean.Map
         {
             //Определяем типы рёбер
             HexEdgeType leftEdgeType
-                = SpaceGenerationData.GetEdgeType(
+                = MapGenerationData.GetEdgeType(
                     bottomCell.Elevation, leftCell.Elevation);
             HexEdgeType rightEdgeType
-                = SpaceGenerationData.GetEdgeType(
+                = MapGenerationData.GetEdgeType(
                     bottomCell.Elevation, rightCell.Elevation);
 
             //Если тип левого ребра - склон
@@ -1149,7 +1185,7 @@ namespace SandOcean.Map
                 }
             }
             //Иначе, если тип ребра между левым и правым соседом - склон
-            else if (SpaceGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
+            else if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
             {
                 //Если высота левого соседа меньше высоты правого
                 if (leftCell.Elevation < rightCell.Elevation)
@@ -1178,14 +1214,15 @@ namespace SandOcean.Map
                 //Заносим треугольник в меш
                 chunk.terrain.AddTriangle(
                     bottom,left,right);
-                chunk.terrain.AddTriangleColor(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2, SpaceGenerationData.cellColor3);
 
-                Vector3 types;
-                types.x = bottomCell.TerrainTypeIndex;
-                types.y = leftCell.TerrainTypeIndex;
-                types.z = rightCell.TerrainTypeIndex;
-                chunk.terrain.AddTriangleTerrainTypes(types);
+                //Заносим данные шейдера
+                Vector3 indices;
+                indices.x = bottomCell.Index;
+                indices.y = leftCell.Index;
+                indices.z = rightCell.Index;
+                chunk.terrain.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
             }
 
             //Триангулируем стену
@@ -1203,70 +1240,70 @@ namespace SandOcean.Map
         {
             //Определяем вершины треугольника
             Vector3 v3 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     begin, left, 
                     1);
             Vector3 v4 
-                = SpaceGenerationData.TerraceLerp(
+                = MapGenerationData.TerraceLerp(
                     begin, right, 
                     1);
-            Color c3 
-                = SpaceGenerationData.TerraceLerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2, 
+            Color w3 
+                = MapGenerationData.TerraceLerp(
+                    MapGenerationData.weights1, MapGenerationData.weights2, 
                     1);
-            Color c4 
-                = SpaceGenerationData.TerraceLerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor3, 
+            Color w4 
+                = MapGenerationData.TerraceLerp(
+                    MapGenerationData.weights1, MapGenerationData.weights3, 
                     1);
-            Vector3 types;
-            types.x = beginCell.TerrainTypeIndex;
-            types.y = leftCell.TerrainTypeIndex;
-            types.z = rightCell.TerrainTypeIndex;
+            Vector3 indices;
+            indices.x = beginCell.Index;
+            indices.y = leftCell.Index;
+            indices.z = rightCell.Index;
 
             //Заносим первый треугольник в меш
             chunk.terrain.AddTriangle(
                 begin, v3, v4);
-            chunk.terrain.AddTriangleColor(
-                SpaceGenerationData.cellColor1, c3, c4);
-            chunk.terrain.AddTriangleTerrainTypes(types);
+            chunk.terrain.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1, w3, w4);
 
             //Для каждого промежуточного квада
-            for (int a = 2; a < SpaceGenerationData.terraceSteps; a++)
+            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
             {
                 //Определяем начальные данные квада
                 Vector3 v1 = v3;
                 Vector3 v2 = v4;
-                Color c1 = c3;
-                Color c2 = c4;
+                Color w1 = w3;
+                Color w2 = w4;
 
                 //Определяем конечные данные квада
-                v3 = SpaceGenerationData.TerraceLerp(
+                v3 = MapGenerationData.TerraceLerp(
                     begin, left, 
                     a);
-                v4 = SpaceGenerationData.TerraceLerp(
+                v4 = MapGenerationData.TerraceLerp(
                     begin, right, 
                     a);
-                c3 = SpaceGenerationData.TerraceLerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2, 
+                w3 = MapGenerationData.TerraceLerp(
+                    MapGenerationData.weights1, MapGenerationData.weights2, 
                     a);
-                c4 = SpaceGenerationData.TerraceLerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor3, 
+                w4 = MapGenerationData.TerraceLerp(
+                    MapGenerationData.weights1, MapGenerationData.weights3, 
                     a);
 
                 //Заносим промежуточный квад в меш
                 chunk.terrain.AddQuad(
                     v1, v2, v3, v4);
-                chunk.terrain.AddQuadColor(
-                    c1, c2, c3, c4);
-                chunk.terrain.AddQuadTerrainTypes(types);
+                chunk.terrain.AddQuadCellData(
+                    indices,
+                    w1, w2, w3, w4);
             }
 
             //Заносим последний квад в меш
             chunk.terrain.AddQuad(
                 v3, v4, left, right);
-            chunk.terrain.AddQuadColor(
-                c3, c4, SpaceGenerationData.cellColor2, SpaceGenerationData.cellColor3);
-            chunk.terrain.AddQuadTerrainTypes(types);
+            chunk.terrain.AddQuadCellData(
+                indices,
+                w3, w4, MapGenerationData.weights2, MapGenerationData.weights3);
         }
 
         void TriangulateCornerTerracesCliff(
@@ -1284,45 +1321,45 @@ namespace SandOcean.Map
             }
             Vector3 boundary
                 = Vector3.Lerp(
-                    SpaceGenerationData.Perturb(begin), SpaceGenerationData.Perturb(right),
+                    MapGenerationData.Perturb(begin), MapGenerationData.Perturb(right),
                     b);
-            Color boundaryColor
+            Color boundaryWeights
                 = Color.Lerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor3,
+                    MapGenerationData.weights1, MapGenerationData.weights3,
                     b);
-            Vector3 types;
-            types.x = beginCell.TerrainTypeIndex;
-            types.y = leftCell.TerrainTypeIndex;
-            types.z = rightCell.TerrainTypeIndex;
+            Vector3 indices;
+            indices.x = beginCell.Index;
+            indices.y = leftCell.Index;
+            indices.z = rightCell.Index;
 
             //Триангулируем пограничный треугольник
             TriangulateBoundaryTriangle(
                 ref chunk,
-                SpaceGenerationData.cellColor1, begin,
-                SpaceGenerationData.cellColor2, left,
-                boundaryColor, boundary,
-                types);
+                MapGenerationData.weights1, begin,
+                MapGenerationData.weights2, left,
+                boundaryWeights, boundary,
+                indices);
             
             //Если граница между левым и правым соседом - склон
-            if (SpaceGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
+            if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
             {
                 //Триангулируем пограничный треугольник
                 TriangulateBoundaryTriangle(
                     ref chunk,
-                    SpaceGenerationData.cellColor2, left,
-                    SpaceGenerationData.cellColor3, right,
-                    boundaryColor, boundary,
-                    types);
+                    MapGenerationData.weights2, left,
+                    MapGenerationData.weights3, right,
+                    boundaryWeights, boundary,
+                    indices);
             }
             //Иначе
             else
             {
                 //Заносим треугольник в меш
                 chunk.terrain.AddTriangleUnperturbed(
-                    SpaceGenerationData.Perturb(left), SpaceGenerationData.Perturb(right), boundary);
-                chunk.terrain.AddTriangleColor(
-                    SpaceGenerationData.cellColor2, SpaceGenerationData.cellColor3, boundaryColor);
-                chunk.terrain.AddTriangleTerrainTypes(types);
+                    MapGenerationData.Perturb(left), MapGenerationData.Perturb(right), boundary);
+                chunk.terrain.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights2, MapGenerationData.weights3, boundaryWeights);
             }
         }
 
@@ -1341,108 +1378,108 @@ namespace SandOcean.Map
             }
             Vector3 boundary
                 = Vector3.Lerp(
-                    SpaceGenerationData.Perturb(begin), SpaceGenerationData.Perturb(left),
+                    MapGenerationData.Perturb(begin), MapGenerationData.Perturb(left),
                     b);
-            Color boundaryColor
+            Color boundaryWeights
                 = Color.Lerp(
-                    SpaceGenerationData.cellColor1, SpaceGenerationData.cellColor2,
+                    MapGenerationData.weights1, MapGenerationData.weights2,
                     b);
-            Vector3 types;
-            types.x = beginCell.TerrainTypeIndex;
-            types.y = leftCell.TerrainTypeIndex;
-            types.z = rightCell.TerrainTypeIndex;
+            Vector3 indices;
+            indices.x = beginCell.Index;
+            indices.y = leftCell.Index;
+            indices.z = rightCell.Index;
 
             //Триангулируем пограничный треугольник
             TriangulateBoundaryTriangle(
                 ref chunk,
-                SpaceGenerationData.cellColor3, right,
-                SpaceGenerationData.cellColor1, begin,
-                boundaryColor, boundary,
-                types);
+                MapGenerationData.weights3, right,
+                MapGenerationData.weights1, begin,
+                boundaryWeights, boundary,
+                indices);
 
             //Если граница между левым и правым соседом - склон
-            if (SpaceGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
+            if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
             {
                 //Триангулируем пограничный треугольник
                 TriangulateBoundaryTriangle(
                     ref chunk,
-                    SpaceGenerationData.cellColor2, left,
-                    SpaceGenerationData.cellColor3, right,
-                    boundaryColor, boundary,
-                    types);
+                    MapGenerationData.weights2, left,
+                    MapGenerationData.weights3, right,
+                    boundaryWeights, boundary,
+                    indices);
             }
             //Иначе
             else
             {
                 //Заносим треугольник в меш
                 chunk.terrain.AddTriangleUnperturbed(
-                    SpaceGenerationData.Perturb(left), SpaceGenerationData.Perturb(right), boundary);
-                chunk.terrain.AddTriangleColor(
-                    SpaceGenerationData.cellColor2, SpaceGenerationData.cellColor3, boundaryColor);
-                chunk.terrain.AddTriangleTerrainTypes(types);
+                    MapGenerationData.Perturb(left), MapGenerationData.Perturb(right), boundary);
+                chunk.terrain.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights2, MapGenerationData.weights3, boundaryWeights);
             }
         }
 
         void TriangulateBoundaryTriangle(
             ref CHexChunk chunk,
-            Color beginColor, Vector3 begin,
-            Color leftColor, Vector3 left,
-            Color boundaryColor, Vector3 boundary,
-            Vector3 types)
+            Color beginWeights, Vector3 begin,
+            Color leftWeights, Vector3 left,
+            Color boundaryWeights, Vector3 boundary,
+            Vector3 indices)
         {
             //Определяем начальную вершину схождения
-            Vector3 v2 = SpaceGenerationData.Perturb(
-                SpaceGenerationData.TerraceLerp(
+            Vector3 v2 = MapGenerationData.Perturb(
+                MapGenerationData.TerraceLerp(
                     begin, left,
                     1));
-            Color c2 = SpaceGenerationData.TerraceLerp(
-                beginColor, leftColor,
+            Color w2 = MapGenerationData.TerraceLerp(
+                beginWeights, leftWeights,
                 1);
 
             //Заносим первый треугольник в меш
             chunk.terrain.AddTriangleUnperturbed(
-                SpaceGenerationData.Perturb(begin), v2, boundary);
-            chunk.terrain.AddTriangleColor(
-                beginColor, c2, boundaryColor);
-            chunk.terrain.AddTriangleTerrainTypes(types);
+                MapGenerationData.Perturb(begin), v2, boundary);
+            chunk.terrain.AddTriangleCellData(
+                indices,
+                beginWeights, w2, boundaryWeights);
 
             //Для каждого промежуточного треугольника
-            for (int a = 2; a < SpaceGenerationData.terraceSteps; a++)
+            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
             {
                 //Определяем начальные данные треугольника
                 Vector3 v1 = v2;
-                Color c1 = c2;
+                Color w1 = w2;
 
                 //Определяем конечные данные треугольника
-                v2 = SpaceGenerationData.Perturb(
-                    SpaceGenerationData.TerraceLerp(
+                v2 = MapGenerationData.Perturb(
+                    MapGenerationData.TerraceLerp(
                         begin, left,
                         a));
-                c2 = SpaceGenerationData.TerraceLerp(
-                    beginColor, leftColor,
+                w2 = MapGenerationData.TerraceLerp(
+                    beginWeights, leftWeights,
                     a);
 
                 //Заносим промежуточный треугольник в меш
                 chunk.terrain.AddTriangleUnperturbed(
                     v1, v2, boundary);
-                chunk.terrain.AddTriangleColor(
-                    c1, c2, boundaryColor);
-                chunk.terrain.AddTriangleTerrainTypes(types);
+                chunk.terrain.AddTriangleCellData(
+                    indices,
+                    w1, w2, boundaryWeights);
             }
 
             //Заносим последний треугольник в меш
             chunk.terrain.AddTriangleUnperturbed(
-                v2, SpaceGenerationData.Perturb(left), boundary);
-            chunk.terrain.AddTriangleColor(
-                c2, leftColor, boundaryColor);
-            chunk.terrain.AddTriangleTerrainTypes(types);
+                v2, MapGenerationData.Perturb(left), boundary);
+            chunk.terrain.AddTriangleCellData(
+                indices,
+                w2, leftWeights, boundaryWeights);
         }
 
         void TriangulateEdgeFan(
             ref CHexChunk chunk,
             Vector3 center,
             DHexEdgeVertices edge,
-            float type)
+            float index)
         {
             //Заносим треугольники в меш
             chunk.terrain.AddTriangle(
@@ -1454,23 +1491,19 @@ namespace SandOcean.Map
             chunk.terrain.AddTriangle(
                 center, edge.v4, edge.v5);
 
-            chunk.terrain.AddTriangleColor(SpaceGenerationData.cellColor1); 
-            chunk.terrain.AddTriangleColor(SpaceGenerationData.cellColor1); 
-            chunk.terrain.AddTriangleColor(SpaceGenerationData.cellColor1); 
-            chunk.terrain.AddTriangleColor(SpaceGenerationData.cellColor1);
-
-            Vector3 types;
-            types.x = types.y = types.z = type;
-            chunk.terrain.AddTriangleTerrainTypes(types);
-            chunk.terrain.AddTriangleTerrainTypes(types);
-            chunk.terrain.AddTriangleTerrainTypes(types);
-            chunk.terrain.AddTriangleTerrainTypes(types);
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.y = indices.z = index;
+            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
+            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
+            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
+            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
         }
 
         void TriangulateEdgeStrip(
             ref CHexChunk chunk,
-            DHexEdgeVertices e1, Color c1, float type1,
-            DHexEdgeVertices e2, Color c2, float type2,
+            DHexEdgeVertices e1, Color w1, float index1,
+            DHexEdgeVertices e2, Color w2, float index2,
             bool hasRoad = false)
         {
             //Заносим квады в меш
@@ -1483,22 +1516,14 @@ namespace SandOcean.Map
             chunk.terrain.AddQuad(
                 e1.v4, e1.v5, e2.v4, e2.v5);
 
-            chunk.terrain.AddQuadColor(
-                c1, c2);
-            chunk.terrain.AddQuadColor(
-                c1, c2);
-            chunk.terrain.AddQuadColor(
-                c1, c2);
-            chunk.terrain.AddQuadColor(
-                c1, c2);
-
-            Vector3 types;
-            types.x = types.z = type1;
-            types.y = type2;
-            chunk.terrain.AddQuadTerrainTypes(types);
-            chunk.terrain.AddQuadTerrainTypes(types);
-            chunk.terrain.AddQuadTerrainTypes(types);
-            chunk.terrain.AddQuadTerrainTypes(types);
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.z = index1;
+            indices.y = index2;
+            chunk.terrain.AddQuadCellData(indices, w1, w2);
+            chunk.terrain.AddQuadCellData(indices, w1, w2);
+            chunk.terrain.AddQuadCellData(indices, w1, w2);
+            chunk.terrain.AddQuadCellData(indices, w1, w2);
 
             //Если в данном направлении присутствует дорога
             if (hasRoad == true)
@@ -1506,7 +1531,9 @@ namespace SandOcean.Map
                 //Триангулируем сегмент дороги
                 TriangulateRoadSegment(
                     ref chunk,
-                    e1.v2, e1.v3, e1.v4, e2.v2, e2.v3, e2.v4);
+                    e1.v2, e1.v3, e1.v4, e2.v2, e2.v3, e2.v4,
+                    w1, w2,
+                    indices);
             }
         }
 
@@ -1515,7 +1542,8 @@ namespace SandOcean.Map
             Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
             float y,
             float v,
-            bool reversed)
+            bool reversed,
+            Vector3 indices)
         {
             //Триангулируем течение реки
             TriangulateRiverQuad(
@@ -1523,7 +1551,8 @@ namespace SandOcean.Map
                 v1, v2, v3, v4,
                 y, y,
                 v,
-                reversed);
+                reversed,
+                indices);
         }
 
         void TriangulateRiverQuad(
@@ -1531,7 +1560,8 @@ namespace SandOcean.Map
             Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
             float y1, float y2,
             float v,
-            bool reversed)
+            bool reversed,
+            Vector3 indices)
         {
             //Опускаем вершины
             v1.y = v2.y = y1; 
@@ -1555,17 +1585,27 @@ namespace SandOcean.Map
                 chunk.rivers.AddQuadUV(
                     0f, 1f, v, v + 0.2f);
             }
+
+            //Заносим данные шейдера
+            chunk.rivers.AddQuadCellData(
+                indices,
+                MapGenerationData.weights1, MapGenerationData.weights2);
         }
 
         void TriangulateRoad(
             ref CHexChunk chunk,
             Vector3 center, Vector3 mL, Vector3 mR,
             DHexEdgeVertices e,
-            bool hasRoadThroughEdge)
+            bool hasRoadThroughEdge,
+            float index)
         {
             //Если ячейка имеет дорогу через ребро
             if(hasRoadThroughEdge == true)
             {
+                //Определяем данные шейдера
+                Vector3 indices;
+                indices.x = indices.y = indices.z = index;
+
                 //Определяем центральную вершину
                 Vector3 mC
                     = Vector3.Lerp(
@@ -1575,7 +1615,9 @@ namespace SandOcean.Map
                 //Триангулируем сегмент дороги
                 TriangulateRoadSegment(
                     ref chunk,
-                    mL, mC, mR, e.v2, e.v3, e.v4);
+                    mL, mC, mR, e.v2, e.v3, e.v4,
+                    MapGenerationData.weights1, MapGenerationData.weights1,
+                    indices);
 
                 //Заносим треугольники в меш
                 chunk.roads.AddTriangle(
@@ -1586,6 +1628,14 @@ namespace SandOcean.Map
                     new(1f, 0f), new(0f, 0f), new(1f, 0f));
                 chunk.roads.AddTriangleUV(
                     new(1f, 0f), new(1f, 0f), new(0f, 0f));
+
+                //Заносим данные шейдера
+                chunk.roads.AddTriangleCellData(
+                    indices, 
+                    MapGenerationData.weights1);
+                chunk.roads.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights1);
             }
             //Иначе
             else
@@ -1593,8 +1643,8 @@ namespace SandOcean.Map
                 //Триангулируем ребро дороги
                 TriangulateRoadEdge(
                     ref chunk,
-                    center, mL, mR);
-
+                    center, mL, mR,
+                    index);
             }
         }
 
@@ -1627,7 +1677,7 @@ namespace SandOcean.Map
             {
                 //Смещаем центр дороги к твёрдому ребру ячейки
                 roadCenter
-                    += SpaceGenerationData.GetSolidEdgeMiddle(
+                    += MapGenerationData.GetSolidEdgeMiddle(
                         cell.RiverBeginOrEndDirection.Opposite()) * (1f / 3f);
             }
             //Иначе, если река идёт в противоположных направлениях
@@ -1648,7 +1698,7 @@ namespace SandOcean.Map
                         return;
                     }
 
-                    corner = SpaceGenerationData.GetSecondSolidCorner(direction);
+                    corner = MapGenerationData.GetSecondSolidCorner(direction);
                 }
                 //Иначе
                 else
@@ -1662,7 +1712,7 @@ namespace SandOcean.Map
                         return;
                     }
 
-                    corner = SpaceGenerationData.GetFirstSolidCorner(direction);
+                    corner = MapGenerationData.GetFirstSolidCorner(direction);
                 }
 
                 //Смещаем центр дороги
@@ -1688,14 +1738,14 @@ namespace SandOcean.Map
             {
                 //Смещаем центр дороги
                 roadCenter
-                    -= SpaceGenerationData.GetSecondCorner(cell.IncomingRiver) * 0.2f;
+                    -= MapGenerationData.GetSecondCorner(cell.IncomingRiver) * 0.2f;
             }
             //Иначе, если ячейка имеет входящую реку через ребро, следующее исходящей
             else if(cell.IncomingRiver == cell.OutgoingRiver.Next() == true)
             {
                 //Смещаем центр дороги
                 roadCenter
-                    -= SpaceGenerationData.GetFirstCorner(cell.IncomingRiver) * 0.2f;
+                    -= MapGenerationData.GetFirstCorner(cell.IncomingRiver) * 0.2f;
             }
             //Иначе, если ячейка имеет реки через оба соседних ребра
             else if(previousHasRiver && nextHasRiver == true)
@@ -1709,8 +1759,8 @@ namespace SandOcean.Map
 
                 //Смещаем центр дороги
                 Vector3 offset
-                    = SpaceGenerationData.GetSolidEdgeMiddle(direction)
-                    * SpaceGenerationData.innerToOuter;
+                    = MapGenerationData.GetSolidEdgeMiddle(direction)
+                    * MapGenerationData.innerToOuter;
                 roadCenter
                     += offset * 0.7f;
                 center
@@ -1747,7 +1797,7 @@ namespace SandOcean.Map
                 }
 
                 //Определяем смещение
-                Vector3 offset = SpaceGenerationData.GetSolidEdgeMiddle(middle);
+                Vector3 offset = MapGenerationData.GetSolidEdgeMiddle(middle);
                 //Смещаем центр дороги
                 roadCenter += offset * 0.25f;
 
@@ -1758,7 +1808,7 @@ namespace SandOcean.Map
                 {
                     //Создаём мост
                     chunk.features.AddBridge(
-                        roadCenter, center - offset * (SpaceGenerationData.innerToOuter * 0.7f));
+                        roadCenter, center - offset * (MapGenerationData.innerToOuter * 0.7f));
                 }
             }
 
@@ -1774,7 +1824,8 @@ namespace SandOcean.Map
                 ref chunk,
                 roadCenter, mL, mR,
                 e, 
-                hasRoadThroughEdge);
+                hasRoadThroughEdge,
+                cell.Index);
 
             //Если ячейка имеет реку через предыдущее ребро
             if (previousHasRiver == true)
@@ -1782,7 +1833,8 @@ namespace SandOcean.Map
                 //Триангулируем ребро дороги
                 TriangulateRoadEdge(
                     ref chunk,
-                    roadCenter, center, mL);
+                    roadCenter, center, mL,
+                    cell.Index);
             }
             //Если ячейка имеет реку через следующее ребро
             if (nextHasRiver == true)
@@ -1790,34 +1842,47 @@ namespace SandOcean.Map
                 //Триангулируем ребро дороги
                 TriangulateRoadEdge(
                     ref chunk,
-                    roadCenter, mR, center);
+                    roadCenter, mR, center,
+                    cell.Index);
             }
         }
 
         void TriangulateRoadSegment(
             ref CHexChunk chunk,
-            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4, Vector3 v5, Vector3 v6)
+            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4, Vector3 v5, Vector3 v6,
+            Color w1, Color w2,
+            Vector3 indices)
         {
             //Заносим квады в меш
-            chunk.roads.AddQuad(
-                v1, v2, v4, v5);
-            chunk.roads.AddQuad(
-                v2, v3, v5, v6);
-            chunk.roads.AddQuadUV(
-                0f, 1f, 0f, 0f);
-            chunk.roads.AddQuadUV(
-                1f, 0f, 0f, 0f);
+            chunk.roads.AddQuad(v1, v2, v4, v5);
+            chunk.roads.AddQuad(v2, v3, v5, v6);
+            chunk.roads.AddQuadUV(0f, 1f, 0f, 0f);
+            chunk.roads.AddQuadUV(1f, 0f, 0f, 0f);
+
+            //Заносим данные шейдера
+            chunk.roads.AddQuadCellData(
+                indices, 
+                w1, w2);
+            chunk.roads.AddQuadCellData(
+                indices, 
+                w1, w2);
         }
 
         void TriangulateRoadEdge(
             ref CHexChunk chunk,
-            Vector3 center, Vector3 mL, Vector3 mR)
+            Vector3 center, Vector3 mL, Vector3 mR,
+            float index)
         {
             //Заносим треугольник в меш
-            chunk.roads.AddTriangle(
-                center, mL, mR);
-            chunk.roads.AddTriangleUV(
-                new(1f, 0f), new(0f, 0f), new(0f, 0f));
+            chunk.roads.AddTriangle(center, mL, mR);
+            chunk.roads.AddTriangleUV(new(1f, 0f), new(0f, 0f), new(0f, 0f));
+
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.y = indices.z = index;
+            chunk.roads.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
         }
 
         void TriangulateWater(
@@ -1857,6 +1922,16 @@ namespace SandOcean.Map
                         center);
                 }
             }
+            //Иначе
+            else
+            {
+                //Триангулируем воду на краю карты
+                TriangulateOpenWater(
+                    ref chunk,
+                    ref cell,
+                    direction,
+                    center);
+            }
         }
 
         void TriangulateOpenWater(
@@ -1867,19 +1942,26 @@ namespace SandOcean.Map
         {
             //Определяем положение углов
             Vector3 c1
-                = center + SpaceGenerationData.GetFirstWaterCorner(direction);
+                = center + MapGenerationData.GetFirstWaterCorner(direction);
             Vector3 c2
-                = center + SpaceGenerationData.GetSecondWaterCorner(direction);
+                = center + MapGenerationData.GetSecondWaterCorner(direction);
 
             //Заносим треугольник в меш
             chunk.water.AddTriangle(
                 center, c1, c2);
 
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.y = indices.z = cell.Index;
+            chunk.water.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
+
             //Если направление меньше или равно юго-востоку
             if (direction <= HexDirection.SE)
             {
                 //Определяем вершины соединения
-                Vector3 bridge = SpaceGenerationData.GetWaterBridge(direction);
+                Vector3 bridge = MapGenerationData.GetWaterBridge(direction);
                 Vector3 e1 
                     = c1 + bridge;
                 Vector3 e2 
@@ -1888,6 +1970,12 @@ namespace SandOcean.Map
                 //Заносим квад в меш
                 chunk.water.AddQuad(
                     c1, c2, e1, e2);
+
+                //Заносим данные шейдера
+                indices.y = neighbourCell.Index;
+                chunk.water.AddQuadCellData(
+                    indices,
+                    MapGenerationData.weights1, MapGenerationData.weights2);
 
                 //Если направление меньше или равно востоку
                 if (direction <= HexDirection.E)
@@ -1908,10 +1996,40 @@ namespace SandOcean.Map
 
                         //Заносим треугольник в меш
                         chunk.water.AddTriangle(
-                            c2, e2, c2 + SpaceGenerationData.GetWaterBridge(direction.Next()));
+                            c2, e2, c2 + MapGenerationData.GetWaterBridge(direction.Next()));
+
+                        //Заносим данные шейдера
+                        indices.z = nextNeighbourCell.Index;
+                        chunk.water.AddTriangleCellData(
+                            indices,
+                            MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
                     }
                 }
             }
+        }
+
+        void TriangulateOpenWater(
+            ref CHexChunk chunk,
+            ref CHexRegion cell,
+            HexDirection direction,
+            Vector3 center)
+        {
+            //Определяем положение углов
+            Vector3 c1
+                = center + MapGenerationData.GetFirstWaterCorner(direction);
+            Vector3 c2
+                = center + MapGenerationData.GetSecondWaterCorner(direction);
+
+            //Заносим треугольник в меш
+            chunk.water.AddTriangle(
+                center, c1, c2);
+
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.y = indices.z = cell.Index;
+            chunk.water.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
         }
 
         void TriangulateShore(
@@ -1923,8 +2041,8 @@ namespace SandOcean.Map
             //Определяем вершины ребра
             DHexEdgeVertices e1
                 = new(
-                    center + SpaceGenerationData.GetFirstWaterCorner(direction),
-                    center + SpaceGenerationData.GetSecondWaterCorner(direction));
+                    center + MapGenerationData.GetFirstWaterCorner(direction),
+                    center + MapGenerationData.GetSecondWaterCorner(direction));
 
             //Заносим треугольники в меш
             chunk.water.AddTriangle(
@@ -1936,12 +2054,40 @@ namespace SandOcean.Map
             chunk.water.AddTriangle(
                 center, e1.v4, e1.v5);
 
+            //Заносим данные шейдера
+            Vector3 indices;
+            indices.x = indices.z = cell.Index;
+            indices.y = neighbourCell.Index;
+            chunk.water.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.water.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.water.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1);
+            chunk.water.AddTriangleCellData(
+                indices, 
+                MapGenerationData.weights1);
+
             //Определяем вершины соединения
             Vector3 center2 = neighbourCell.Position;
+            //Если сосед находится на восточном краю карты
+            if (neighbourCell.ColumnIndex < cell.ColumnIndex - 1)
+            {
+                center2.x += MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
+            }
+            //Иначе, если сосед находится на западном краю карты
+            else if(neighbourCell.ColumnIndex > cell.ColumnIndex + 1)
+            {
+                center2.x -= MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
+            }
+
             center2.y = center.y;
             DHexEdgeVertices e2 = new(
-                center2 + SpaceGenerationData.GetSecondSolidCorner(direction.Opposite()),
-                center2 + SpaceGenerationData.GetFirstSolidCorner(direction.Opposite()));
+                center2 + MapGenerationData.GetSecondSolidCorner(direction.Opposite()),
+                center2 + MapGenerationData.GetFirstSolidCorner(direction.Opposite()));
 
             //Если ячейка имеет реку через данное ребро
             if (cell.HasRiverThroughEdge(direction) == true)
@@ -1950,27 +2096,34 @@ namespace SandOcean.Map
                 TriangulateEstuary(
                     ref chunk,
                     e1, e2,
-                    cell.IncomingRiver == direction);
+                    cell.HasIncomingRiver && cell.IncomingRiver == direction,
+                    indices);
             }
             else
             {
                 //Заносим квады в меш
-                chunk.waterShore.AddQuad(
-                    e1.v1, e1.v2, e2.v1, e2.v2);
-                chunk.waterShore.AddQuad(
-                    e1.v2, e1.v3, e2.v2, e2.v3);
-                chunk.waterShore.AddQuad(
-                    e1.v3, e1.v4, e2.v3, e2.v4);
-                chunk.waterShore.AddQuad(
-                    e1.v4, e1.v5, e2.v4, e2.v5);
-                chunk.waterShore.AddQuadUV(
-                    0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(
-                    0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(
-                    0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(
-                    0f, 0f, 0f, 1f);
+                chunk.waterShore.AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
+                chunk.waterShore.AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
+                chunk.waterShore.AddQuad(e1.v3, e1.v4, e2.v3, e2.v4);
+                chunk.waterShore.AddQuad(e1.v4, e1.v5, e2.v4, e2.v5);
+                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
+                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
+                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
+                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
+
+                //Заносим данные шейдера
+                chunk.waterShore.AddQuadCellData(
+                    indices, 
+                    MapGenerationData.weights1, MapGenerationData.weights2);
+                chunk.waterShore.AddQuadCellData(
+                    indices, 
+                    MapGenerationData.weights1, MapGenerationData.weights2);
+                chunk.waterShore.AddQuadCellData(
+                    indices, 
+                    MapGenerationData.weights1, MapGenerationData.weights2);
+                chunk.waterShore.AddQuadCellData(
+                    indices, 
+                    MapGenerationData.weights1, MapGenerationData.weights2);
             }
 
             //Если у ячейки есть следующий сосед
@@ -1980,71 +2133,91 @@ namespace SandOcean.Map
                 ref CHexRegion nextNeighbourCell
                     = ref regionPool.Value.Get(nextNeighbourCellEntity);
 
+                //Определяем центр следующего соседа
+                Vector3 center3 = nextNeighbourCell.Position;
+                //Если сосед находится на восточном краю карты
+                if (nextNeighbourCell.ColumnIndex < cell.ColumnIndex - 1)
+                {
+                    center3.x += MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
+                }
+                //Иначе, если сосед находится на западном краю карты
+                else if(nextNeighbourCell.ColumnIndex > cell.ColumnIndex +1)
+                {
+                    center3.x -= MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
+                }
+
                 //Определяем вершину треугольника
                 Vector3 v3 
-                    = nextNeighbourCell.Position 
+                    = center3 
                     + (nextNeighbourCell.IsUnderwater 
-                    ? SpaceGenerationData.GetFirstWaterCorner(direction.Previous()) 
-                    : SpaceGenerationData.GetFirstSolidCorner(direction.Previous()));
+                    ? MapGenerationData.GetFirstWaterCorner(direction.Previous()) 
+                    : MapGenerationData.GetFirstSolidCorner(direction.Previous()));
                 v3.y = center.y;
 
                 //Заносим треугольник в меш
-                chunk.waterShore.AddTriangle(
-                    e1.v5, e2.v5, v3);
-                chunk.waterShore.AddTriangleUV(
-                    new(0f, 0f), new(0f, 1f), new(0f, nextNeighbourCell.IsUnderwater ? 0f : 1f));
+                chunk.waterShore.AddTriangle(e1.v5, e2.v5, v3);
+                chunk.waterShore.AddTriangleUV(new(0f, 0f), new(0f, 1f), new(0f, nextNeighbourCell.IsUnderwater ? 0f : 1f));
+
+                //Заносим данные шейдера
+                indices.z = nextNeighbourCell.Index;
+                chunk.waterShore.AddTriangleCellData(
+                    indices,
+                    MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
             }
         }
 
         void TriangulateEstuary(
             ref CHexChunk chunk,
             DHexEdgeVertices e1, DHexEdgeVertices e2,
-            bool incomingRiver)
+            bool incomingRiver,
+            Vector3 indices)
         {
             //Заносим треугольники в меш
-            chunk.waterShore.AddTriangle(
-                e2.v1, e1.v2, e1.v1);
-            chunk.waterShore.AddTriangle(
-                e2.v5, e1.v5, e1.v4);
-            chunk.waterShore.AddTriangleUV(
-                new(0f, 1f), new(0f, 0f), new(0f, 0f));
-            chunk.waterShore.AddTriangleUV(
-                new(0f, 1f), new(0f, 0f), new(0f, 0f));
+            chunk.waterShore.AddTriangle(e2.v1, e1.v2, e1.v1);
+            chunk.waterShore.AddTriangle(e2.v5, e1.v5, e1.v4);
+            chunk.waterShore.AddTriangleUV(new(0f, 1f), new(0f, 0f), new(0f, 0f));
+            chunk.waterShore.AddTriangleUV(new(0f, 1f), new(0f, 0f), new(0f, 0f));
+
+            //Заносим данные шейдера
+            chunk.waterShore.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights1);
+            chunk.waterShore.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights1);
 
             //Заносим объекты в меш
-            chunk.estuaries.AddQuad(
-                e2.v1, e1.v2, e2.v2, e1.v3);
-            chunk.estuaries.AddTriangle(
-                e1.v3, e2.v2, e2.v4);
-            chunk.estuaries.AddQuad(
-                e1.v3, e1.v4, e2.v4, e2.v5);
+            chunk.estuaries.AddQuad(e2.v1, e1.v2, e2.v2, e1.v3);
+            chunk.estuaries.AddTriangle(e1.v3, e2.v2, e2.v4);
+            chunk.estuaries.AddQuad(e1.v3, e1.v4, e2.v4, e2.v5);
 
-            chunk.estuaries.AddQuadUV(
-                new Vector2(0f, 1f), new (0f, 0f), new (1f, 1f), new (0f, 0f));
-            chunk.estuaries.AddTriangleUV(
-                new (0f, 0f), new (1f, 1f), new (1f, 1f));
-            chunk.estuaries.AddQuadUV(
-                new Vector2(0f, 0f), new (0f, 0f), new (1f, 1f), new (0f, 1f));
+            chunk.estuaries.AddQuadUV(new Vector2(0f, 1f), new (0f, 0f), new (1f, 1f), new (0f, 0f));
+            chunk.estuaries.AddTriangleUV(new (0f, 0f), new (1f, 1f), new (1f, 1f));
+            chunk.estuaries.AddQuadUV(new Vector2(0f, 0f), new (0f, 0f), new (1f, 1f), new (0f, 1f));
+
+            chunk.estuaries.AddQuadCellData(
+                indices,
+                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights1);
+            chunk.estuaries.AddTriangleCellData(
+                indices,
+                MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights2);
+            chunk.estuaries.AddQuadCellData(
+                indices,
+                MapGenerationData.weights1, MapGenerationData.weights2);
 
             //Если река входящая
             if (incomingRiver)
             {
-                chunk.estuaries.AddQuadUV2(
-                    new Vector2(1.5f, 1f), new (0.7f, 1.15f), new (1f, 0.8f), new (0.5f, 1.1f));
-                chunk.estuaries.AddTriangleUV2(
-                    new (0.5f, 1.1f), new (1f, 0.8f), new (0f, 0.8f));
-                chunk.estuaries.AddQuadUV2(
-                    new Vector2(0.5f, 1.1f), new (0.3f, 1.15f), new (0f, 0.8f), new (-0.5f, 1f));
+                chunk.estuaries.AddQuadUV2(new Vector2(1.5f, 1f), new (0.7f, 1.15f), new (1f, 0.8f), new (0.5f, 1.1f));
+                chunk.estuaries.AddTriangleUV2(new (0.5f, 1.1f), new (1f, 0.8f), new (0f, 0.8f));
+                chunk.estuaries.AddQuadUV2(new Vector2(0.5f, 1.1f), new (0.3f, 1.15f), new (0f, 0.8f), new (-0.5f, 1f));
             }
             //Иначе
             else
             {
-                chunk.estuaries.AddQuadUV2(
-                    new Vector2(-0.5f, -0.2f), new (0.3f, -0.35f), new (0f, 0f), new (0.5f, -0.3f));
-                chunk.estuaries.AddTriangleUV2(
-                    new (0.5f, -0.3f), new (0f, 0f), new (1f, 0f));
-                chunk.estuaries.AddQuadUV2(
-                    new Vector2(0.5f, -0.3f), new (0.7f, -0.35f), new (1f, 0f), new (1.5f, -0.2f));
+                chunk.estuaries.AddQuadUV2(new Vector2(-0.5f, -0.2f), new (0.3f, -0.35f), new (0f, 0f), new (0.5f, -0.3f));
+                chunk.estuaries.AddTriangleUV2(new (0.5f, -0.3f), new (0f, 0f), new (1f, 0f));
+                chunk.estuaries.AddQuadUV2(new Vector2(0.5f, -0.3f), new (0.7f, -0.35f), new (1f, 0f), new (1.5f, -0.2f));
             }
         }
 
@@ -2079,7 +2252,7 @@ namespace SandOcean.Map
             int z = coordinates.Z;
 
             //Если координата выходит за границы карты
-            if (z < 0 || z >= spaceGenerationData.Value.regionCountZ)
+            if (z < 0 || z >= mapGenerationData.Value.regionCountZ)
             {
                 return new();
             }
@@ -2087,12 +2260,12 @@ namespace SandOcean.Map
             int x = coordinates.X + z / 2;
 
             //Если координата выходит за границы ячейки
-            if (x < 0 || x >= spaceGenerationData.Value.regionCountX)
+            if (x < 0 || x >= mapGenerationData.Value.regionCountX)
             {
                 return new();
             }
 
-            return spaceGenerationData.Value.regionPEs[x + z * spaceGenerationData.Value.regionCountX];
+            return mapGenerationData.Value.regionPEs[x + z * mapGenerationData.Value.regionCountX];
         }
 
 

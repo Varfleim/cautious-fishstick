@@ -7,6 +7,7 @@ using UnityEngine;
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 
+using SandOcean.UI;
 using SandOcean.Diplomacy;
 using SandOcean.AEO.RAEO;
 
@@ -24,6 +25,7 @@ namespace SandOcean.Map
         //Карта
         readonly EcsPoolInject<CHexChunk> chunkPool = default;
 
+        readonly EcsFilterInject<Inc<CHexRegion>> regionFilter = default;
         readonly EcsPoolInject<CHexRegion> regionPool = default;
 
         //Дипломатия
@@ -50,8 +52,8 @@ namespace SandOcean.Map
         //Данные
         readonly EcsCustomInject<StaticData> staticData = default;
         readonly EcsCustomInject<SceneData> sceneData = default;
-        readonly EcsCustomInject<SpaceGenerationData> spaceGenerationData = default;
-        //readonly EcsCustomInject<InputData> inputData = default;
+        readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
+        readonly EcsCustomInject<InputData> inputData = default;
 
         public void Run(IEcsSystems systems)
         {
@@ -62,7 +64,7 @@ namespace SandOcean.Map
                 ref EMapGeneration mapGenerationEvent= ref mapGenerationEventPool.Value.Get(mapGenerationEventEntity);
 
                 //Инициализируем хэш-таблицу
-                SpaceGenerationData.InitializeHashGrid();
+                MapGenerationData.InitializeHashGrid();
 
                 //Создаём карту
                 MapCreate(ref mapGenerationEvent);
@@ -126,8 +128,13 @@ namespace SandOcean.Map
             //Инициализируем карту
             MapInitialization(ref mapGenerationEvent);
 
-            //Создаём структуру, хранящую данные для генерации карты
-            //TempSectorGenerationData tempSectorGenerationData = new();
+
+            //Создаём чанки
+            MapCreateChunks(ref mapGenerationEvent);
+
+            //Создаём регионы
+            MapCreateRegions(ref mapGenerationEvent);
+
 
             //Распределяем богатство карты
             MapWealthDistribution();
@@ -140,28 +147,81 @@ namespace SandOcean.Map
             ref EMapGeneration mapGenerationEvent)
         {
             //Назначаем текстуру шума
-            SpaceGenerationData.noiseSource
-                = spaceGenerationData.Value.noiseTexture;
+            MapGenerationData.noiseSource
+                = mapGenerationData.Value.noiseTexture;
 
             //Определяем количество чанков
-            spaceGenerationData.Value.chunkCountX
+            mapGenerationData.Value.chunkCountX
                 = mapGenerationEvent.chunkCountX;
-            spaceGenerationData.Value.chunkCountZ
+            mapGenerationData.Value.chunkCountZ
                 = mapGenerationEvent.chunkCountZ;
 
             //Определяем размер массива PE чанков
-            spaceGenerationData.Value.chunkPEs = new EcsPackedEntity[spaceGenerationData.Value.chunkCountX * spaceGenerationData.Value.chunkCountZ];
+            mapGenerationData.Value.chunkPEs = new EcsPackedEntity[mapGenerationData.Value.chunkCountX * mapGenerationData.Value.chunkCountZ];
 
             //Определяем количество регионов
-            spaceGenerationData.Value.regionCountX
+            mapGenerationData.Value.regionCountX
                 = mapGenerationEvent.chunkCountX
-                * SpaceGenerationData.chunkSizeX;
-            spaceGenerationData.Value.regionCountZ
+                * MapGenerationData.chunkSizeX;
+            mapGenerationData.Value.regionCountZ
                 = mapGenerationEvent.chunkCountZ
-                * SpaceGenerationData.chunkSizeZ;
+                * MapGenerationData.chunkSizeZ;
+            mapGenerationData.Value.regionCount = mapGenerationData.Value.regionCountX * mapGenerationData.Value.regionCountZ;
+
+            //Определяем размер свёртки
+            MapGenerationData.wrapSize = mapGenerationData.Value.regionCountX;
 
             //Определяем размер массива PE регионов
-            spaceGenerationData.Value.regionPEs = new EcsPackedEntity[spaceGenerationData.Value.regionCountX * spaceGenerationData.Value.regionCountZ];
+            mapGenerationData.Value.regionPEs = new EcsPackedEntity[mapGenerationData.Value.regionCount];
+
+            //Инициализируем данные шейдера
+            mapGenerationData.Value.regionShaderData.Initialize(mapGenerationData.Value.regionCountX, mapGenerationData.Value.regionCountZ);
+        }
+
+        void MapCreateChunks(
+            ref EMapGeneration mapGenerationEvent)
+        {
+            //Создаём массив столбцов карты
+            mapGenerationData.Value.columns = new Transform[mapGenerationData.Value.chunkCountX];
+            //Для каждого чанка по ширине
+            for (int x = 0; x < mapGenerationData.Value.chunkCountX; x++)
+            {
+                //Создаём новый столбец и присоединяем его к центральному объекту
+                mapGenerationData.Value.columns[x] = new GameObject("Column").transform;
+                mapGenerationData.Value.columns[x].SetParent(sceneData.Value.coreObject);
+            }
+
+
+            //Для каждого чанка по высоте
+            for (int z = 0, i = 0; z < mapGenerationData.Value.chunkCountZ; z++)
+            {
+                //Для каждого чанка по ширине
+                for (int x = 0; x < mapGenerationData.Value.chunkCountX; x++)
+                {
+                    //Создаём чанк
+                    ChunkCreate(
+                        ref mapGenerationEvent,
+                        x, z,
+                        i++);
+                }
+            }
+        }
+
+        void MapCreateRegions(
+            ref EMapGeneration mapGenerationEvent)
+        {
+            //Для каждого региона по высоте
+            for (int z = 0, i = 0; z < mapGenerationData.Value.regionCountZ; z++)
+            {
+                //Для каждого региона по ширине
+                for (int x = 0; x < mapGenerationData.Value.regionCountX; x++)
+                {
+                    //Создаём регион
+                    RegionCreate(
+                        x, z,
+                        i++);
+                }
+            }
         }
 
         void MapWealthDistribution()
@@ -172,52 +232,682 @@ namespace SandOcean.Map
         void MapGeneration(
             ref EMapGeneration mapGenerationEvent)
         {
-            //Создаём чанки
-            MapCreateChunks(ref mapGenerationEvent);
+            //Создаём границу приоритетную очередь для генерации алгоритмами поиска пути
+            HexRegionPriorityQueue searchFrontier = new();
 
-            //Создаём регионы
-            MapCreateRegions(ref mapGenerationEvent);
+            //Для каждого региона
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                //Берём компонент региона
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
 
-            //Создаём острова
-            //MapCreateIslands(ref mapGenerationEvent);
+                //Устанавливаем уровень моря
+                region.WaterLevel = mapGenerationData.Value.waterLevel;
+            }
+
+            //Создаём зоны карты
+            MapCreateAreas();
+
+            //Создаём сушу
+            MapCreateLand(searchFrontier);
+
+            //Проводим эрозию
+            MapErodeLand();
+
+            //Создаём климат
+            List<DHexRegionClimate> climate = MapCreateClimat();
+
+            //Устанавливаем типы ландшафта
+            MapSetTerrainType(climate);
+
+            //Для каждого региона
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                //Берём компонент региона
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Устанавливаем фазу поиска на ноль
+                region.SearchPhase = 0;
+            }
         }
 
-        void MapCreateChunks(
-            ref EMapGeneration mapGenerationEvent)
+        void MapCreateAreas()
         {
-            //Для каждого чанка по высоте
-            for (int z = 0, i = 0; z < spaceGenerationData.Value.chunkCountZ; z++)
+            int borderX = mapGenerationData.Value.areaBorder;
+
+            //Создаём зону карты
+            DMapArea mapArea;
+
+            switch (mapGenerationData.Value.areaCount)
             {
-                //Для каждого чанка по ширине
-                for (int x = 0; x < spaceGenerationData.Value.chunkCountX; x++)
+                default:
+                    borderX = 0;
+
+                    mapGenerationData.Value.mapAreas = new DMapArea[1];
+
+                    mapArea.xMin = borderX;
+                    mapArea.xMax = mapGenerationData.Value.regionCountX - borderX;
+                    mapArea.zMin = mapGenerationData.Value.mapBorderZ;
+                    mapArea.zMax = mapGenerationData.Value.regionCountZ - mapGenerationData.Value.mapBorderZ;
+                    mapGenerationData.Value.mapAreas[0] = mapArea;
+                    break;
+                case 2:
+                    mapGenerationData.Value.mapAreas = new DMapArea[2];
+
+                    if (UnityEngine.Random.value < 0.5f)
+                    {
+                        mapArea.xMin = borderX;
+                        mapArea.xMax = mapGenerationData.Value.regionCountX / 2 - mapGenerationData.Value.areaBorder;
+                        mapArea.zMin = mapGenerationData.Value.mapBorderZ;
+                        mapArea.zMax = mapGenerationData.Value.regionCountZ - mapGenerationData.Value.mapBorderZ;
+                        //Заносим новую зону в массив
+                        mapGenerationData.Value.mapAreas[0] = mapArea;
+
+                        mapArea.xMin = mapGenerationData.Value.regionCountX / 2 + mapGenerationData.Value.areaBorder;
+                        mapArea.xMax = mapGenerationData.Value.regionCountX - borderX;
+                        //Заносим новую зону в массив
+                        mapGenerationData.Value.mapAreas[1] = mapArea;
+                    }
+                    else
+                    {
+                        borderX = 0;
+
+                        mapArea.xMin = borderX;
+                        mapArea.xMax = mapGenerationData.Value.regionCountX - borderX;
+                        mapArea.zMin = mapGenerationData.Value.mapBorderZ;
+                        mapArea.zMax = mapGenerationData.Value.regionCountZ / 2 - mapGenerationData.Value.areaBorder;
+                        //Заносим новую зону в массив
+                        mapGenerationData.Value.mapAreas[0] = mapArea;
+
+                        mapArea.zMin = mapGenerationData.Value.regionCountZ / 2 + mapGenerationData.Value.areaBorder;
+                        mapArea.zMax = mapGenerationData.Value.regionCountZ - mapGenerationData.Value.mapBorderZ;
+                        //Заносим новую зону в массив
+                        mapGenerationData.Value.mapAreas[1] = mapArea;
+                    }
+                    break;
+            }
+        }
+
+        void MapCreateLand(
+            HexRegionPriorityQueue searchFrontier)
+        {
+            //Определяем количество регионов суши
+            int landBudget = Mathf.RoundToInt(mapGenerationData.Value.regionCount * mapGenerationData.Value.landPercentage * 0.01f);
+
+            //Пока бюджет суши больше нуля и прошло менее 10000 итераций
+            for(int a = 0; a < 10000; a++)
+            {
+                //Определяем, нужно ли утопить сушу
+                bool sink = UnityEngine.Random.value < mapGenerationData.Value.sinkProbability;
+
+                //Для каждой зоны карты
+                for (int b = 0; b < mapGenerationData.Value.mapAreas.Length; b++)
                 {
-                    //Создаём чанк
-                    ChunkCreate(
-                        ref mapGenerationEvent,
-                        x, z,
-                        i++);
+                    //Определяем размер чанка
+                    int chunkSize = UnityEngine.Random.Range(mapGenerationData.Value.chunkSizeMin, mapGenerationData.Value.chunkSizeMax + 1);
+
+                    //Если требуется утопить сушу
+                    if (sink == true)
+                    {
+                        //Топим сушу
+                        MapSinkTerrain(
+                            searchFrontier,
+                            ref mapGenerationData.Value.mapAreas[b],
+                            chunkSize,
+                            landBudget,
+                            out landBudget);
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Поднимаем сушу
+                        MapRaiseTerrain(
+                            searchFrontier,
+                            ref mapGenerationData.Value.mapAreas[b],
+                            chunkSize,
+                            landBudget,
+                            out landBudget);
+
+                        //Если бюджет суши равен нулю
+                        if (landBudget == 0)
+                        {
+                            return;
+                        }
+                    }
                 }
             }
 
-            //Создаём стартовые чанки
-            /*ChunkCreate(
-                0, 0);*/
+            //Если бюджет суши больше нуля
+            if (landBudget > 0)
+            {
+                Debug.LogWarning("Failed to use up " + landBudget + " land budget.");
+            }
         }
 
-        void MapCreateRegions(
-            ref EMapGeneration mapGenerationEvent)
+        void MapRaiseTerrain(
+            HexRegionPriorityQueue searchFrontier,
+            ref DMapArea mapArea,
+            int chunkSize,
+            int landBudget,
+            out int currentLandBudget)
         {
-            //Для каждого региона по высоте
-            for (int z = 0, i = 0; z < spaceGenerationData.Value.regionCountZ; z++)
+            //Увеличиваем фазу поиска
+            inputData.Value.searchFrontierPhase += 1;
+
+            //Берём компонент первого региона случайно
+            RegionGetRandom(ref mapArea).Unpack(world.Value, out int firstRegionEntity);
+            ref CHexRegion firstRegion = ref regionPool.Value.Get(firstRegionEntity);
+
+            //Устанавливаем его фазу поиска на текущую
+            firstRegion.SearchPhase = inputData.Value.searchFrontierPhase;
+            firstRegion.Distance = 0;
+            firstRegion.SearchHeuristic = 0;
+            //Включаем регион в границу поиска
+            searchFrontier.Enqueue(
+                firstRegion.selfPE,
+                firstRegion.SearchPriority);
+
+            //Запоминаем координаты первого региона
+            DHexCoordinates center = firstRegion.coordinates;
+
+            //Определяем, будет это высотным поднятием суши или обычным
+            int rise = UnityEngine.Random.value < mapGenerationData.Value.highRiseProbability ? 2 : 1;
+            //Создаём счётчик размера
+            int currentSize = 0;
+            //Пока счётчик меньше требуемого размера и граница не пуста
+            while (currentSize < chunkSize && searchFrontier.Count > 0)
             {
-                //Для каждого региона по ширине
-                for (int x = 0; x < spaceGenerationData.Value.regionCountX; x++)
+                //Берём компонент первого региона в границе
+                searchFrontier.Dequeue().cellPE.Unpack(world.Value, out int regionEntity);
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Запоминаем исходную высоту региона
+                int originalElevation = region.Elevation;
+                //Определяем новую высоту региона
+                int newElevation = originalElevation + rise;
+
+                //Если новая высота больше максимальной
+                if (newElevation > mapGenerationData.Value.elevationMaximum)
                 {
-                    //Создаём регион
-                    RegionCreate(
-                        x, z,
-                        i++);
+                    continue;
                 }
+
+                //Увеличиваем высоту региона
+                region.Elevation = newElevation;
+
+                //Если исходная высота региона меньше уровня моря
+                if(originalElevation < mapGenerationData.Value.waterLevel
+                    //И новая высота больше или равна уровню моря
+                    && newElevation >= mapGenerationData.Value.waterLevel
+                    //И уменьшенный бюджет суши равен нулю
+                    && --landBudget == 0)
+                {
+                    break;
+                }
+
+                //Увеличиваем счётчик
+                currentSize += 1;
+
+                //Для каждого направления
+                for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+                {
+                    //Если сосед с данного направления существует
+                    if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                    {
+                        //Берём компонент соседнего региона
+                        ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                        //Если фаза поиска соседа меньше текущей
+                        if (neighbourRegion.SearchPhase < inputData.Value.searchFrontierPhase)
+                        {
+                            //Устанавливаем его фазу поиска на текущую
+                            neighbourRegion.SearchPhase = inputData.Value.searchFrontierPhase;
+                            neighbourRegion.Distance = neighbourRegion.coordinates.DistanceTo(center);
+                            neighbourRegion.SearchHeuristic = UnityEngine.Random.value < mapGenerationData.Value.jitterProbability ? 1 : 0;
+                            //Включаем регион в границу поиска
+                            searchFrontier.Enqueue(
+                                neighbourRegion.selfPE, 
+                                neighbourRegion.SearchPriority);
+                        }
+                    }
+                }
+            }
+            //Очищаем границу поиска
+            searchFrontier.Clear();
+
+            //Возвращаем оставшийся бюджет суши
+            currentLandBudget = landBudget;
+        }
+        
+        void MapSinkTerrain(
+            HexRegionPriorityQueue searchFrontier,
+            ref DMapArea mapArea,
+            int chunkSize,
+            int landBudget,
+            out int currentLandBudget)
+        {
+            //Увеличиваем фазу поиска
+            inputData.Value.searchFrontierPhase += 1;
+
+            //Берём компонент первого региона случайно
+            RegionGetRandom(ref mapArea).Unpack(world.Value, out int firstRegionEntity);
+            ref CHexRegion firstRegion = ref regionPool.Value.Get(firstRegionEntity);
+
+            //Устанавливаем его фазу поиска на текущую
+            firstRegion.SearchPhase = inputData.Value.searchFrontierPhase;
+            firstRegion.Distance = 0;
+            firstRegion.SearchHeuristic = 0;
+            //Включаем регион в границу поиска
+            searchFrontier.Enqueue(
+                firstRegion.selfPE,
+                firstRegion.SearchPriority);
+
+            //Запоминаем координаты первого региона
+            DHexCoordinates center = firstRegion.coordinates;
+
+            //Определяем, будет это высотным утоплением суши или обычным
+            int sink = UnityEngine.Random.value < mapGenerationData.Value.highRiseProbability ? 2 : 1;
+            //Создаём счётчик размера
+            int currentSize = 0;
+            //Пока счётчик меньше требуемого размера и граница не пуста
+            while (currentSize < chunkSize && searchFrontier.Count > 0)
+            {
+                //Берём компонент первого региона в границе
+                searchFrontier.Dequeue().cellPE.Unpack(world.Value, out int regionEntity);
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Запоминаем исходную высоту региона
+                int originalElevation = region.Elevation;
+                //Определяем новую высоту региона
+                int newElevation = region.Elevation - sink;
+
+                //Если новая высота региона меньше минимальной
+                if (newElevation < mapGenerationData.Value.elevationMinimum)
+                {
+                    continue;
+                }
+
+                //Уменьшаем высоту региона
+                region.Elevation = newElevation;
+
+                //Если исходная высота региона больше или равна уровню моря
+                if(originalElevation >= mapGenerationData.Value.waterLevel
+                    //И новая высота меньше уровню моря
+                    && newElevation < mapGenerationData.Value.waterLevel)
+                {
+                    //Увеличиваем бюджет суши
+                    landBudget += 1;
+                }
+
+                //Увеличиваем счётчик
+                currentSize += 1;
+
+                //Для каждого направления
+                for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+                {
+                    //Если сосед с данного направления существует
+                    if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                    {
+                        //Берём компонент соседнего региона
+                        ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                        //Если фаза поиска соседа меньше текущей
+                        if (neighbourRegion.SearchPhase < inputData.Value.searchFrontierPhase)
+                        {
+                            //Устанавливаем его фазу поиска на текущую
+                            neighbourRegion.SearchPhase = inputData.Value.searchFrontierPhase;
+                            neighbourRegion.Distance = neighbourRegion.coordinates.DistanceTo(center);
+                            neighbourRegion.SearchHeuristic = UnityEngine.Random.value < mapGenerationData.Value.jitterProbability ? 1 : 0;
+                            //Включаем регион в границу поиска
+                            searchFrontier.Enqueue(
+                                neighbourRegion.selfPE, 
+                                neighbourRegion.SearchPriority);
+                        }
+                    }
+                }
+            }
+            //Очищаем границу поиска
+            searchFrontier.Clear();
+
+            //Возвращаем оставшийся бюджет суши
+            currentLandBudget = landBudget;
+        }
+
+        void MapErodeLand()
+        {
+            //Создаём список PE регионов, подлежащих эрозии
+            List<int> erodibleRegions = ListPool<int>.Get();
+
+            //Для каждого региона
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                //Берём компонент региона
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Если регион подлежит эрозии
+                if (RegionIsErodible(ref region) == true)
+                {
+                    //Заносим его в список 
+                    erodibleRegions.Add(regionEntity);
+                }
+            }
+
+            //Определяем, сколько регионов должно подвергнуться эрозии
+            int erodibleRegionsCount = (int)(erodibleRegions.Count * (100 - mapGenerationData.Value.erosionPercentage) * 0.01f);
+
+            //Пока список PE регионов больше требуемого числа
+            while (erodibleRegions.Count > erodibleRegionsCount)
+            {
+                //Выбираем случайный регион в списке
+                int index = UnityEngine.Random.Range(0, erodibleRegions.Count);
+                ref CHexRegion region = ref regionPool.Value.Get(erodibleRegions[index]);
+
+                //Выбираем одного соседа как цель эрозии
+                RegionGetErosionTarget(ref region).Unpack(world.Value, out int targetRegionEntity);
+                ref CHexRegion targetRegion = ref regionPool.Value.Get(targetRegionEntity);
+
+                //Уменьшаем высоту исходного региона и увеличиваем высоту целевого
+                region.Elevation -= 1;
+                targetRegion.Elevation += 1;
+
+                //Если регион больше не подлежит эрозии
+                if (RegionIsErodible(ref region) == false)
+                {
+                    //Удаляем его PE из списка, заменяя последним регионом в списке
+                    erodibleRegions[index] = erodibleRegions[erodibleRegions.Count - 1];
+                    erodibleRegions.RemoveAt(erodibleRegions.Count - 1);
+                }
+
+                //Для каждого направления
+                for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+                {
+                    //Если сосед существует
+                    if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                    {
+                        //Берём компонент соседа
+                        ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                        //Если высота соседа на 2 больше эрозируемого региона
+                        if (neighbourRegion.Elevation == region.Elevation + 2
+                            //Если сосед подлежит эрозии
+                            && RegionIsErodible(ref neighbourRegion) == true
+                            //И если список не содержит PE соседа
+                            && erodibleRegions.Contains(neighbourRegionEntity) == false)
+                        {
+                            //Заносим соседа в список
+                            erodibleRegions.Add(neighbourRegionEntity);
+                        }
+                    }
+                }
+
+                //Если целевой регион подлежит эрозии
+                if (RegionIsErodible(ref targetRegion)
+                    //И список PE подлежащих эрозии регионов не содержит его
+                    && erodibleRegions.Contains(targetRegionEntity) == false)
+                {
+                    //Заносим целевой регион в список
+                    erodibleRegions.Add(targetRegionEntity);
+                }
+
+                //Для каждого направления
+                for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+                {
+                    //Если сосед существует
+                    if (targetRegion.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity)
+                        //И если сосед - не исходный эрозируемый регион
+                        && region.selfPE.EqualsTo(targetRegion.GetNeighbour(d)) == false)
+                    {
+                        //Берём компонент соседа
+                        ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                        //Если высота соседа на единицу больше, чем высота целевого региона
+                        if (neighbourRegion.Elevation == targetRegion.Elevation + 1
+                            //И если сосед не подлежит эрозии
+                            && RegionIsErodible(ref neighbourRegion) == false
+                            //И если список содержит PE соседа
+                            && erodibleRegions.Contains(neighbourRegionEntity) == true)
+                        {
+                            //Удаляем соседа из списка
+                            erodibleRegions.Remove(neighbourRegionEntity);
+                        }
+                    }
+                }
+            }
+
+            //Выносим список в пул
+            ListPool<int>.Add(erodibleRegions);
+        }
+
+        List<DHexRegionClimate> MapCreateClimat()
+        {
+            //Создаём списки для рассчёта климата
+            List<DHexRegionClimate> climate = new();
+            List<DHexRegionClimate> nextClimate = new();
+
+            //Для каждого региона
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                //Берём компонент региона
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Создаём записи для него в обоих списках
+                climate.Add(new(0, mapGenerationData.Value.startingMoisture));
+                nextClimate.Add(new(0, 0));
+            }
+
+            //Несколько раз
+            for (int a = 0; a < 40; a++)
+            {
+                //Для каждого региона
+                foreach (int regionEntity in regionFilter.Value)
+                {
+                    //Берём компонент региона
+                    ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                    //Рассчитываем климатические данные
+                    RegionEvolveClimate(
+                        ref region,
+                        climate, nextClimate);
+                }
+
+                //Меняем списки местами
+                List<DHexRegionClimate> swap = climate;
+                climate = nextClimate;
+                nextClimate = swap;
+            }
+
+            return climate;
+        }
+
+        void MapSetTerrainType(
+            List<DHexRegionClimate> climate)
+        {
+            //Рассчитываем высоту, необходимую для появления каменистой пустыни
+            int rockDesertElevation = mapGenerationData.Value.elevationMaximum 
+                - (mapGenerationData.Value.elevationMaximum - mapGenerationData.Value.waterLevel) / 2;
+
+            //Для каждого региона
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                //Берём компонент региона и данные климата
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+                DHexRegionClimate regionClimate = climate[region.Index];
+
+                //Рассчитываем температуру региона
+                float temperature = RegionDetermineTemperature(ref region);
+
+                //Если регион не под водой
+                if (region.IsUnderwater == false)
+                {
+                    //Определяем уровень температуры региона
+                    int t = 0;
+
+                    //Для каждого уровня температуры
+                    for (; t < MapGenerationData.temperatureBands.Length; t++)
+                    {
+                        //Если температуры меньше уровня
+                        if (temperature < MapGenerationData.temperatureBands[t])
+                        {
+                            break;
+                        }
+                    }
+
+                    //Опрелеояем уррвень влажности региона
+                    int m = 0;
+
+                    //Для каждого уровня влажности
+                    for (; m < MapGenerationData.moistureBands.Length; m++)
+                    {
+                        //Если влажность меньше уровня
+                        if (regionClimate.moisture < MapGenerationData.moistureBands[m])
+                        {
+                            break;
+                        }
+                    }
+
+                    //Определяем биом региона
+                    ref DBiome biome = ref MapGenerationData.biomes[t * 4 + m];
+
+                    //Если тип ландшафта биома - пустыня
+                    if (biome.terrainTypeIndex == 0)
+                    {
+                        //Если высота региона больше или равна высоты, требуемой для каменистой пустыни
+                        if (region.Elevation >= rockDesertElevation)
+                        {
+                            //Устанавливаем тип ландшафта региона на камень
+                            region.TerrainTypeIndex = 3;
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Устанавливаем тип ландшафта по стандартным правилам
+                            region.TerrainTypeIndex = biome.terrainTypeIndex;
+                        }
+                    }
+                    //Иначе, если высота региона равна максимальной
+                    else if(region.Elevation == mapGenerationData.Value.elevationMaximum)
+                    {
+                        Debug.LogWarning("!");
+
+                        //Устанавливаем тип ландшафта региона на снег
+                        region.TerrainTypeIndex = 4;
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Устанавливаем тип ландшафта региона
+                        region.TerrainTypeIndex = biome.terrainTypeIndex;
+                    }
+
+                    //Если высота региона не равна максимальной
+                    if (region.Elevation != mapGenerationData.Value.elevationMaximum)
+                    {
+                        //Устанавливаем уровень растительности соответственно биому
+                        region.PlantLevel = biome.plant;
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Уровень растительности равен нулю
+                        region.PlantLevel = 0;
+                    }
+                }
+                //Иначе
+                else
+                {
+                    //Определяем тип ландшафта
+                    int terrainTypeIndex;
+
+                    //Если регион на один уровень ниже уровня моря
+                    if (region.Elevation == mapGenerationData.Value.waterLevel - 1)
+                    {
+                        //Определяем количество соседей со склонами и обрывами
+                        int cliffs = 0, slopes = 0;
+
+                        //Для каждого направления
+                        for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+                        {
+                            //Если сосед существует
+                            if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                            {
+                                //Берём компонент соседа
+                                ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                                //Определяем разницу в высоте с уровнем воды
+                                int elevationDelta = neighbourRegion.Elevation - region.WaterLevel;
+
+                                //Если разница равна нулю
+                                if (elevationDelta == 0)
+                                {
+                                    //То имеем склон
+                                    slopes += 1;
+                                }
+                                //Иначе, если разница больше нуля
+                                else if (elevationDelta > 0)
+                                {
+                                    //То имеем обрыв
+                                    cliffs += 1;
+                                }
+                            }
+                        }
+
+                        //Если число склонов и обрывов больше трёх
+                        if (cliffs + slopes > 3)
+                        {
+                            //Тип ландшафта - трава
+                            terrainTypeIndex = 1;
+                        }
+                        //Иначе, если обрывов больше нуля
+                        else if(cliffs > 0)
+                        {
+                            //Тип ландшафта - камень
+                            terrainTypeIndex = 3;
+                        }
+                        //Иначе, если склонов больше нуля
+                        else if(slopes > 0)
+                        {
+                            //Тип ландшафта - пустыня
+                            terrainTypeIndex = 0;
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Тип ландшафта - трава
+                            terrainTypeIndex = 1;
+                        }
+                    }
+                    //Иначе, если высота региона больше уровня моря
+                    else if(region.Elevation >= mapGenerationData.Value.waterLevel)
+                    {
+                        //Тип ландшафта - трава
+                        terrainTypeIndex = 1;
+                    }
+                    //Иначе, если высота региона отрицательна
+                    else if(region.Elevation < 0)
+                    {
+                        //Тип ландшафта - камень
+                        terrainTypeIndex = 3;
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Тип ландшафта - грязь
+                        terrainTypeIndex = 2;
+                    }
+                    
+                    //Если тип ландшафта - трава и температура находится в самом низком диапазоне
+                    if (terrainTypeIndex == 1 && temperature < MapGenerationData.temperatureBands[0])
+                    {
+                        //Тип ландшафта - грязь
+                        terrainTypeIndex = 2;
+                    }
+
+                    //Устанавливаем тип ландшафта
+                    region.TerrainTypeIndex = terrainTypeIndex;
+                }
+
+                //Устанавливаем данные карты
+                //region.SetMapData(temperature);
             }
         }
 
@@ -240,7 +930,7 @@ namespace SandOcean.Map
                 chunkGO.transform, chunkGO.chunkCanvas,
                 chunkGO.terrain, chunkGO.rivers, chunkGO.roads, chunkGO.water, chunkGO.waterShore, chunkGO.estuaries,
                 chunkGO.features,
-                SpaceGenerationData.ChunkSize);
+                MapGenerationData.ChunkSize);
 
             //Создаём меши
             chunk.terrain.mesh = new();
@@ -286,11 +976,11 @@ namespace SandOcean.Map
                 chunk.features.walls.meshCollider = chunk.features.walls.gameObject.AddComponent<MeshCollider>();
             }
 
-            //Присоединяем чанк к центральному объекту
-            chunk.transform.SetParent(sceneData.Value.coreObject, false);
+            //Присоединяем чанк к соответствующему столбцу
+            chunk.transform.SetParent(mapGenerationData.Value.columns[chunkX], false);
 
             //Заносим чанк в массив чанков
-            spaceGenerationData.Value.chunkPEs[chunkIndex] = chunk.selfPE;
+            mapGenerationData.Value.chunkPEs[chunkIndex] = chunk.selfPE;
 
             //Запрашиваем обновление чанка
             ChunkRefreshEvent(chunkEntity);
@@ -313,14 +1003,14 @@ namespace SandOcean.Map
             int regionIndex)
         {
             //Определяем родительский чанк региона
-            int parentChunkX = regionGlobalX / SpaceGenerationData.chunkSizeX;
-            int parentChunkZ = regionGlobalZ / SpaceGenerationData.chunkSizeZ;
-            spaceGenerationData.Value.chunkPEs[parentChunkX + parentChunkZ * spaceGenerationData.Value.chunkCountX].Unpack(
+            int parentChunkX = regionGlobalX / MapGenerationData.chunkSizeX;
+            int parentChunkZ = regionGlobalZ / MapGenerationData.chunkSizeZ;
+            mapGenerationData.Value.chunkPEs[parentChunkX + parentChunkZ * mapGenerationData.Value.chunkCountX].Unpack(
                 world.Value, out int parentChunkEntity);
             ref CHexChunk parentChunk = ref chunkPool.Value.Get(parentChunkEntity);
 
-            int regionLocalX = regionGlobalX - parentChunkX * SpaceGenerationData.chunkSizeX;
-            int regionLocalZ = regionGlobalZ - parentChunkZ * SpaceGenerationData.chunkSizeZ;
+            int regionLocalX = regionGlobalX - parentChunkX * MapGenerationData.chunkSizeX;
+            int regionLocalZ = regionGlobalZ - parentChunkZ * MapGenerationData.chunkSizeZ;
 
             //Создаём новую сущность и назначаем ей компонент региона и RAEO
             int regionEntity = world.Value.NewEntity();
@@ -329,9 +1019,9 @@ namespace SandOcean.Map
 
             //Определяем позицию региона
             Vector3 position = new(
-                (regionGlobalX + regionGlobalZ * 0.5f - regionGlobalZ / 2) * (SpaceGenerationData.innerRadius * 2f),
+                (regionGlobalX + regionGlobalZ * 0.5f - regionGlobalZ / 2) * (MapGenerationData.innerRadius * 2f),
                 0f,
-                regionGlobalZ * (SpaceGenerationData.outerRadius * 1.5f));
+                regionGlobalZ * (MapGenerationData.outerRadius * 1.5f));
             //Определяем координаты региона
             DHexCoordinates regionCoordinates = DHexCoordinates.FromOffsetCoordinates(regionGlobalX, regionGlobalZ);
 
@@ -340,10 +1030,11 @@ namespace SandOcean.Map
 
             //Заполняем основные данные региона
             currentRegion = new(
-                world.Value.PackEntity(regionEntity),
+                world.Value.PackEntity(regionEntity), regionIndex,
                 position, regionCoordinates,
                 regionGO.regionTransform, regionGO.regionLabel, regionGO.regionHighlight,
-                parentChunk.selfPE);
+                regionGlobalX / MapGenerationData.chunkSizeX, parentChunk.selfPE,
+                mapGenerationData.Value.regionShaderData);
 
             //Перемещаем объект региона на соответствующую позицию
             currentRegion.transform.localPosition = currentRegion.Position;
@@ -352,7 +1043,7 @@ namespace SandOcean.Map
             currentRegion.uiRect.rectTransform.anchoredPosition = new(currentRegion.Position.x, currentRegion.Position.z);
 
             //Заносим регион в массив регионов родительского чанка
-            parentChunk.regionPEs[regionLocalX + regionLocalZ * SpaceGenerationData.chunkSizeX] = currentRegion.selfPE;
+            parentChunk.regionPEs[regionLocalX + regionLocalZ * MapGenerationData.chunkSizeX] = currentRegion.selfPE;
 
             //Прикрепляем объекты региона к объекту чанка
             currentRegion.transform.SetParent(parentChunk.transform, false);
@@ -360,19 +1051,32 @@ namespace SandOcean.Map
             currentRegion.highlight.rectTransform.SetParent(parentChunk.canvas.transform);
 
             //Заносим регион в массив регионов
-            spaceGenerationData.Value.regionPEs[regionIndex] = currentRegion.selfPE;
+            mapGenerationData.Value.regionPEs[regionIndex] = currentRegion.selfPE;
 
             //Если регион не находится в крайнем левом столбце
             if (regionGlobalX > 0)
             {
                 //Берём соседа с запада
-                spaceGenerationData.Value.regionPEs[regionIndex - 1].Unpack(world.Value, out int wNeighbourRegionEntity);
+                mapGenerationData.Value.regionPEs[regionIndex - 1].Unpack(world.Value, out int wNeighbourRegionEntity);
                 ref CHexRegion wNeighbourRegion = ref regionPool.Value.Get(wNeighbourRegionEntity);
 
                 //Создаём соседство
                 RegionSetNeighbour(
                     ref currentRegion, ref wNeighbourRegion,
                     HexDirection.W);
+
+                //Если регион находится в крайнем правом столбце
+                if (regionGlobalX == mapGenerationData.Value.regionCountX - 1)
+                {
+                    //Берём соседа с востока
+                    mapGenerationData.Value.regionPEs[regionIndex - regionGlobalX].Unpack(world.Value, out int eNeighbourRegionEntity);
+                    ref CHexRegion eNeighbourRegion = ref regionPool.Value.Get(eNeighbourRegionEntity);
+
+                    //Создаём соседство 
+                    RegionSetNeighbour(
+                        ref currentRegion, ref eNeighbourRegion,
+                        HexDirection.E);
+                }
             }
             //Если регион не находится в крайнем нижнем ряду
             if (regionGlobalZ > 0)
@@ -381,7 +1085,7 @@ namespace SandOcean.Map
                 if ((regionGlobalZ & 1) == 0)
                 {
                     //Берём соседа с юго-востока
-                    spaceGenerationData.Value.regionPEs[regionIndex - spaceGenerationData.Value.regionCountX].Unpack(world.Value, out int sENeighbourRegionEntity);
+                    mapGenerationData.Value.regionPEs[regionIndex - mapGenerationData.Value.regionCountX].Unpack(world.Value, out int sENeighbourRegionEntity);
                     ref CHexRegion sENeighbourRegion = ref regionPool.Value.Get(sENeighbourRegionEntity);
 
                     //Создаём соседство
@@ -393,7 +1097,19 @@ namespace SandOcean.Map
                     if (regionGlobalX > 0)
                     {
                         //Берём соседа с юго-запада
-                        spaceGenerationData.Value.regionPEs[regionIndex - spaceGenerationData.Value.regionCountX - 1].Unpack(world.Value, out int sWNeighbourRegionEntity);
+                        mapGenerationData.Value.regionPEs[regionIndex - mapGenerationData.Value.regionCountX - 1].Unpack(world.Value, out int sWNeighbourRegionEntity);
+                        ref CHexRegion sWNeighbourRegion = ref regionPool.Value.Get(sWNeighbourRegionEntity);
+
+                        //Создаём соседство
+                        RegionSetNeighbour(
+                            ref currentRegion, ref sWNeighbourRegion,
+                            HexDirection.SW);
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Берём соседа с юго-запада
+                        mapGenerationData.Value.regionPEs[regionIndex - 1].Unpack(world.Value, out int sWNeighbourRegionEntity);
                         ref CHexRegion sWNeighbourRegion = ref regionPool.Value.Get(sWNeighbourRegionEntity);
 
                         //Создаём соседство
@@ -406,7 +1122,7 @@ namespace SandOcean.Map
                 else
                 {
                     //Берём соседа с юго-запада
-                    spaceGenerationData.Value.regionPEs[regionIndex - spaceGenerationData.Value.regionCountX].Unpack(world.Value, out int sWNeighbourRegionEntity);
+                    mapGenerationData.Value.regionPEs[regionIndex - mapGenerationData.Value.regionCountX].Unpack(world.Value, out int sWNeighbourRegionEntity);
                     ref CHexRegion sWNeighbourRegion = ref regionPool.Value.Get(sWNeighbourRegionEntity);
 
                     //Создаём соседство
@@ -415,10 +1131,22 @@ namespace SandOcean.Map
                         HexDirection.SW);
 
                     //Если регион не находится в крайнем правом столбце
-                    if (regionGlobalX < spaceGenerationData.Value.regionCountX - 1)
+                    if (regionGlobalX < mapGenerationData.Value.regionCountX - 1)
                     {
                         //Берём соседа с юго-востока
-                        spaceGenerationData.Value.regionPEs[regionIndex - spaceGenerationData.Value.regionCountX + 1].Unpack(world.Value, out int sENeighbourRegionEntity);
+                        mapGenerationData.Value.regionPEs[regionIndex - mapGenerationData.Value.regionCountX + 1].Unpack(world.Value, out int sENeighbourRegionEntity);
+                        ref CHexRegion sENeighbourRegion = ref regionPool.Value.Get(sENeighbourRegionEntity);
+
+                        //Создаём соседство
+                        RegionSetNeighbour(
+                            ref currentRegion, ref sENeighbourRegion,
+                            HexDirection.SE);
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Берём соседа с юго-востока
+                        mapGenerationData.Value.regionPEs[regionIndex - mapGenerationData.Value.regionCountX * 2 + 1].Unpack(world.Value, out int sENeighbourRegionEntity);
                         ref CHexRegion sENeighbourRegion = ref regionPool.Value.Get(sENeighbourRegionEntity);
 
                         //Создаём соседство
@@ -445,6 +1173,232 @@ namespace SandOcean.Map
             //Задаём соседа по противоположному направлению соседу
             neighbourRegion.neighbourRegionPEs[(int)direction.Opposite()] = current.selfPE;
         }
+
+        EcsPackedEntity RegionGet(
+            int xOffset, int zOffset)
+        {
+            //Возвращаем PE запрошенного региона
+            return mapGenerationData.Value.regionPEs[xOffset + zOffset * mapGenerationData.Value.regionCountX];
+        }
+
+        EcsPackedEntity RegionGet(
+            int regionIndex)
+        {
+            //Возвращаем PE запрошенного региона
+            return mapGenerationData.Value.regionPEs[regionIndex];
+        }
+
+        EcsPackedEntity RegionGetRandom(
+            ref DMapArea mapArea)
+        {
+            //Возвращаем PE случайного региона
+            return RegionGet(
+                UnityEngine.Random.Range(mapArea.xMin, mapArea.xMax),
+                UnityEngine.Random.Range(mapArea.zMin, mapArea.zMax));
+        }
+
+        bool RegionIsErodible(
+            ref CHexRegion region)
+        {
+            //Определяем высоту, при которой произойдёт эрозия
+            int erodibleElevation = region.Elevation - 2;
+
+            //Для каждого направления
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                //Если сосед существует
+                if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                {
+                    //Берём компонент соседа
+                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                    //Если высота соседа меньше или равна высоте эрозии
+                    if (neighbourRegion.Elevation <= erodibleElevation)
+                    {
+                        //Возвращаем, что эрозия возможна
+                        return true;
+                    }
+                }
+            }
+
+            //Возвращаем, что эрозия невозможна
+            return false;
+        }
+
+        EcsPackedEntity RegionGetErosionTarget(
+            ref CHexRegion region)
+        {
+            //Создаём список кандидатов целей эрозии
+            List<int> candidates = ListPool<int>.Get();
+
+            //Определяем высоту, при которой произойдёт эрозия
+            int erodibleElevation = region.Elevation - 2;
+
+            //Для каждого направления
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                //Если сосед существует
+                if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                {
+                    //Берём компонент соседа
+                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                    //Если высота соседа меньше или равна высоте эрозии
+                    if (neighbourRegion.Elevation <= erodibleElevation)
+                    {
+                        //Заносим соседа в список
+                        candidates.Add(neighbourRegionEntity);
+                    }
+                }
+            }
+
+            //Случайно выбираем цель из списка
+            ref CHexRegion targetRegion = ref regionPool.Value.Get(candidates[UnityEngine.Random.Range(0, candidates.Count)]);
+
+            //Выносим список в пул
+            ListPool<int>.Add(candidates);
+
+            //Возвращаем PE целевого региона
+            return targetRegion.selfPE;
+        }
+
+        void RegionEvolveClimate(
+            ref CHexRegion region,
+            List<DHexRegionClimate> climate,
+            List<DHexRegionClimate> nextClimate)
+        {
+            //Берём данные климата
+            DHexRegionClimate regionClimate = climate[region.Index];
+
+            //Если регион находится под водой
+            if (region.IsUnderwater == true)
+            {
+                //Определяем влажность
+                regionClimate.moisture = 1f;
+
+                //Рассчитываем испарение
+                regionClimate.clouds += mapGenerationData.Value.evaporationFactor;
+            }
+            //Иначе
+            else
+            {
+                //Рассчитываем испарение 
+                float evaporation = regionClimate.moisture * mapGenerationData.Value.evaporationFactor;
+                regionClimate.moisture -= evaporation;
+                regionClimate.clouds += evaporation;
+            }
+
+            //Рассчитываем, сколько облаков превратится в осадки
+            float precipitation = regionClimate.clouds * mapGenerationData.Value.precipitationFactor;
+            //Применяем осадки к облакам и влажности
+            regionClimate.clouds -= precipitation;
+            regionClimate.moisture += precipitation;
+
+            //Рассчитываем максимум облаков для региона
+            float cloudMaximum = 1f - region.ViewElevation / (mapGenerationData.Value.elevationMaximum + 1);
+            //Если облаков больше возможного
+            if (regionClimate.clouds > cloudMaximum)
+            {
+                //То избыток переходит во влагу
+                regionClimate.moisture += regionClimate.clouds - cloudMaximum;
+                regionClimate.clouds = cloudMaximum;
+            }
+
+            //Определяем направление ветра
+            HexDirection mainDispersalDirection = mapGenerationData.Value.windDirection.Opposite();
+            //Рассчитываем, сколько облаков рассеется
+            float cloudDispersal = regionClimate.clouds * (1f / (5f + mapGenerationData.Value.windStrength));
+
+            //Рассчитываем, сколько стекает в регионы ниже
+            float runoff = regionClimate.moisture * mapGenerationData.Value.runoffFactor * (1f / 6f);
+            //Рассчитываем, сколько влаги просачивается
+            float seepage = regionClimate.moisture * mapGenerationData.Value.seepageFactor * (1f / 6f);
+
+            //Для каждого направления
+            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
+            {
+                //Если сосед существует
+                if (region.GetNeighbour(d).Unpack(world.Value, out int neighbourRegionEntity))
+                {
+                    //Берём компонент соседа и следующие данные климата
+                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+                    DHexRegionClimate neighbourRegionClimate = nextClimate[neighbourRegion.Index];
+
+                    //Если направление равно главному направлению ветра
+                    if (d == mainDispersalDirection)
+                    {
+                        //Рассеивается объём облаков, увеличенный силой ветра
+                        neighbourRegionClimate.clouds += cloudDispersal * mapGenerationData.Value.windStrength;
+                    }
+                    //Иначе
+                    else
+                    {
+                        //Рассеивается обычный объём облаков
+                        neighbourRegionClimate.clouds += cloudDispersal;
+                    }
+
+                    //Рассчитываем разницу в высоте между регионами
+                    int elevationDelta = neighbourRegion.ViewElevation - region.ViewElevation;
+                    //Если разница меньше нуля
+                    if (elevationDelta < 0)
+                    {
+                        //Сток уходит в соседний регион
+                        neighbourRegionClimate.moisture -= runoff;
+                        neighbourRegionClimate.moisture += runoff;
+                    }
+                    //Иначе, если разница равна нулю
+                    else if (elevationDelta == 0)
+                    {
+                        //Просачивание уходит в соседние регионы
+                        neighbourRegionClimate.moisture -= seepage;
+                        neighbourRegionClimate.moisture += seepage;
+                    }
+
+                    //Обновляем данные климата соседа в списке
+                    nextClimate[neighbourRegion.Index] = neighbourRegionClimate;
+                }
+            }
+
+            //Обновляем данные климата
+            DHexRegionClimate regionNextClimate = nextClimate[region.Index];
+            regionNextClimate.moisture += regionClimate.moisture;
+
+            //Если будущая влажность больше единицы
+            if (regionNextClimate.moisture > 1f)
+            {
+                //Устанавливаем её на единицу
+                regionNextClimate.moisture = 1f;
+            }
+
+            nextClimate[region.Index] = regionNextClimate;
+            climate[region.Index] = new();
+        }
+
+        float RegionDetermineTemperature(
+            ref CHexRegion region)
+        {
+            //Рассчитываем широту региона
+            float latitude = (float)region.coordinates.Z / mapGenerationData.Value.regionCountZ;
+            latitude *= 2f;
+            //Если широта больше единицы, то это другое полушарин
+            if (latitude > 1f)
+            {
+                latitude = 2f - latitude;
+            }
+
+            //Рассчитываем температуру региона
+            //По широте
+            float temperature = Mathf.LerpUnclamped(mapGenerationData.Value.lowTemperature, mapGenerationData.Value.highTemperature, latitude);
+            //По высоте
+            temperature *= 1f - (region.ViewElevation - mapGenerationData.Value.waterLevel)
+                / (mapGenerationData.Value.elevationMaximum - mapGenerationData.Value.waterLevel + 1f);
+            //По случайному модификатору
+            temperature += (MapGenerationData.SampleNoise(region.Position * 0.1f).w * 2f - 1f) * mapGenerationData.Value.temperatureJitter;
+
+            //Возвращаем температуру
+            return temperature;
+        }
+
 
         void ORAEOCreating()
         {

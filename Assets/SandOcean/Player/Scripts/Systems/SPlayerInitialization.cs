@@ -15,13 +15,13 @@ namespace SandOcean.Player
         //Игроки
         readonly EcsPoolInject<CPlayer> playerPool = default;
 
-        //События дипломатии
-        readonly EcsPoolInject<EOrganizationCreating> organizationCreatingEventPool = default;
-
-        //Общие события
+        //События игроков
         readonly EcsFilterInject<Inc<EStartNewGamePlayerCreating>> startNewGamePlayerCreatingEventFilter = default;
         readonly EcsPoolInject<EStartNewGamePlayerCreating> startNewGamePlayerCreatingEventPool = default;
 
+        //События дипломатии
+        readonly EcsPoolInject<EOrganizationCreating> organizationCreatingEventPool = default;
+        
         //Данные
         readonly EcsCustomInject<InputData> inputData = default;
 

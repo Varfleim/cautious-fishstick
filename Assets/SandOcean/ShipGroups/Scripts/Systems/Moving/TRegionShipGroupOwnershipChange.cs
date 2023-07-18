@@ -17,7 +17,7 @@ namespace SandOcean.Ship.Moving
     {
         public EcsWorld world;
 
-        public SpaceGenerationData spaceGenerationData;
+        public MapGenerationData mapGenerationData;
 
         int[] regionEntities;
 
@@ -143,10 +143,10 @@ namespace SandOcean.Ship.Moving
             double distance = Vector3.Distance(shipGroup.position, parentRegion.Position);
 
             //Если расстояние больше внешнего радиуса региона
-            if (distance > SpaceGenerationData.outerRadius)
+            if (distance > MapGenerationData.outerRadius)
             {
                 //Определяем, в каком регионе находится группа кораблей
-                spaceGenerationData.GetRegionPEFromPosition(shipGroup.position).Unpack(world, out int currentRegionEntity);
+                mapGenerationData.GetRegionPEFromPosition(shipGroup.position).Unpack(world, out int currentRegionEntity);
                 ref CHexRegion currentRegion = ref regionPool[regionIndices[currentRegionEntity]];
 
                 //Меняем регион, в котором находится группа кораблей

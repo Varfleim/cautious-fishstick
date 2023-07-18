@@ -90,8 +90,8 @@ namespace SandOcean.UI
         readonly EcsFilterInject<Inc<EGameDisplayObjectPanel>> gameDisplayObjectPanelEventFilter = default;
         readonly EcsPoolInject<EGameDisplayObjectPanel> gameDisplayObjectPanelEventPool = default;
 
-        readonly EcsFilterInject<Inc<RChangeMapMode>> changeMapModeRequestFilter = default;
-        readonly EcsPoolInject<RChangeMapMode> changeMapModeRequestPool = default;
+        //readonly EcsFilterInject<Inc<RChangeMapMode>> changeMapModeRequestFilter = default;
+        //readonly EcsPoolInject<RChangeMapMode> changeMapModeRequestPool = default;
 
         //Общие события
         //readonly EcsFilterInject<Inc<EStartNewGame>> startNewGameEventFilter = default;
@@ -110,7 +110,7 @@ namespace SandOcean.UI
         readonly EcsCustomInject<SceneData> sceneData = default;
         readonly EcsCustomInject<ContentData> contentData = default;
         //readonly EcsCustomInject<MapData> mapData = default;
-        readonly EcsCustomInject<SpaceGenerationData> spaceGenerationData = default;
+        readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
         readonly EcsCustomInject<DesignerData> designerData = default;
         //readonly EcsCustomInject<ModifierData> modifierData = default;
 
@@ -685,9 +685,6 @@ namespace SandOcean.UI
                 }
             }
 
-            //Выполняем перемещения камеры
-            CameraMovement();
-
             /*foreach (int regionEntity
                 in regionFilter.Value)
             {
@@ -822,7 +819,7 @@ namespace SandOcean.UI
                 = eUI.Value.newGameMenuWindow;
 
             //Записываем модификатор размера сектора из окна меню новой игры
-            spaceGenerationData.Value.sectorSizeModifier
+            mapGenerationData.Value.sectorSizeModifier
                 = newGameMenuWindow.sectorSizeSlider.value;
 
         }
@@ -8787,7 +8784,7 @@ namespace SandOcean.UI
             ref CExplorationORAEO ownerExORAEO = ref explorationORAEOPool.Value.Get(ownerORAEOEntity);
 
             //Отображаем уровень исследования региона организацией-владельцем
-            overviewTab.explorationLevel.text = ownerExORAEO.explorationLevel.ToString();
+            overviewTab.explorationLevel.text = region.Index.ToString();//= ownerExORAEO.explorationLevel.ToString();
 
             //Если производится не обновление
             if (isRefresh == false)
@@ -8963,125 +8960,6 @@ namespace SandOcean.UI
             //Указываем индекс набора контента
             saveEvent.contentSetIndex
                 = contentSetIndex;
-        }
-
-
-        void CameraMovement()
-        {
-            //Движение
-            //Если требуется переместить камеру
-            if (inputData.Value.cameraFocusMoving.magnitude != 0)
-            {
-                //Прибавляем движение камеры к текущему её положению
-                inputData.Value.cameraFocusPosition += inputData.Value.cameraFocusMoving;
-
-                //Обновляем положение центрального объекта
-                sceneData.Value.coreObject.position = inputData.Value.cameraFocusPosition;
-            }
-
-            //Поворот
-            //Если изменение поворота по оси X не равно нулю
-            if (inputData.Value.rotationAnglesX != 0)
-            {
-                //Изменяем текущий поворот по оси
-                inputData.Value.rotationX += inputData.Value.rotationAnglesX;
-                //Ограничиваем его максимальными и минимальным поворотом
-                inputData.Value.rotationX = Mathf.Clamp(inputData.Value.rotationX, inputData.Value.minAngleX, inputData.Value.maxAngleX);
-
-                //Назначаем полученный поворот поворотному объекту X
-                inputData.Value.rotationObjectX.localRotation = Quaternion.Euler(inputData.Value.rotationX, 0f, 0f);
-            }
-
-            //Если изменение поворота по оси Z не равно нулю
-            if (inputData.Value.rotationAnglesZ != 0)
-            {
-                //Изменяем текущий поворот по оси
-                inputData.Value.rotationZ += inputData.Value.rotationAnglesZ;
-
-                //Назначаем полученный поворот поворотному объекту Z
-                inputData.Value.rotationObjectZ.localRotation = Quaternion.Euler(0f, 0f, inputData.Value.rotationZ);
-
-                inputData.Value.rotationZ
-                    = inputData.Value.rotationObjectZ.localRotation.eulerAngles.z;
-            }
-
-            //Приближение
-            //Находим текущее приближение
-            float currentZoom
-                = Vector3.Distance(inputData.Value.camera.transform.position, inputData.Value.rotationObjectZ.position);
-
-            //Если приближение положительно
-            if (inputData.Value.zoomAmount > 0
-                //И текущее приближение больше максимального
-                && currentZoom > inputData.Value.maxZoom)
-            {
-                //Вычитаем из текущего приближения максимальное, получая предельно возможное изменение приближения
-                currentZoom -= inputData.Value.maxZoom;
-
-                //Выбираем меньшее значение
-                currentZoom = Mathf.Min(currentZoom, inputData.Value.zoomAmount);
-
-                //Передвигаем камеру на предельно возможное расстояние
-                inputData.Value.camera.transform.position
-                    = Vector3.MoveTowards(
-                        inputData.Value.camera.transform.position, inputData.Value.rotationObjectZ.position,
-                        currentZoom);
-            }
-            //Если приближение отрицательно
-            else if (inputData.Value.zoomAmount < 0
-                //И текущее приближение меньше минимального
-                && currentZoom < inputData.Value.minZoom)
-            {
-                //Вычитаем из текущего приближения минимальное, получая предельно возможное изменение приближения (отрицательное)
-                currentZoom -= inputData.Value.minZoom;
-
-                //Выбираем большее значение (из отрицательных)
-                currentZoom = Mathf.Max(currentZoom, inputData.Value.zoomAmount);
-
-                //Передвигаем камеру на предельно возможное расстояние
-                inputData.Value.camera.transform.position
-                    = Vector3.MoveTowards(
-                        inputData.Value.camera.transform.position, inputData.Value.rotationObjectZ.position,
-                        currentZoom);
-            }
-
-            //Обнуляем переменные, хранящие изменения положения камеры
-            inputData.Value.cameraFocusMoving 
-                = new Vector3();
-
-            inputData.Value.rotationAnglesX = 0f;
-            inputData.Value.rotationAnglesZ = 0f;
-
-            inputData.Value.zoomAmount = 0f;
-        }
-
-        void CameraMapModeChange()
-        {
-            //Перемещаем центральный объект в центр координат
-            sceneData.Value.coreObject.position = new Vector3(0, 0, 0);
-
-            //Обнуляем текущее положение камеры
-            inputData.Value.cameraFocusPosition = new Vector3(0, 0, 0);
-
-
-            //Возвращаем начальный поворот камеры
-            //Определяем обратный поворот камеры по оси X
-            float rotationAngleX
-                = inputData.Value.maxAngleX
-                - inputData.Value.rotationX;
-
-            //Возвращаем начальный поворот камеры по оси X
-            inputData.Value.rotationAnglesX
-                = rotationAngleX;
-
-            //Возвращаем начальный поворот камеры по оси Z
-            inputData.Value.rotationAnglesZ
-                = -inputData.Value.rotationZ;
-
-
-            //Возвращаем начальное приближение камеры
-            inputData.Value.zoomAmount
-                = -inputData.Value.minZoom;
         }
     }
 }

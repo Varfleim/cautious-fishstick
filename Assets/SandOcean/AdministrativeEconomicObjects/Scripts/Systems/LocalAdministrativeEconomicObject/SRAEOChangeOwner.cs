@@ -4,6 +4,7 @@ using Leopotam.EcsLite.Di;
 
 using SandOcean.UI;
 using SandOcean.UI.Events;
+using SandOcean.Map;
 using SandOcean.Diplomacy;
 
 namespace SandOcean.AEO.RAEO
@@ -15,6 +16,9 @@ namespace SandOcean.AEO.RAEO
 
         //Объекты карты
         //readonly EcsPoolInject<CMapObject> mapObjectPool = default;
+
+        //Карта
+        readonly EcsPoolInject<CHexRegion> regionPool = default;
 
         //Дипломатия
         readonly EcsPoolInject<COrganization> organizationPool = default;
@@ -62,6 +66,12 @@ namespace SandOcean.AEO.RAEO
                         ref organization,
                         ref rAEO,
                         ref exORAEO);
+
+                    //Берём компонент региона
+                    ref CHexRegion region = ref regionPool.Value.Get(rAEOEntity);
+
+                    //Увеличиваем видимость региона
+                    region.IncreaseVisibility();
                 }
 
                 //Если сущность RAEO не имеет компонента самозапроса обновления панели объекта

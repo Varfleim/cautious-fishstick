@@ -13,6 +13,16 @@ namespace SandOcean.Map
             int x,
             int z)
         {
+            int oX = x + z / 2;
+            if (oX < 0)
+            {
+                x += MapGenerationData.wrapSize;
+            }
+            else if(oX >= MapGenerationData.wrapSize)
+            {
+                x -= MapGenerationData.wrapSize;
+            }
+
             X = x;
             Z = z;
         }
@@ -38,48 +48,31 @@ namespace SandOcean.Map
         }
 
         public static DHexCoordinates FromOffsetCoordinates(
-            int x,
-            int z)
+            int x,int z)
         {
-            return new DHexCoordinates(
-                x - z / 2,
-                z);
+            return new DHexCoordinates(x - z / 2, z);
         }
 
         public static DHexCoordinates FromPosition(Vector3 position)
         {
-            float x 
-                = position.x 
-                / (SpaceGenerationData.innerRadius * 2f);
+            float x = position.x / MapGenerationData.innerDiameter;
             float y = -x;
 
-            float offset
-                = position.z
-                / (SpaceGenerationData.outerRadius * 3f);
+            float offset = position.z / (MapGenerationData.outerRadius * 3f);
             x -= offset;
             y -= offset;
 
-            int iX
-                = Mathf.RoundToInt(
-                    x);
-            int iY
-                = Mathf.RoundToInt(
-                    y);
-            int iZ
-                = Mathf.RoundToInt(
-                    -x - y);
+            int iX = Mathf.RoundToInt(x);
+            int iY = Mathf.RoundToInt(y);
+            int iZ = Mathf.RoundToInt(-x - y);
 
-            if (iX + iY + iZ
-                != 0)
+            if (iX + iY + iZ != 0)
             {
-                float dX 
-                    = Mathf.Abs(x - iX);
-                float dY 
-                    = Mathf.Abs(y - iY);
-                float dZ 
-                    = Mathf.Abs(-x - y - iZ);
+                float dX = Mathf.Abs(x - iX);
+                float dY = Mathf.Abs(y - iY);
+                float dZ = Mathf.Abs(-x - y - iZ);
 
-                if (dX > dY 
+                if (dX > dY
                     && dX > dZ)
                 {
                     iX = -iY - iZ;
@@ -160,10 +153,35 @@ namespace SandOcean.Map
         public int DistanceTo(
             DHexCoordinates otherCell)
         {
-            return
-                ((X < otherCell.X ? otherCell.X - X : X - otherCell.X) +
-                (Y < otherCell.Y ? otherCell.Y - Y : Y - otherCell.Y) +
-                (Z < otherCell.Z ? otherCell.Z - Z : Z - otherCell.Z)) / 2;
+            int xy 
+                = (X < otherCell.X ? otherCell.X - X : X - otherCell.X) 
+                + (Y < otherCell.Y ? otherCell.Y - Y : Y - otherCell.Y);
+
+            otherCell.X += MapGenerationData.wrapSize;
+
+            int xyWrapped 
+                = (X < otherCell.X ? otherCell.X - X : X - otherCell.X) 
+                + (Y < otherCell.Y ? otherCell.Y - Y : Y - otherCell.Y);
+
+            if (xyWrapped < xy)
+            {
+                xy = xyWrapped;
+            }
+            else
+            {
+                otherCell.X -= 2 * MapGenerationData.wrapSize;
+
+                xyWrapped
+                    = (X < otherCell.X ? otherCell.X - X : X - otherCell.X) 
+                    + (Y < otherCell.Y ? otherCell.Y - Y : Y - otherCell.Y);
+
+                if (xyWrapped < xy)
+                {
+                    xy = xyWrapped;
+                }
+            }
+
+            return (xy + (Z < otherCell.Z ? otherCell.Z - Z : Z - otherCell.Z)) / 2;
         }
 
         public override string ToString()

@@ -32,7 +32,7 @@ namespace SandOcean
 
         public SceneData sceneData;
         public ContentData contentData;
-        public SpaceGenerationData spaceGenerationData;
+        public MapGenerationData mapGenerationData;
         public DesignerData designerData;
         public InputData inputData;
 
@@ -56,7 +56,7 @@ namespace SandOcean
                 .Add(new SLoad())
 
                 //Инициализация новой игры - мир
-                .Add(new SNewGameInitializationWorld())
+                .Add(new SNewGameInitializationMain())
 
                 //Создание игроков
                 .Add(new SPlayerInitialization())
@@ -100,7 +100,7 @@ namespace SandOcean
                 staticData,
                 sceneData,
                 contentData,
-                spaceGenerationData,
+                mapGenerationData,
                 designerData,
                 inputData,
                 runtimeData)
@@ -122,21 +122,21 @@ namespace SandOcean
                 
                 //Обработка посадки групп кораблей на уровне региона
                 .Add(new SMTRegionShipGroupLanding())
-                //Обработка посадки групп кораблей на уровне LAEO
+                //Обработка посадки групп кораблей на уровне RAEO
                 .Add(new SMTRAEOShipGroupLanding())
-                //Обработка посадки групп кораблей на уровне OLAEO
+                //Обработка посадки групп кораблей на уровне ORAEO
                 .Add(new SMTORAEOShipGroupLanding())
 
                 //Удаление компонентов после окончания движения
                 .Add(new SShipGroupMovingStop())
                 //Движение групп кораблей
 
-                //Смена владельца LAEO
+                //Смена владельца RAEO
                 .Add(new SRAEOChangeOwner())
 
-                //Исследование LAEO силами EcOLAEO
+                //Исследование RAEO силами EcORAEO
                 .Add(new SMTEcORAEOExplorationCalculate())
-                //Исследование LAEO силами кораблей в LAEO
+                //Исследование RAEO силами кораблей в RAEO
                 .Add(new SMTRAEOExplorationCalculate())
 
                 //Обновление интерфейса после тика
@@ -146,7 +146,7 @@ namespace SandOcean
                 staticData,
                 sceneData,
                 contentData,
-                spaceGenerationData,
+                mapGenerationData,
                 designerData,
                 inputData,
                 runtimeData)

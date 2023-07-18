@@ -10,27 +10,30 @@ namespace SandOcean.Map
     public struct CHexRegion
     {
         public CHexRegion(
-            EcsPackedEntity selfPE, 
+            EcsPackedEntity selfPE, int index,
             Vector3 position, DHexCoordinates coordinates,
             Transform transform, TMPro.TextMeshProUGUI uiTransform, UnityEngine.UI.Image highlight,
-            EcsPackedEntity parentChunkPE)
+            int columnIndex, EcsPackedEntity parentChunkPE,
+            HexRegionShaderData shaderData)
         {
             this.selfPE = selfPE;
+            this.Index = index;
 
             this.position = position;
             this.coordinates = coordinates;
 
             this.transform = transform;
-            this.uiRect = uiTransform;
+            uiRect = uiTransform;
             this.highlight = highlight;
 
+            this.ColumnIndex = columnIndex;
             this.parentChunkPE = parentChunkPE;
 
             elevation = 0;
 
             waterLevel = 0;
 
-            terrainTypeIndex = 3;
+            terrainTypeIndex = 0;
 
             urbanLevel = 0;
             farmLevel = 0;
@@ -47,6 +50,11 @@ namespace SandOcean.Map
 
             neighbourRegionPEs = new EcsPackedEntity[6];
 
+            ShaderData = shaderData;
+
+            visibility = 0;
+            IsExplored = false;
+
             distance = 0;
             PathFromPE = new();
             SearchHeuristic = 0;
@@ -54,21 +62,22 @@ namespace SandOcean.Map
 
             mapDistance = 0;
 
-            islandPEs = new EcsPackedEntity[0];
-
             shipGroups = new LinkedList<EcsPackedEntity>();
             ownershipChangeShipGroups = new List<EcsPackedEntity>();
 
-            Elevation = elevation;
-            WaterLevel = waterLevel;
-            TerrainTypeIndex = terrainTypeIndex;
+            TerrainTypeIndex = 0;
 
             DisableHighlight();
         }
 
         public readonly EcsPackedEntity selfPE;
 
-        public Vector3 Position
+        public readonly int Index
+        {
+            get;
+        }
+
+        public readonly Vector3 Position
         {
             get
             {
@@ -79,7 +88,7 @@ namespace SandOcean.Map
 
         public DHexCoordinates coordinates;
 
-
+        public readonly int ColumnIndex { get; }
         public readonly EcsPackedEntity parentChunkPE;
 
 
@@ -100,15 +109,24 @@ namespace SandOcean.Map
                 {
                     elevation = value;
 
+                    ShaderData.ViewElevationChanged(ref this);
+
                     position.y
-                        = value * SpaceGenerationData.elevationStep;
+                        = value * MapGenerationData.elevationStep;
                     position.y
-                        += (SpaceGenerationData.SampleNoise(position).y * 2f - 1f)
-                        * SpaceGenerationData.elevationPerturbStrength;
+                        += (MapGenerationData.SampleNoise(position).y * 2f - 1f)
+                        * MapGenerationData.elevationPerturbStrength;
                 }
             }
         }
         int elevation;
+        public int ViewElevation 
+        {
+            get
+            {
+                return elevation >= waterLevel ? elevation : waterLevel;
+            }
+        }
 
         public int WaterLevel
         {
@@ -123,6 +141,8 @@ namespace SandOcean.Map
                     return;
                 }
                 waterLevel = value;
+
+                ShaderData.ViewElevationChanged(ref this);
             }
         }
         int waterLevel;
@@ -138,24 +158,24 @@ namespace SandOcean.Map
         {
             get
             {
-                return (elevation + SpaceGenerationData.streamBedElevationOffset)
-                    * SpaceGenerationData.elevationStep;
+                return (elevation + MapGenerationData.streamBedElevationOffset)
+                    * MapGenerationData.elevationStep;
             }
         }
         public float RiverSurfaceY
         {
             get
             {
-                return (elevation + SpaceGenerationData.waterElevationOffset)
-                    * SpaceGenerationData.elevationStep;
+                return (elevation + MapGenerationData.waterElevationOffset)
+                    * MapGenerationData.elevationStep;
             }
         }
         public float WaterSurfaceY
         {
             get
             {
-                return (waterLevel + SpaceGenerationData.waterElevationOffset)
-                    * SpaceGenerationData.elevationStep;
+                return (waterLevel + MapGenerationData.waterElevationOffset)
+                    * MapGenerationData.elevationStep;
             }
         }
 
@@ -170,6 +190,8 @@ namespace SandOcean.Map
                 if (terrainTypeIndex != value)
                 {
                     terrainTypeIndex = value;
+
+                    ShaderData.RefreshTerrain(ref this);
                 }
             }
         }
@@ -376,6 +398,66 @@ namespace SandOcean.Map
             return neighbourRegionPEs[(int)direction];
         }
 
+        public void SetLabel(
+            string text)
+        {
+            uiRect.text = text;
+        }
+
+        public void DisableHighlight()
+        {
+            highlight.enabled = false;
+
+        }
+        public void EnableHighlight(
+            Color color)
+        {
+            highlight.enabled = true;
+            highlight.color = color;
+        }
+
+        public HexRegionShaderData ShaderData
+        {
+            get;
+            set;
+        }
+
+        public bool IsVisible
+        {
+            get
+            {
+                return visibility > 0;
+            }
+        }
+        int visibility;
+        public void IncreaseVisibility()
+        {
+            visibility += 1;
+
+            //Если видимость равна единице
+            if (visibility == 1)
+            {
+                ShaderData.RefreshVisibility(ref this);
+            }
+        }
+        public void DecreaseVisibility()
+        {
+            visibility -= 1;
+
+            //Если видимость равна нулю
+            if (visibility == 0)
+            {
+                IsExplored = true;
+
+                ShaderData.RefreshVisibility(ref this);
+            }
+        }
+        public bool IsExplored
+        {
+            get;
+            private set;
+        }
+
         public int Distance
         {
             get
@@ -388,28 +470,6 @@ namespace SandOcean.Map
             }
         }
         int distance;
-
-        public void SetLabel(
-            string text)
-        {
-            uiRect.text = text;
-        }
-
-        public void DisableHighlight()
-        {
-            highlight.enabled = false;
-        }
-        public void EnableHighlight(
-            Color color)
-        {
-            highlight.enabled = true;
-            highlight.color = color;
-        }
-
-        public EcsPackedEntity PathFromPE
-        {
-            get; set;
-        }
         public int SearchHeuristic 
         { 
             get; set; 
@@ -421,15 +481,25 @@ namespace SandOcean.Map
                 return distance + SearchHeuristic;
             }
         }
-        public byte SearchPhase
+        public int SearchPhase
         {
             get;
             set;
         }
+        public EcsPackedEntity PathFromPE
+        {
+            get; set;
+        }
+
+        public void SetMapData(
+            float data)
+        {
+            ShaderData.SetMapData(
+                ref this, 
+                data);
+        }
 
         public int mapDistance;
-
-        public EcsPackedEntity[] islandPEs;
 
         public LinkedList<EcsPackedEntity> shipGroups;
         public List<EcsPackedEntity> ownershipChangeShipGroups;

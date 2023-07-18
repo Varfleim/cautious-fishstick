@@ -111,7 +111,7 @@ namespace SandOcean.UI
         readonly EcsCustomInject<SceneData> sceneData = default;
         readonly EcsCustomInject<ContentData> contentData = default;
         //readonly EcsCustomInject<DesignerData> designerData = default;
-        readonly EcsCustomInject<SpaceGenerationData> spaceGenerationData = default;
+        readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
         readonly EcsCustomInject<InputData> inputData = default;
 
         readonly EcsCustomInject<RuntimeData> runtimeData = default;
@@ -137,7 +137,10 @@ namespace SandOcean.UI
             sliderEventUIPool = uguiUIWorld.GetPool<EcsUguiSliderChangeEvent>();
             sliderEventUIFilter = uguiUIWorld.Filter<EcsUguiSliderChangeEvent>().End();
 
-            spaceGenerationData.Value.terrainMaterial.EnableKeyword("GRID_ON");
+            mapGenerationData.Value.terrainMaterial.EnableKeyword("_SHOW_GRID");
+
+            Shader.EnableKeyword("_HEX_MAP_EDIT_MODE");
+            //Shader.DisableKeyword("_HEX_MAP_EDIT_MODE");
         }
 
         public void Run(IEcsSystems systems)
@@ -980,23 +983,18 @@ namespace SandOcean.UI
                 uguiSOWorld.DelEntity(clickEventSpaceEntity);
             }
 
-
-            //Ввод перемещения камеры
-            InputCameraMoving();
-
-            //Ввод приближения камеры
-            InputCameraZoom();
-
-            //Если активен режим карты планетарной системы
-            /*if (inputData.Value.activeMapMode
-                == MapMode.PlanetSystem)
+            //Если активен какой-либо режим карты
+            if (inputData.Value.mapMode != MapMode.None)
             {
+                //Ввод перемещения камеры
+                InputCameraMoving();
+
                 //Ввод поворота камеры
                 InputCameraRotating();
 
-                //Ввод изменения масштаба камеры
-                MapScaleChangingInput();
-            }*/
+                //Ввод приближения камеры
+                InputCameraZoom();
+            }
 
             //Прочий ввод
             InputOther();
@@ -1596,116 +1594,180 @@ namespace SandOcean.UI
 
         void InputCameraMoving()
         {
-            //Если нажата клавиша движения вперёд
-            if (Input.GetKey(KeyCode.W))
+            //Берём движение по осям
+            float xDelta = Input.GetAxis("Horizontal");
+            float zDelta = Input.GetAxis("Vertical");
+            //Если движение не равно нулю
+            if (xDelta != 0f || zDelta != 0f)
             {
-                //Рассчитываем перемещение камеры вперёд
-                inputData.Value.cameraFocusMoving
-                    //Умножаем вектор направления "вверх"
-                    += (-inputData.Value.rotationObjectZ.transform.forward
-                    //На скорость движения камеры
-                    * inputData.Value.movementSpeed
-                    //И на время кадра
-                    * UnityEngine.Time.deltaTime);
+                //Применяем движение
+                CameraAdjustPosition(xDelta, zDelta);
+            }
+        }
 
-            }
-            //Иначе, если нажата клавиша движения назад
-            else if (Input.GetKey(KeyCode.S))
+        void CameraAdjustPosition(
+            float xDelta, float zDelta)
+        {
+            //Рассчитываем параметры движения
+            Vector3 direction = inputData.Value.mapCamera.localRotation * new Vector3(xDelta, 0f, zDelta).normalized;
+            float damping = Mathf.Max(Mathf.Abs(xDelta), Mathf.Abs(zDelta));
+            float distance = Mathf.Lerp(inputData.Value.movementSpeedMinZoom, inputData.Value.movementSpeedMaxZoom, inputData.Value.zoom)
+                * damping * UnityEngine.Time.deltaTime;
+
+            //Рассчитываем движение камеры
+            Vector3 position = inputData.Value.mapCamera.localPosition;
+            position += direction * distance;
+            position = CameraWrapPosition(position);
+
+            //Применяем движение камеры
+            inputData.Value.mapCamera.localPosition = position;
+        }
+
+        Vector3 CameraWrapPosition(
+            Vector3 position)
+        {
+            //Определяем границы движения камеры
+            float width = mapGenerationData.Value.regionCountX * MapGenerationData.innerDiameter;
+            //Пока координата X меньше нуля
+            while (position.x < 0f)
             {
-                //Рассчитываем перемещение камеры назад
-                inputData.Value.cameraFocusMoving
-                    //Умножаем вектор направления "вверх"
-                    += (inputData.Value.rotationObjectZ.transform.forward
-                    //На скорость движения камеры
-                    * inputData.Value.movementSpeed
-                    //И на время кадра
-                    * UnityEngine.Time.deltaTime);
+                //Прибавляем ширину
+                position.x += width;
+            }
+            //Пока координата X больше ширины
+            while (position.x > width)
+            {
+                //Вычитаем ширину
+                position.x -= width;
             }
 
-            //Если нажата клавиша движения влево
-            if (Input.GetKey(KeyCode.A))
+            //Ограничиваем движение по оси Z
+            float zMax = (mapGenerationData.Value.regionCountZ - 1) * (1.5f * MapGenerationData.outerRadius);
+            position.z = Mathf.Clamp(position.z, 0f, zMax);
+
+            //Проверяем положения столбцов чанков
+            MapCenter(position.x);
+
+            //Возвращаем позицию
+            return position;
+        }
+
+        void MapCenter(float xPosition)
+        {
+            //Определяем индекс столбца, который находится в центре
+            int centerColumnIndex = (int)(xPosition / (MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX));
+
+            //Если текущий центральный столбец равен вычисленному
+            if (inputData.Value.currentCenterColumnIndex == centerColumnIndex)
             {
-                //Рассчитываем перемещение камеры влево
-                inputData.Value.cameraFocusMoving
-                    //Умножаем вектор направления "вправо"
-                    += (inputData.Value.rotationObjectZ.transform.right
-                    //На скорость движения камеры
-                    * inputData.Value.movementSpeed
-                    //И на время кадра
-                    * UnityEngine.Time.deltaTime);
+                //Выходим из функции
+                return;
             }
-            //Иначе, если нажата клавиша движения вправо
-            else if (Input.GetKey(KeyCode.D))
+            //Иначе
+            else
             {
-                //Рассчитываем перемещение камеры вправо
-                inputData.Value.cameraFocusMoving
-                    //Умножаем вектор направления "вправо"
-                    += (-inputData.Value.rotationObjectZ.transform.right
-                    //На скорость движения камеры
-                    * inputData.Value.movementSpeed
-                    //И на время кадра
-                    * UnityEngine.Time.deltaTime);
+                //Обновляем текущий центральный столбец
+                inputData.Value.currentCenterColumnIndex = centerColumnIndex;
+            }
+
+            //Определяем минимальный и максимальный индексы столбцов
+            int minColumnIndex = centerColumnIndex - mapGenerationData.Value.chunkCountX / 2;
+            int maxColumnIndex = centerColumnIndex + mapGenerationData.Value.chunkCountX / 2;
+
+            //Определяем позиции столбцов
+            Vector3 position;
+            position.y = position.z = 0;
+            //Для каждого столбца
+            for (int a = 0; a < mapGenerationData.Value.columns.Length; a++)
+            {
+                //Если индекс меньше минимального
+                if (a < minColumnIndex)
+                {
+                    //Перемещаем стобец на правый край
+                    position.x = mapGenerationData.Value.chunkCountX * (MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX);
+                }
+                //Иначе, если индекс больше максимального
+                else if (a > maxColumnIndex)
+                {
+                    //Перемещаем столбец на левый край
+                    position.x = mapGenerationData.Value.chunkCountX * -(MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX);
+                }
+                //Иначе
+                else
+                {
+                    //Обнуляем позицию стобца
+                    position.x = 0f;
+                }
+
+                //Обновляем позицию стобца
+                mapGenerationData.Value.columns[a].localPosition = position;
             }
         }
 
         void InputCameraRotating()
         {
-            //Если нажата клавиша поворота вправо
-            if (Input.GetKey(KeyCode.E))
+            //Берём вращение
+            float rotationDelta = Input.GetAxis("Rotation");
+            //Если вращение не равно нулю
+            if (rotationDelta != 0f)
             {
-                //Рассчитываем поворот камеры вправо
-                inputData.Value.rotationAnglesZ
-                    //Умножаем скорость поворота камеры
-                    += -inputData.Value.rotationSpeed
-                    //На время кадра
-                    * UnityEngine.Time.deltaTime;
+                //Применяем вращение
+                CameraAdjustRotation(rotationDelta);
             }
-            //Иначе, если нажата клавиша поворота влево
-            else if (Input.GetKey(KeyCode.Q))
+        }
+
+        void CameraAdjustRotation(
+            float rotationDelta)
+        {
+            //Рассчитываем угол вращения
+            inputData.Value.rotationAngle += rotationDelta * inputData.Value.rotationSpeed * UnityEngine.Time.deltaTime;
+
+            //Выравниваем угол
+            if (inputData.Value.rotationAngle < 0f)
             {
-                //Рассчитываем поворот камеры влево
-                inputData.Value.rotationAnglesZ
-                    //Умножаем скорость поворота камеры
-                    += inputData.Value.rotationSpeed
-                    //На время кадра
-                    * UnityEngine.Time.deltaTime;
+                inputData.Value.rotationAngle += 360f;
+            }
+            else if (inputData.Value.rotationAngle >= 360f)
+            {
+                inputData.Value.rotationAngle -= 360f;
             }
 
-            //Если нажата клавиша поворота камеры вверх
-            if (Input.GetKey(KeyCode.X))
-            {
-                //Рассчитываем поворот камеры вверх
-                inputData.Value.rotationAnglesX
-                    //Умножаем скорость поворота камеры
-                    += inputData.Value.rotationSpeed
-                    //На время кадра
-                    * UnityEngine.Time.deltaTime;
-            }
-            //Иначе, если нажата клавиша поворота камеры вниз
-            else if (Input.GetKey(KeyCode.Z))
-            {
-                //Рассчитываем поворот камеры вниз
-                inputData.Value.rotationAnglesX
-                    //Умножаем скорость поворота камеры
-                    += -inputData.Value.rotationSpeed
-                    //На время кадра
-                    * UnityEngine.Time.deltaTime;
-            }
+            //Применяем вращение
+            inputData.Value.mapCamera.localRotation = Quaternion.Euler(0f, inputData.Value.rotationAngle, 0f);
         }
 
         void InputCameraZoom()
         {
-            //Если есть вращение колёсика мыши
-            if (Input.mouseScrollDelta.y
-                != 0)
+            //Берём вращение колёсика мыши
+            float zoomDelta = Input.GetAxis("Mouse ScrollWheel");
+
+            //Если оно не равно нулю
+            if (zoomDelta != 0)
             {
-                //Рассчитываем приближение камеры
-                inputData.Value.zoomAmount
-                    //Умножаем вращение колёсика мыши
-                    += Input.mouseScrollDelta.y
-                    //На скорость приближения камеры
-                    * inputData.Value.zoomSpeed;
+                //Применяем приближение
+                CameraAdjustZoom(zoomDelta);
             }
+        }
+
+        void CameraAdjustZoom(
+            float zoomDelta)
+        {
+            //Рассчитываем приближение камеры
+            inputData.Value.zoom = Mathf.Clamp01(inputData.Value.zoom + zoomDelta);
+
+            //Рассчитываем расстояние приближения и применяем его
+            float zoomDistance = Mathf.Lerp(inputData.Value.stickMinZoom, inputData.Value.stickMaxZoom, inputData.Value.zoom);
+            inputData.Value.stick.localPosition = new(0f, 0f, zoomDistance);
+
+            //Рассчитываем поворот приближения и применяем его
+            float zoomAngle = Mathf.Lerp(inputData.Value.swiwelMinZoom, inputData.Value.swiwelMaxZoom, inputData.Value.zoom);
+            inputData.Value.swiwel.localRotation = Quaternion.Euler(zoomAngle, 0f, 0f);
+        }
+
+        void CameraValidatePosition()
+        {
+            //Совершаем нулевое движение камеры
+            CameraAdjustPosition(0f, 0f);
         }
 
         void InputOther()
@@ -1875,18 +1937,10 @@ namespace SandOcean.UI
 
         void HandleInput2()
         {
-            Ray inputRay
-                = inputData.Value.camera.ScreenPointToRay(
-                    Input.mousePosition);
-
-            RaycastHit hit;
-
-            if (Physics.Raycast(
-                inputRay,
-                out hit))
+            //Берём регион под курсором
+            if (GetRegionUnderCursor().Unpack(world.Value, out int regionEntity))
             {
                 //Берём компонент региона
-                GetRegionPE(hit.point).Unpack(world.Value, out int regionEntity);
                 ref CHexRegion currentRegion = ref regionPool.Value.Get(regionEntity);
 
                 //Если текущий регион не совпадает с предыдущим
@@ -1916,7 +1970,7 @@ namespace SandOcean.UI
                     //Если стартовый регион не совпадает с текущей
                     if (inputData.Value.searchFromRegion.EqualsTo(currentRegion.selfPE) == false)
                     {
-                        //Если стартовый регион задана
+                        //Если стартовый регион задан
                         if (inputData.Value.searchFromRegion.Unpack(world.Value, out int fromRegionEntity))
                         {
                             //Берём компонент стартового региона
@@ -1941,7 +1995,7 @@ namespace SandOcean.UI
                         }
                     }
                 }
-                //Иначе, если стартовый регион задана
+                //Иначе, если стартовый регион задан
                 else if (inputData.Value.searchFromRegion.Unpack(world.Value, out int fromRegionEntity)
                     //И стартовый регион не совпадает с конечным
                     && inputData.Value.searchFromRegion.EqualsTo(currentRegion.selfPE) == false)
@@ -2002,6 +2056,83 @@ namespace SandOcean.UI
             }
         }
 
+        void OnDraw()
+        {
+            List<EcsPackedEntity> path = GetPath();
+
+            if (path == null || path.Count == 0)
+            {
+                return;
+            }
+
+            //Берём компонент первого региона
+            path[0].Unpack(world.Value, out int firstRegionEntity);
+            ref CHexRegion firstRegion = ref regionPool.Value.Get(firstRegionEntity);
+
+            Vector3 a, b, c = firstRegion.Position;
+
+            for (int i = 1; i < path.Count; i++)
+            {
+                //Берём компонент предыдущего региона
+                path[i - 1].Unpack(world.Value, out int previousRegionEntity);
+                ref CHexRegion previousRegion = ref regionPool.Value.Get(previousRegionEntity);
+
+                //Берём компонент текущего региона
+                path[i].Unpack(world.Value, out int currentRegionEntity);
+                ref CHexRegion currentRegion = ref regionPool.Value.Get(currentRegionEntity);
+
+                a = c;
+                b = previousRegion.Position;
+                c = (b + currentRegion.Position) * 0.5f;
+
+                for (float t = 0f; t < 1f; t += 0.1f)
+                {
+                    GameObject.CreatePrimitive(PrimitiveType.Sphere).transform.position
+                        = Bezier.GetPoint(a, b, c, t);
+                }
+            }
+
+            //Берём компонент последнего региона
+            path[path.Count - 1].Unpack(world.Value, out int lastRegionEntity);
+            ref CHexRegion lastRegion = ref regionPool.Value.Get(lastRegionEntity);
+
+            a = c;
+            b = lastRegion.Position;
+            c = b;
+
+            for (float t = 0f; t < 1f; t += 0.1f)
+            {
+                GameObject.CreatePrimitive(PrimitiveType.Sphere).transform.position
+                    = Bezier.GetPoint(a, b, c, t);
+            }
+        }
+
+        EcsPackedEntity GetRegionUnderCursor()
+        {
+            //Берём луч из положения мыши
+            Ray inputRay = inputData.Value.camera.ScreenPointToRay(Input.mousePosition);
+
+            //Возвращаем PE региона  на позиции пересечения
+            return GetRegionPE(inputRay);
+        }
+
+        EcsPackedEntity GetRegionPE(
+            Ray ray)
+        {
+            //Если луч пересекает коллайдер
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                //Возвращаем PE региона по точке пересечения
+                return GetRegionPE(hit.point);
+            }
+            //Иначе
+            else
+            {
+                //Возвращаем пустую PE
+                return new();
+            }
+        }
+
         EcsPackedEntity GetRegionPE(
             Vector3 position)
         {
@@ -2011,12 +2142,7 @@ namespace SandOcean.UI
             //Вычисляем координаты региона
             DHexCoordinates coordinates = DHexCoordinates.FromPosition(position);
 
-            //Определяем индекс региона
-            int index = coordinates.X + coordinates.Z * spaceGenerationData.Value.regionCountX + coordinates.Z / 2;
-
-            //Возвращаем PE региона по этому индексу
-            return spaceGenerationData.Value.regionPEs[index];
-            //return spaceGenerationData.Value.cells[coordinates];
+            return GetRegionPE(coordinates);
         }
 
         EcsPackedEntity GetRegionPE(
@@ -2025,7 +2151,7 @@ namespace SandOcean.UI
             int z = coordinates.Z;
 
             //Если координата выходит за границы карты
-            if (z < 0 || z >= spaceGenerationData.Value.regionCountZ)
+            if (z < 0 || z >= mapGenerationData.Value.regionCountZ)
             {
                 return new();
             }
@@ -2033,12 +2159,12 @@ namespace SandOcean.UI
             int x = coordinates.X + z / 2;
 
             //Если координата выходит за границы карты
-            if (x < 0 || x >= spaceGenerationData.Value.regionCountX)
+            if (x < 0 || x >= mapGenerationData.Value.regionCountX)
             {
                 return new();
             }
 
-            return spaceGenerationData.Value.regionPEs[x + z * spaceGenerationData.Value.regionCountX];
+            return mapGenerationData.Value.regionPEs[x + z * mapGenerationData.Value.regionCountX];
         }
 
         void RegionsEdit(
@@ -2437,7 +2563,99 @@ namespace SandOcean.UI
         }
 
         void FindPath(
-            ref CHexRegion fromCell, ref CHexRegion toCell)
+            ref CHexRegion fromRegion, ref CHexRegion toRegion)
+        {
+            //Очищаем путь
+            ClearPath();
+
+            //Сохраняем стартовый и конечный регионы
+            inputData.Value.currentPathFrom = fromRegion.selfPE;
+            inputData.Value.currentPathTo = toRegion.selfPE;
+            
+            //Определяем, существует ли путь
+            inputData.Value.currentPathExists = Search(ref fromRegion, ref toRegion);
+
+            //Отображаем путь
+            ShowPath();
+        }
+
+        void ShowPath()
+        {
+            //Берём компоненты стартового и конечного регионов
+            inputData.Value.currentPathFrom.Unpack(world.Value, out int fromRegionEntity);
+            ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
+
+            inputData.Value.currentPathTo.Unpack(world.Value, out int toRegionEntity);
+            ref CHexRegion toRegion = ref regionPool.Value.Get(toRegionEntity);
+
+            //Если путь существует 
+            if (inputData.Value.currentPathExists == true)
+            {
+                //Берём конечный регион как текущий
+                ref CHexRegion currentRegion = ref regionPool.Value.Get(toRegionEntity);
+
+                //Пока текущий регион - не стартовый
+                while (currentRegion.selfPE.EqualsTo(inputData.Value.currentPathFrom) == false)
+                {
+                    //Отображаем расстояиние и подсветку региона
+                    currentRegion.SetLabel(currentRegion.Distance.ToString());
+                    currentRegion.EnableHighlight(Color.white);
+
+                    //Берём компонент предыдущего региона
+                    currentRegion.PathFromPE.Unpack(world.Value, out int currentRegionEntity);
+                    currentRegion = ref regionPool.Value.Get(currentRegionEntity);
+                }
+            }
+
+            //Отображаем подсветку стартового и конечного регионов
+            fromRegion.EnableHighlight(Color.blue);
+            toRegion.EnableHighlight(Color.red);
+        }
+
+        void ClearPath()
+        {
+            //Если конечный регион существует
+            if (inputData.Value.currentPathTo.Unpack(world.Value, out int toRegionEntity))
+            {
+                //Берём компонент конечного региона
+                ref CHexRegion toRegion = ref regionPool.Value.Get(toRegionEntity);
+
+                //Если путь существует 
+                if (inputData.Value.currentPathExists == true)
+                {
+                    //Берём конечный регион как текущий
+                    ref CHexRegion currentRegion = ref regionPool.Value.Get(toRegionEntity);
+
+                    //Пока текущий регион - не стартовый
+                    while (currentRegion.selfPE.EqualsTo(inputData.Value.currentPathFrom) == false)
+                    {
+                        //Очищаем расстояиние и подсветку региона
+                        currentRegion.SetLabel(null);
+                        currentRegion.DisableHighlight();
+
+                        //Берём компонент предыдущего региона
+                        currentRegion.PathFromPE.Unpack(world.Value, out int currentRegionEntity);
+                        currentRegion = ref regionPool.Value.Get(currentRegionEntity);
+                    }
+                }
+                //Иначе, если путь недопустим
+                else if (inputData.Value.currentPathFrom.Unpack(world.Value, out int fromRegionEntity))
+                {
+                    //Берём компонент стартового региона
+                    ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
+
+                    //Отключаем подсветку стартового и конечного регионов
+                    fromRegion.DisableHighlight();
+                    toRegion.DisableHighlight();
+                }
+            }
+
+            //Очищаем PE стартового и конечного регионов
+            inputData.Value.currentPathFrom = inputData.Value.currentPathTo = new();
+        }
+
+        bool Search(
+            ref CHexRegion fromRegion, ref CHexRegion toRegion)
         {
             if (inputData.Value.searchFrontier == null)
             {
@@ -2457,22 +2675,22 @@ namespace SandOcean.UI
 
                 //Очищаем ячейку
                 currentCell.SearchPhase = 0;
-                currentCell.SetLabel(null);
-                currentCell.DisableHighlight();
+                //currentCell.SetLabel(null);
+                //currentCell.DisableHighlight();
             }
 
             //Выводим стартовую ячейку за границу поиска
-            fromCell.SearchPhase = 2;
-            fromCell.Distance = 0;
-            fromCell.EnableHighlight(
+            fromRegion.SearchPhase = 2;
+            fromRegion.Distance = 0;
+            fromRegion.EnableHighlight(
                 Color.blue);
 
             //Берём сущность искомой начальной ячейки
-            fromCell.selfPE.Unpack(world.Value, out int fromCellEntity);
+            fromRegion.selfPE.Unpack(world.Value, out int fromCellEntity);
 
             //Заносим её первой в очередь
             inputData.Value.searchFrontier.Enqueue(
-                fromCell.selfPE,
+                fromRegion.selfPE,
                 0);
 
             while (inputData.Value.searchFrontier.Count > 0)
@@ -2486,30 +2704,10 @@ namespace SandOcean.UI
                 currentCell.SearchPhase += 1;
 
                 //Если текущая ячейка совпадает с искомой
-                if (currentCell.selfPE.EqualsTo(toCell.selfPE) == true)
+                if (currentCell.selfPE.EqualsTo(toRegion.selfPE) == true)
                 {
-                    //Берём ссылку на предыдущую ячейку
-                    //currentCell.PathFromPE.Unpack(world.Value, out int pathFromCellEntity);
-                    //ref CHexCell pathFromCell = ref cellPool.Value.Get(pathFromCellEntity);
-
-                    //Пока предыдущая ячейка - не стартовая ячейка
-                    while (currentCell.selfPE.EqualsTo(fromCell.selfPE) == false)
-                    {
-                        currentCell.SetLabel(currentCell.Distance.ToString());
-
-                        currentCell.EnableHighlight(
-                            Color.white);
-
-                        //Берём компонент предыдущей ячейки
-                        currentCell.PathFromPE.Unpack(world.Value, out currentCellEntity);
-                        currentCell = ref regionPool.Value.Get(currentCellEntity);
-                    }
-
-                    toCell.EnableHighlight(
-                        Color.red);
-
-                    //Выходим из цикла
-                    break;
+                    //То путь найден
+                    return true;
                 }
 
                 //Для каждой соседней ячейки
@@ -2530,7 +2728,7 @@ namespace SandOcean.UI
                         }
 
                         //Определяем тип ребра
-                        HexEdgeType edgeType = SpaceGenerationData.GetEdgeType(currentCell.Elevation, neighbourCell.Elevation);
+                        HexEdgeType edgeType = MapGenerationData.GetEdgeType(currentCell.Elevation, neighbourCell.Elevation);
 
                         //Если ячейка находится под водой
                         if (neighbourCell.IsUnderwater == true
@@ -2568,7 +2766,7 @@ namespace SandOcean.UI
                             neighbourCell.PathFromPE = currentCell.selfPE;
 
                             neighbourCell.SearchHeuristic = neighbourCell.coordinates.DistanceTo(
-                                toCell.coordinates);
+                                toRegion.coordinates);
 
                             //Заносим его сущность в очередь
                             inputData.Value.searchFrontier.Enqueue(
@@ -2593,6 +2791,52 @@ namespace SandOcean.UI
                         }
                     }
                 }
+            }
+
+            //Возвращаем, что путь не был найден
+            return false;
+        }
+
+        List<EcsPackedEntity> GetPath()
+        {
+            //Если текущий путь не существует
+            if (inputData.Value.currentPathExists == false)
+            {
+                //Возвращаем null
+                return null;
+            }
+            //Иначе
+            else
+            {
+                //Создаём список из пула
+                List<EcsPackedEntity> path = ListPool<EcsPackedEntity>.Get();
+
+                //Берём компонент конечного региона
+                inputData.Value.currentPathTo.Unpack(world.Value, out int currentRegionEntity);
+                ref CHexRegion currentRegion = ref regionPool.Value.Get(currentRegionEntity);
+
+                //Заносим конечный регион в список
+                path.Add(currentRegion.selfPE);
+
+                //Пока предыдущий регион не равен стартовому
+                while (currentRegion.PathFromPE.EqualsTo(inputData.Value.currentPathFrom) == false)
+                {
+                    //Берём компонент предыдущего региона
+                    currentRegion.PathFromPE.Unpack(world.Value, out currentRegionEntity);
+                    currentRegion = ref regionPool.Value.Get(currentRegionEntity);
+
+                    //Заносим текущий регион в список
+                    path.Add(currentRegion.selfPE);
+                }
+
+                //Заносим стартовый регион в список
+                path.Add(inputData.Value.currentPathFrom);
+
+                //Разворачиваем список в обратную сторону
+                path.Reverse();
+
+                //Возвращаем список
+                return path;
             }
         }
     }

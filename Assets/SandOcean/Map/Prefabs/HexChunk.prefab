@@ -55,10 +55,9 @@ MonoBehaviour:
   meshFilter: {fileID: 2182917317719787505}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 0
   useUVCoordinates: 0
   useUV2Coordinates: 0
-  useTerrainTypes: 0
 --- !u!33 &2182917317719787505
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -87,7 +86,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: aca177f253d2f5d45a6bf526ba91f657, type: 2}
+  - {fileID: 2100000, guid: 1898e7bc099ca4ac7b3cde78088ff4ea, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -251,10 +250,9 @@ MonoBehaviour:
   meshFilter: {fileID: 1116259350990806607}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 1
   useUVCoordinates: 1
   useUV2Coordinates: 0
-  useTerrainTypes: 0
 --- !u!33 &1116259350990806607
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -283,7 +281,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 13eb0beec3d1e1c49bcabae159547034, type: 2}
+  - {fileID: 2100000, guid: 1dd17e018eb7441cabe18759136ca2cd, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -360,10 +358,9 @@ MonoBehaviour:
   meshFilter: {fileID: 2395795654742691437}
   meshCollider: {fileID: 0}
   useCollider: 1
-  useColors: 1
+  useRegionData: 1
   useUVCoordinates: 0
   useUV2Coordinates: 0
-  useTerrainTypes: 1
 --- !u!33 &2395795654742691437
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -392,7 +389,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: e9640cae1b03bc941bd9e635b2019497, type: 2}
+  - {fileID: 2100000, guid: da66e8f0c1d16476bae8e2d228492d7f, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -618,10 +615,9 @@ MonoBehaviour:
   meshFilter: {fileID: 7644356389963977331}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 1
   useUVCoordinates: 1
   useUV2Coordinates: 1
-  useTerrainTypes: 0
 --- !u!33 &7644356389963977331
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -650,7 +646,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0285aa99ae85f5b4bb53546b39cfde79, type: 2}
+  - {fileID: 2100000, guid: 715c24d9df0844c328774625826d6c58, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -727,10 +723,9 @@ MonoBehaviour:
   meshFilter: {fileID: 7401120648871141765}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 1
   useUVCoordinates: 1
   useUV2Coordinates: 0
-  useTerrainTypes: 0
 --- !u!33 &7401120648871141765
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -759,7 +754,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 0752301e24693ce468e5e6f4ad55f7fb, type: 2}
+  - {fileID: 2100000, guid: c4e96afe4a43e46328a2864a2d0be913, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -836,10 +831,9 @@ MonoBehaviour:
   meshFilter: {fileID: 3469895463430939768}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 1
   useUVCoordinates: 1
   useUV2Coordinates: 0
-  useTerrainTypes: 0
 --- !u!33 &3469895463430939768
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -868,7 +862,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: db9aa68668935654c8a88012b8652104, type: 2}
+  - {fileID: 2100000, guid: a7ceaf8480a2e45f9b8cdd99785d2a11, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -945,10 +939,9 @@ MonoBehaviour:
   meshFilter: {fileID: 6030291560962539574}
   meshCollider: {fileID: 0}
   useCollider: 0
-  useColors: 0
+  useRegionData: 1
   useUVCoordinates: 0
   useUV2Coordinates: 0
-  useTerrainTypes: 0
 --- !u!33 &6030291560962539574
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -977,7 +970,7 @@ MeshRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 2100000, guid: 300cb106571797d49953dc544f78c0c2, type: 2}
+  - {fileID: 2100000, guid: 8dc6db47f35e145a895af3d47a547834, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
