@@ -13,7 +13,7 @@ namespace SandOcean.Designer.Game
         {
             this.modelName = modelName;
 
-            this.shipClasses = new List<DContentObjectRef>();
+            this.shipClasses = new List<DContentObjectLink>();
 
             this.coreTechnologies = coreTechnologies;
 
@@ -37,7 +37,7 @@ namespace SandOcean.Designer.Game
         string modelName;
 
 
-        public List<DContentObjectRef> ShipClasses
+        public List<DContentObjectLink> ShipClasses
         {
             get
             {
@@ -49,7 +49,7 @@ namespace SandOcean.Designer.Game
                     = value;
             }
         }
-        List<DContentObjectRef> shipClasses;
+        List<DContentObjectLink> shipClasses;
 
 
         public DComponentCoreTechnology[] coreTechnologies;

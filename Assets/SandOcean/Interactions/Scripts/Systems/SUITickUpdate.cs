@@ -12,7 +12,7 @@ namespace SandOcean.UI
         readonly EcsWorldInject world = default;
 
         //События игры
-        readonly EcsPoolInject<EGameDisplayObjectPanel> gameDisplayObjectPanelEventPool = default;
+        readonly EcsPoolInject<RGameDisplayObjectPanel> gameDisplayObjectPanelRequestPool = default;
 
         //Данные
         readonly EcsCustomInject<EUI> eUI = default;
@@ -41,8 +41,8 @@ namespace SandOcean.UI
                         if (organizationSubpanel.tabGroup.selectedTab == organizationSubpanel.overviewTab.selfTabButton)
                         {
                             //Запрашиваем обновление обзорной вкладки
-                            GameDisplayObjectPanelEvent(
-                                DisplayObjectPanelEventType.OrganizationOverview,
+                            GameDisplayObjectPanelRequest(
+                                DisplayObjectPanelRequestType.OrganizationOverview,
                                 objectPanel.activeObjectPE);
                         }
                     }
@@ -56,16 +56,16 @@ namespace SandOcean.UI
                         if (islandSubpanel.tabGroup.selectedTab == islandSubpanel.overviewTab.selfTabButton)
                         {
                             //Запрашиваем обновление обзорной вкладки
-                            GameDisplayObjectPanelEvent(
-                                DisplayObjectPanelEventType.RegionOverview,
+                            GameDisplayObjectPanelRequest(
+                                DisplayObjectPanelRequestType.RegionOverview,
                                 objectPanel.activeObjectPE);
                         }
                         //Иначе, если активна вкладка организаций
                         else if (islandSubpanel.tabGroup.selectedTab == islandSubpanel.organizationsTab.selfTabButton)
                         {
                             //Запрашиваем обновление вкладки организаций
-                            GameDisplayObjectPanelEvent(
-                                DisplayObjectPanelEventType.RegionOrganizations,
+                            GameDisplayObjectPanelRequest(
+                                DisplayObjectPanelRequestType.RegionOrganizations,
                                 objectPanel.activeObjectPE);
                         }
                     }
@@ -79,8 +79,8 @@ namespace SandOcean.UI
                         if (oRAEOSubpanel.tabGroup.selectedTab == oRAEOSubpanel.overviewTab.selfTabButton)
                         {
                             //Запрашиваем обновление обзорной вкладки
-                            GameDisplayObjectPanelEvent(
-                                DisplayObjectPanelEventType.ORAEOOverview,
+                            GameDisplayObjectPanelRequest(
+                                DisplayObjectPanelRequestType.ORAEOOverview,
                                 objectPanel.activeObjectPE);
                         }
                     }
@@ -88,18 +88,18 @@ namespace SandOcean.UI
             }
         }
 
-        void GameDisplayObjectPanelEvent(
-            DisplayObjectPanelEventType eventType,
+        void GameDisplayObjectPanelRequest(
+            DisplayObjectPanelRequestType requestType,
             EcsPackedEntity objectPE,
             bool isRefresh = true)
         {
-            //Создаём новую сущность и назначаем ей компонент события отображения панели объекта
-            int eventEntity = world.Value.NewEntity();
-            ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent = ref gameDisplayObjectPanelEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса отображения панели объекта
+            int requestEntity = world.Value.NewEntity();
+            ref RGameDisplayObjectPanel gameDisplayObjectPanelRequest = ref gameDisplayObjectPanelRequestPool.Value.Add(requestEntity);
 
-            //Заполняем данные события
-            gameDisplayObjectPanelEvent = new(
-                eventType,
+            //Заполняем данные запроса
+            gameDisplayObjectPanelRequest = new(
+                requestType,
                 objectPE,
                 isRefresh);
         }

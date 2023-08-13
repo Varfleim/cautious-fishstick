@@ -219,7 +219,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < engines.Length; a++)
             {
                 //Если ссылка на двигатель действительна
-                if (engines[a].IsValidRef
+                if (engines[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на двигатель
@@ -239,7 +239,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < reactors.Length; a++)
             {
                 //Если ссылка на реактор действительна
-                if (reactors[a].IsValidRef
+                if (reactors[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на реактор
@@ -259,7 +259,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < fuelTanks.Length; a++)
             {
                 //Если ссылка на топливный бак действительна
-                if (fuelTanks[a].IsValidRef
+                if (fuelTanks[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на топливный бак
@@ -279,7 +279,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < extractionEquipmentSolids.Length; a++)
             {
                 //Если ссылка на оборудование для твёрдой добычи действительна
-                if (extractionEquipmentSolids[a].IsValidRef
+                if (extractionEquipmentSolids[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на оборудование для твёрдой добычи
@@ -299,7 +299,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < energyGuns.Length; a++)
             {
                 //Если ссылку на энергетическое орудие действительна
-                if (energyGuns[a].IsValidRef
+                if (energyGuns[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на данные энергетического орудия
@@ -327,7 +327,7 @@ namespace SandOcean.Designer.Workshop
             for (int a = 0; a < engines.Length; a++)
             {
                 //Если ссылка на двигатель действительна
-                if (engines[a].IsValidRef
+                if (engines[a].IsValidLink
                     == true)
                 {
                     //Берём ссылку на данные двигателя

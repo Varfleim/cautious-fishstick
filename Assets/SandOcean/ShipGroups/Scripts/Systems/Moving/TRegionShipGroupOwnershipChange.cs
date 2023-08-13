@@ -140,13 +140,13 @@ namespace SandOcean.Ship.Moving
             out bool isRegionChanged)
         {
             //Вычисляем расстояние от текущего положения группы кораблей до центра региона
-            double distance = Vector3.Distance(shipGroup.position, parentRegion.Position);
+            /*double distance = Vector3.Distance(shipGroup.position, parentRegion.Position);
 
             //Если расстояние больше внешнего радиуса региона
             if (distance > MapGenerationData.outerRadius)
             {
                 //Определяем, в каком регионе находится группа кораблей
-                mapGenerationData.GetRegionPEFromPosition(shipGroup.position).Unpack(world, out int currentRegionEntity);
+                mapGenerationData.RegionGet(shipGroup.position).Unpack(world, out int currentRegionEntity);
                 ref CHexRegion currentRegion = ref regionPool[regionIndices[currentRegionEntity]];
 
                 //Меняем регион, в котором находится группа кораблей
@@ -160,10 +160,10 @@ namespace SandOcean.Ship.Moving
             }
             //Иначе
             else
-            {
+            {*/
                 //Регион не меняется
                 isRegionChanged = false;
-            }
+            //}
         }
     }
 }

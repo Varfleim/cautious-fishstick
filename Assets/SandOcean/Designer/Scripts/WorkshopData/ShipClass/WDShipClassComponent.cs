@@ -4,7 +4,7 @@ using System;
 namespace SandOcean.Designer.Workshop
 {
     [Serializable]
-    public struct WDShipClassComponent : IContentObjectRef, IWorkshopContentObjectRef
+    public struct WDShipClassComponent : IContentObjectLink, IWorkshopContentObjectLink
     {
         public WDShipClassComponent(
             string contentSetName,
@@ -21,7 +21,7 @@ namespace SandOcean.Designer.Workshop
 
             this.componentIndex = 0;
 
-            this.isValidRef = false;
+            this.isValidLink = false;
         }
 
         public WDShipClassComponent(
@@ -42,7 +42,7 @@ namespace SandOcean.Designer.Workshop
 
             this.numberOfComponents = numberOfComponents;
 
-            this.isValidRef = isValidRef;
+            this.isValidLink = isValidRef;
         }
 
         public string contentSetName;
@@ -79,18 +79,18 @@ namespace SandOcean.Designer.Workshop
         }
         int componentIndex;
 
-        public bool IsValidRef
+        public bool IsValidLink
         {
             get
             {
-                return isValidRef;
+                return isValidLink;
             }
             set
             {
-                isValidRef
+                isValidLink
                     = value;
             }
         }
-        bool isValidRef;
+        bool isValidLink;
     }
 }

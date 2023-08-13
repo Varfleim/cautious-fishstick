@@ -18,7 +18,7 @@ namespace SandOcean.Designer.Workshop
             this.gameObjectIndex = -1;
             this.isValidObject = true;
 
-            this.shipClasses = new List<WDContentObjectRef>();
+            this.shipClasses = new List<WDContentObjectLink>();
 
             this.coreTechnologies = coreTechnologies;
 
@@ -71,7 +71,7 @@ namespace SandOcean.Designer.Workshop
         }
         bool isValidObject;
 
-        public List<WDContentObjectRef> ShipClasses
+        public List<WDContentObjectLink> ShipClasses
         {
             get
             {
@@ -83,7 +83,7 @@ namespace SandOcean.Designer.Workshop
                     = value;
             }
         }
-        List<WDContentObjectRef> shipClasses;
+        List<WDContentObjectLink> shipClasses;
 
 
         public WDComponentCoreTechnology[] coreTechnologies;
@@ -139,7 +139,7 @@ namespace SandOcean.Designer.Workshop
         public void CalculatePower()
         {
             //≈сли ссылка на технологию мощности на единицу размера действительна
-            if (coreTechnologies[0].IsValidRef
+            if (coreTechnologies[0].IsValidLink
                 == true)
             {
                 enginePower

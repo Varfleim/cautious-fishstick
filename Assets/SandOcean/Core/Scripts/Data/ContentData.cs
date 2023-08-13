@@ -7,7 +7,6 @@ using UnityEngine;
 using SandOcean.Diplomacy;
 using SandOcean.Technology;
 using SandOcean.Designer.Workshop;
-using SandOcean.Designer.Game;
 
 namespace SandOcean
 {
@@ -123,7 +122,7 @@ namespace SandOcean
         }
     }
 
-    public interface IContentObjectRef
+    public interface IContentObjectLink
     {
         public int ContentSetIndex
         {
@@ -138,9 +137,9 @@ namespace SandOcean
         }
     }
 
-    public interface IWorkshopContentObjectRef
+    public interface IWorkshopContentObjectLink
     {
-        public bool IsValidRef
+        public bool IsValidLink
         {
             get;
             set;
@@ -207,6 +206,12 @@ namespace SandOcean
 
     public interface IComponentCoreTechnology
     {
+        public DContentObjectLink ContentObjectLink
+        {
+            get;
+            set;
+        }
+
         public float ModifierValue
         {
             get;
@@ -216,7 +221,7 @@ namespace SandOcean
 
     public interface IWorkshopComponent
     {
-        public List<WDContentObjectRef> ShipClasses
+        public List<WDContentObjectLink> ShipClasses
         {
             get;
             set;
@@ -225,7 +230,7 @@ namespace SandOcean
 
     public interface IGameComponent
     {
-        public List<DContentObjectRef> ShipClasses
+        public List<DContentObjectLink> ShipClasses
         {
             get;
             set;

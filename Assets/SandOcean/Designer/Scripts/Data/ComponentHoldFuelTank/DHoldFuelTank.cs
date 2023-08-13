@@ -16,7 +16,7 @@ namespace SandOcean.Designer.Game
             this.gameObjectIndex = -1;
             this.isValidObject = true;
 
-            this.shipClasses = new List<DContentObjectRef>();
+            this.shipClasses = new List<DContentObjectLink>();
 
             this.coreTechnologies = coreTechnologies;
 
@@ -69,7 +69,7 @@ namespace SandOcean.Designer.Game
         bool isValidObject;
 
 
-        public List<DContentObjectRef> ShipClasses
+        public List<DContentObjectLink> ShipClasses
         {
             get
             {
@@ -81,7 +81,7 @@ namespace SandOcean.Designer.Game
                     = value;
             }
         }
-        List<DContentObjectRef> shipClasses;
+        List<DContentObjectLink> shipClasses;
 
 
         public DComponentCoreTechnology[] coreTechnologies;

@@ -48,6 +48,12 @@ namespace SandOcean
                 = newCellPriority;
         }
 
+        public void Enqueue(
+            EcsPackedEntity regionPE, float priority)
+        {
+
+        }
+
         public DHexRegionPriority Dequeue()
         {
             count -= 1;
@@ -78,7 +84,7 @@ namespace SandOcean
             DHexRegionPriority nextCell = currentCell.NextWithSamePriority;
 
             //Если PE первой ячейки соответствут искомому PE
-            if (currentCell.cellPE.EqualsTo(cellPE) == true)
+            if (currentCell.regionPE.EqualsTo(cellPE) == true)
             {
                 //То первая ячейка - искомая
 
@@ -89,7 +95,7 @@ namespace SandOcean
             else
             {
                 //Пока PE следующей ячейки не соответствует искомому
-                while (nextCell.cellPE.EqualsTo(cellPE) == false)
+                while (nextCell.regionPE.EqualsTo(cellPE) == false)
                 {
                     //Делаем следующую ячейку в списке текущей
                     currentCell = nextCell;

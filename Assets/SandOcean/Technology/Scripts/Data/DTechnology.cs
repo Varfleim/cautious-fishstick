@@ -2,8 +2,6 @@
 using System;
 using System.Collections.Generic;
 
-using SandOcean.Designer.Game;
-
 namespace SandOcean.Technology
 {
     [Serializable]
@@ -22,11 +20,11 @@ namespace SandOcean.Technology
             this.technologyModifiers = technologyModifiers;
             this.technologyComponentCoreModifiers = technologyComponentCoreModifiers;
 
-            this.engines = new List<DContentObjectRef>();
-            this.reactors = new List<DContentObjectRef>();
-            this.fuelTanks = new List<DContentObjectRef>();
-            this.extractionEquipmentSolids = new List<DContentObjectRef>();
-            this.energyGuns = new List<DContentObjectRef>();
+            this.engines = new List<DContentObjectLink>();
+            this.reactors = new List<DContentObjectLink>();
+            this.fuelTanks = new List<DContentObjectLink>();
+            this.extractionEquipmentSolids = new List<DContentObjectLink>();
+            this.energyGuns = new List<DContentObjectLink>();
         }
 
         public string ObjectName
@@ -60,10 +58,10 @@ namespace SandOcean.Technology
         public DTechnologyModifier[] technologyModifiers;
         public DTechnologyComponentCoreModifier[] technologyComponentCoreModifiers;
 
-        public List<DContentObjectRef> engines;
-        public List<DContentObjectRef> reactors;
-        public List<DContentObjectRef> fuelTanks;
-        public List<DContentObjectRef> extractionEquipmentSolids;
-        public List<DContentObjectRef> energyGuns;
+        public List<DContentObjectLink> engines;
+        public List<DContentObjectLink> reactors;
+        public List<DContentObjectLink> fuelTanks;
+        public List<DContentObjectLink> extractionEquipmentSolids;
+        public List<DContentObjectLink> energyGuns;
     }
 }

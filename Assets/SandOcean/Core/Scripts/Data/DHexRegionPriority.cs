@@ -6,17 +6,27 @@ namespace SandOcean
     public class DHexRegionPriority
     {
         public DHexRegionPriority(
-            EcsPackedEntity cellPE, 
-            int cellPriority)
+            EcsPackedEntity regionPE, 
+            int regionPriority)
         {
-            this.cellPE = cellPE;
+            this.regionPE = regionPE;
 
-            this.cellPriority = cellPriority;
+            this.regionPriority = regionPriority;
         }
 
-        public EcsPackedEntity cellPE;
+        public DHexRegionPriority(
+            EcsPackedEntity regionPE,
+            float regionPriority)
+        {
+            this.regionPE = regionPE;
 
-        public int cellPriority;
+            this.regionPriority2 = regionPriority;
+        }
+
+        public EcsPackedEntity regionPE;
+
+        public int regionPriority;
+        public float regionPriority2;
 
         public DHexRegionPriority NextWithSamePriority
         {

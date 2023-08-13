@@ -4,7 +4,7 @@ using System;
 namespace SandOcean.Designer.Game
 {
     [Serializable]
-    public struct DShipClassComponent : IContentObjectRef
+    public struct DShipClassComponent : IContentObjectLink
     {
         public DShipClassComponent(
             int contentSetIndex,

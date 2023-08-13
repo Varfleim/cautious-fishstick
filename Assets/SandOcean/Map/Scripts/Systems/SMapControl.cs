@@ -1,8 +1,12 @@
 
+using System.Collections.Generic;
+
 using UnityEngine;
 
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
+
+using SandOcean.UI;
 using SandOcean.Map.Events;
 using SandOcean.Diplomacy;
 using SandOcean.AEO.RAEO;
@@ -15,32 +19,27 @@ namespace SandOcean.Map
         readonly EcsWorldInject world = default;
 
         //Карта
-        //readonly EcsFilterInject<Inc<CHexChunk>> chunkFilter = default;
-        readonly EcsPoolInject<CHexChunk> chunkPool = default;
-
-        readonly EcsFilterInject<Inc<CHexRegion>> regionFilter = default;
+        //readonly EcsFilterInject<Inc<CHexRegion>> regionFilter = default;
         readonly EcsPoolInject<CHexRegion> regionPool = default;
 
         //Организации
-        readonly EcsPoolInject<COrganization> organizationPool = default;
+        //readonly EcsPoolInject<COrganization> organizationPool = default;
 
         //Административно-экономические объекты
-        readonly EcsPoolInject<CRegionAEO> regionAEOPool = default;
+        //readonly EcsPoolInject<CRegionAEO> regionAEOPool = default;
 
-        readonly EcsPoolInject<CExplorationORAEO> explorationORAEOPool = default;
+        //readonly EcsPoolInject<CExplorationORAEO> explorationORAEOPool = default;
 
-        readonly EcsPoolInject<CEconomicORAEO> economicORAEOPool = default;
+        //readonly EcsPoolInject<CEconomicORAEO> economicORAEOPool = default;
 
         //События карты
         readonly EcsFilterInject<Inc<RChangeMapMode>> changeMapModeRequestFilter = default;
         readonly EcsPoolInject<RChangeMapMode> changeMapModeRequestPool = default;
 
-        readonly EcsFilterInject<Inc<SRMapChunkRefresh, CHexChunk>> refreshChunkSelfRequestFilter = default;
-        readonly EcsPoolInject<SRMapChunkRefresh> mapChunkRefreshSelfRequestPool = default;
-
         //Данные
+        readonly EcsCustomInject<SceneData> sceneData = default;
         readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
-        readonly EcsCustomInject<UI.InputData> inputData;
+        readonly EcsCustomInject<InputData> inputData;
 
         public void Run(IEcsSystems systems)
         {
@@ -54,7 +53,7 @@ namespace SandOcean.Map
                 if (changeMapModeR.mapMode == UI.MapMode.Distance)
                 {
                     //Рассчитываем расстояния
-                    MapModeDistanceCalculate();
+                    //MapModeDistanceCalculate();
 
                     //Указываем, что активный режим карты - режим расстояния
                     inputData.Value.mapMode = UI.MapMode.Distance;
@@ -64,34 +63,39 @@ namespace SandOcean.Map
                 world.Value.DelEntity(changeMapModeREntity);
             }
 
-            //Для каждого чанка, который требуется обновить
-            foreach (int refreshChunkEntity in refreshChunkSelfRequestFilter.Value)
+            //Если требуется обновление материалов
+            if (mapGenerationData.Value.isMaterialUpdated == true)
             {
-                //Берём компонент чанка
-                ref CHexChunk chunk = ref chunkPool.Value.Get(refreshChunkEntity);
+                //Обновляем свойства материалов
+                MapMaterialPropertiesUpdate(mapGenerationData.Value.isInitializationUpdate);
 
-                //Триангулируем меш чанка
-                ChunkTriangulate(ref chunk);
-                //ChunkSimpleTriangulate(ref chunk);
-
-                Debug.LogWarning("Chunk refreshed!");
-
-                //Удаляем с сущности чанка самозапрос обновления
-                mapChunkRefreshSelfRequestPool.Value.Del(refreshChunkEntity);
+                mapGenerationData.Value.isMaterialUpdated = false;
+                mapGenerationData.Value.isRegionUpdated = false;
+                mapGenerationData.Value.isInitializationUpdate = false;
             }
 
-            //Если данные шейдера карты были изменены
-            if (mapGenerationData.Value.regionShaderData.isChanged == true)
+            //Если требуется обновление массива текстур
+            if (mapGenerationData.Value.isTextureArrayUpdated == true)
             {
-                //Обновляем данные шейдера карты
-                mapGenerationData.Value.regionShaderData.Refresh();
+                //Обновляем материалы
+                MapUpdateShadedMaterials(mapGenerationData.Value.isInitializationUpdate);
 
-                //Указываем, что данные шейдера карты обновлены
-                mapGenerationData.Value.regionShaderData.isChanged = false;
+                mapGenerationData.Value.isInitializationUpdate = false;
+                mapGenerationData.Value.isTextureArrayUpdated = false;
+            }
+            //Иначе, если требуется обновление UV-координат или цветов
+            else if(mapGenerationData.Value.isUVUpdatedFast == true
+                || mapGenerationData.Value.isColorUpdated == true)
+            {
+                //Обновляем материалы упрощённо
+                MapUpdateShadedMaterialsFast();
+
+                mapGenerationData.Value.isColorUpdated = false;
+                mapGenerationData.Value.isUVUpdatedFast = false;
             }
         }
 
-        void MapModeDistanceCalculate()
+        /*void MapModeDistanceCalculate()
         {
             //Берём компонент организации игрока
             inputData.Value.playerOrganizationPE.Unpack(world.Value, out int organizationEntity);
@@ -108,9 +112,6 @@ namespace SandOcean.Map
 
                     //Обнуляем расстояние до региона
                     region.mapDistance = 0;
-
-                    //Запрашиваем триангуляцию чанка
-                    ChunkRefreshSelfRequest(ref region);
                 }
             }
 
@@ -153,7 +154,7 @@ namespace SandOcean.Map
                         for (int x = centerX - r; x <= centerX + radius; x++)
                         {
                             //Если существует регион с такими координатами
-                            if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
+                            if (mapGenerationData.Value.RegionGet(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
                             {
                                 //Берём компонент региона
                                 ref CHexRegion neighbourRegion = ref regionPool.Value.Get(cellEntity);
@@ -176,7 +177,7 @@ namespace SandOcean.Map
                         for (int x = centerX - radius; x <= centerX + r; x++)
                         {
                             //Если существует регион с такими координатами
-                            if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
+                            if (mapGenerationData.Value.RegionGet(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
                             {
                                 //Берём компонент региона
                                 ref CHexRegion neighbourRegion = ref regionPool.Value.Get(cellEntity);
@@ -205,7 +206,7 @@ namespace SandOcean.Map
                         for (int x = centerX - r; x <= centerX + radius; x++)
                         {
                             //Если существует регион с такими координатами
-                            if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
+                            if (mapGenerationData.Value.RegionGet(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
                             {
                                 //Берём компонент региона
                                 ref CHexRegion neighbourRegion = ref regionPool.Value.Get(cellEntity);
@@ -221,7 +222,7 @@ namespace SandOcean.Map
                         for (int x = centerX - radius; x <= centerX + r; x++)
                         {
                             //Если существует регион с такими координатами
-                            if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
+                            if (mapGenerationData.Value.RegionGet(new DHexCoordinates(x, z)).Unpack(world.Value, out int cellEntity))
                             {
                                 //Берём компонент региона
                                 ref CHexRegion neighbourRegion = ref regionPool.Value.Get(cellEntity);
@@ -233,2076 +234,684 @@ namespace SandOcean.Map
                     }
                 }
             }
-        }
+        }*/
 
-        void ChunkTriangulate(
-            ref CHexChunk chunk)
+        void MapMaterialPropertiesUpdate(
+            bool isInitializationUpdate = false)
         {
-            //Очищаем меши
-            chunk.terrain.Clear();
-            chunk.rivers.Clear();
-            chunk.roads.Clear();
-            chunk.water.Clear();
-            chunk.waterShore.Clear();
-            chunk.estuaries.Clear();
-
-            chunk.features.Clear();
-
-            //Для каждой ячейки чанка
-            for (int a = 0; a < chunk.regionPEs.Length; a++)
+            //Если нужно обновить регионы
+            if (mapGenerationData.Value.isRegionUpdated == true)
             {
-                //Берём компонент ячейки
-                chunk.regionPEs[a].Unpack(world.Value, out int cellEntity);
-                ref CHexRegion cell
-                    = ref regionPool.Value.Get(cellEntity);
+                //Обновляем регионы
+                MapRebuildTiles();
 
-                //Триангулируем ячейку
-                CellTriangulate(
-                    ref chunk,
-                    ref cell);
+                //Отмечаем, что регионы были обновлены
+                mapGenerationData.Value.isRegionUpdated = false;
             }
 
-            //Заполняем меши
-            chunk.terrain.Apply();
-            chunk.rivers.Apply();
-            chunk.roads.Apply();
-            chunk.water.Apply();
-            chunk.waterShore.Apply();
-            chunk.estuaries.Apply();
+            //Обновляем материалы регионов и тени
+            MapUpdateShadedMaterials(isInitializationUpdate);
+            MapUpdateMeshRenderersShadowSupport();
 
-            chunk.features.Apply();
+            //Обновляем материал регионов
+            mapGenerationData.Value.regionMaterial.SetFloat("_GradientIntensity", 1f - mapGenerationData.Value.gradientIntensity);
+            mapGenerationData.Value.regionMaterial.SetFloat("_ExtrusionMultiplier", MapGenerationData.extrudeMultiplier);
+            mapGenerationData.Value.regionMaterial.SetColor("_Color", mapGenerationData.Value.tileTintColor);
+            mapGenerationData.Value.regionMaterial.SetColor("_AmbientColor", mapGenerationData.Value.ambientColor);
+            mapGenerationData.Value.regionMaterial.SetFloat("_MinimumLight", mapGenerationData.Value.minimumLight);
+
+            //Обновляем размер коллайдера
+            sceneData.Value.hexasphereCollider.radius = 0.5f * (1.0f + MapGenerationData.extrudeMultiplier);
+
+            //Обновляем свет
+            MapUpdateLightingMode();
+
+            //Обновляем скос
+            MapUpdateBevel();
         }
 
-        void ChunkSimpleTriangulate(
-            ref CHexChunk chunk)
+        void MapRebuildTiles()
         {
-            //Очищаем меши
-            chunk.terrain.Clear();
-            chunk.rivers.Clear();
-            chunk.roads.Clear();
-            chunk.water.Clear();
-            chunk.waterShore.Clear();
-            chunk.estuaries.Clear();
-
-            chunk.features.Clear();
-
-            //Для каждой ячейки чанка
-            for (int a = 0; a < chunk.regionPEs.Length; a++)
+            //Удаляем заглушки
+            GameObject placeholder = GameObject.Find(MapGenerationData.shaderframeName);
+            if (placeholder != null)
             {
-                //Берём компонент ячейки
-                chunk.regionPEs[a].Unpack(world.Value, out int cellEntity);
-                ref CHexRegion cell = ref regionPool.Value.Get(cellEntity);
-
-                //Триангулируем ячейку
-                CellSimpleTriangulate(
-                    ref chunk,
-                    ref cell);
+                GameObject.DestroyImmediate(placeholder);
             }
 
-            //Заполняем меши
-            chunk.terrain.Apply();
-            chunk.rivers.Apply();
-            chunk.roads.Apply();
-            chunk.water.Apply();
-            chunk.waterShore.Apply();
-            chunk.estuaries.Apply();
-
-            chunk.features.Apply();
+            //Создаём меш тайлов
+            MapBuildTiles();
         }
 
-        void CellTriangulate(
-            ref CHexChunk chunk,
-            ref CHexRegion cell)
+        void MapBuildTiles()
         {
-            //Обновляем положение метки ячейки
-            Vector3 uiPosition
-                = cell.uiRect.rectTransform.localPosition;
-            uiPosition.z
-                = cell.Elevation * -MapGenerationData.elevationStep;
-            cell.uiRect.rectTransform.localPosition
-                = uiPosition;
+            //Берём индекс первого чанка
+            int chunkIndex = 0;
 
-            //Для каждого треугольника ячейки
-            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
-            {
-                //Триангулируем треугольник
-                TriangulateEdge(
-                    ref chunk,
-                    ref cell,
-                    d);
-            }
+            //Создаём списки для вершин, индексов и UV-координат
+            List<Vector3> vertexChunk = MapGenerationData.CheckList(ref MapGenerationData.verticesShaded[chunkIndex]);
+            List<int> indicesChunk = MapGenerationData.CheckList(ref MapGenerationData.indicesShaded[chunkIndex]);
+            List<Vector4> uv2Chunk = MapGenerationData.CheckList(ref MapGenerationData.uv2Shaded[chunkIndex]);
 
-            //Если ячейка не находится под водой
-            if (cell.IsUnderwater == false)
+            //Создаём счётчик вершин
+            int verticesCount = 0;
+
+            //Определяем количество регионов
+            int tileCount = RegionsData.regionPEs.Length;
+
+            //Создаём массивы индексов гексов и пентагонов
+            int[] hexIndices = MapGenerationData.hexagonIndicesExtruded;
+            int[] pentIndices = MapGenerationData.pentagonIndicesExtruded;
+
+            //Для каждого региона
+            for (int k = 0; k < tileCount; k++)
             {
-                //Если ячейка свободна
-                if (cell.HasRiver == false
-                    && cell.HasRoads == false)
+                //Берём компонент региона
+                RegionsData.regionPEs[k].Unpack(world.Value, out int regionEntity);
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Если количество вершин больше максимального количества вершин на чанк
+                if (verticesCount > MapGenerationData.maxVertexCountPerChunk)
                 {
-                    //Добавляем объект
-                    chunk.features.AddFeature(
-                        ref cell,
-                        cell.Position);
+                    //Увеличиваем индекс чанка
+                    chunkIndex++;
+
+                    //Обновляем списки вершин, индексов и UV-координат
+                    vertexChunk = MapGenerationData.CheckList(ref MapGenerationData.verticesShaded[chunkIndex]);
+                    indicesChunk = MapGenerationData.CheckList(ref MapGenerationData.indicesShaded[chunkIndex]);
+                    uv2Chunk = MapGenerationData.CheckList(ref MapGenerationData.uv2Shaded[chunkIndex]);
+
+                    //Обнуляем счётчик вершин
+                    verticesCount = 0;
                 }
-                //Если ячейка имеет особый объект
-                if (cell.IsSpecial == true)
+
+                //Берём массив вершин региона
+                DHexaspherePoint[] tileVertices = region.vertexPoints;
+
+                //Определяем количество вершин
+                int tileVerticesCount = tileVertices.Length;
+
+                //Создаём структуру для UV4-координат
+                Vector4 gpos = Vector4.zero;
+
+                //Для каждой вершины
+                for (int b = 0; b < tileVerticesCount; b++)
                 {
-                    chunk.features.AddSpecialFeature(
-                        ref cell,
-                        cell.Position);
+                    //Берём вершину региона
+                    DHexaspherePoint point = tileVertices[b];
+
+                    //Берём координату центра вершины и заносим её в список вершин
+                    Vector3 vertex = point.ProjectedVector3;
+                    vertexChunk.Add(vertex);
+
+                    //Обновляем gpos
+                    gpos.x += vertex.x;
+                    gpos.y += vertex.y;
+                    gpos.z += vertex.z;
                 }
-            }
-        }
 
-        void CellSimpleTriangulate(
-            ref CHexChunk chunk,
-            ref CHexRegion cell)
-        {
-            //Обновляем положение метки ячейки
-            Vector3 uiPosition = cell.uiRect.rectTransform.localPosition;
-            uiPosition.z = cell.Elevation * -MapGenerationData.elevationStep;
-            cell.uiRect.rectTransform.localPosition = uiPosition;
+                //Корректируем gpos
+                gpos.x /= tileVerticesCount;
+                gpos.y /= tileVerticesCount;
+                gpos.z /= tileVerticesCount;
 
-            //Для каждого треугольника ячейки
-            for (HexDirection d = HexDirection.NE; d <= HexDirection.NW; d++)
-            {
-                //Триангулируем треугольник
-                SimpleTriangulateEdge(
-                    ref chunk,
-                    ref cell,
-                    d);
-            }
-        }
+                //Создаём массив индексов
+                int[] indicesArray;
 
-        void TriangulateEdge(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction)
-        {
-            //Берём основные вершины треугольника
-            Vector3 center = cell.Position;
-            DHexEdgeVertices e
-                = new(
-                    center + MapGenerationData.GetFirstSolidCorner(
-                        direction),
-                    center + MapGenerationData.GetSecondSolidCorner(
-                        direction));
-
-            //Если ячейка имеет реку
-            if (cell.HasRiver == true)
-            {
-                //Если ячейка имеет реку через данное ребро
-                if (cell.HasRiverThroughEdge(direction) == true)
+                //Если число вершин региона равно шести
+                if (tileVerticesCount == 6)
                 {
-                    //Опускаем центральную вершину ребра
-                    e.v3.y = cell.StreamBedY;
+                    //Заносим вершины основания гекса в список
+                    vertexChunk.Add((tileVertices[1].ProjectedVector3 + tileVertices[5].ProjectedVector3) * 0.5f);
+                    vertexChunk.Add((tileVertices[2].ProjectedVector3 + tileVertices[4].ProjectedVector3) * 0.5f);
 
-                    //Если ячейка имеет начало или конец реки
-                    if (cell.HasRiverBeginOrEnd == true)
+                    //Обновляем счётчик вершин
+                    tileVerticesCount += 2;
+
+                    //Переносим индексы 
+                    indicesArray = hexIndices;
+                }
+                //Иначе это пентагон
+                else
+                {
+                    //Заносим вершины основания пентагона в список
+                    vertexChunk.Add((tileVertices[1].ProjectedVector3 + tileVertices[4].ProjectedVector3) * 0.5f);
+                    vertexChunk.Add((tileVertices[2].ProjectedVector3 + tileVertices[4].ProjectedVector3) * 0.5f);
+
+                    //Обновляем счётчик вершин
+                    tileVerticesCount += 2;
+
+                    //Обнуляем bevel для пентагонов
+                    gpos.w = 1.0f;
+
+                    //Переносим индексы 
+                    indicesArray = pentIndices;
+                }
+
+                //Для каждой вершины
+                for (int b = 0; b < tileVerticesCount; b++)
+                {
+                    //Заносим gpos в список UV-координат
+                    uv2Chunk.Add(gpos);
+                }
+
+                //Для каждого индекса
+                for (int b = 0; b < indicesArray.Length; b++)
+                {
+                    //Заносим индекс вершины в список индексов
+                    indicesChunk.Add(verticesCount + indicesArray[b]);
+                }
+
+                //Обновляем счётчик вершин
+                verticesCount += tileVerticesCount;
+            }
+
+            //Создаём родительский GO
+            GameObject partsRoot = MapCreateGOAndParent(
+                sceneData.Value.coreObject,
+                MapGenerationData.shaderframeName);
+
+            //Для каждого чанка
+            for (int k = 0; k <= chunkIndex; k++)
+            {
+                //Создаём объект тайлов
+                GameObject go = MapCreateGOAndParent(
+                    partsRoot.transform,
+                    MapGenerationData.shaderframeGOName);
+
+                //Назначаем ему компонент мешфильтра и заполняем данные
+                MeshFilter mf = go.AddComponent<MeshFilter>();
+                MapGenerationData.shadedMFs[k] = mf;
+                if (MapGenerationData.shadedMeshes[k] == null)
+                {
+                    MapGenerationData.shadedMeshes[k] = new Mesh();
+                    MapGenerationData.shadedMeshes[k].hideFlags = HideFlags.DontSave;
+                }
+                MapGenerationData.shadedMeshes[k].Clear();
+                MapGenerationData.shadedMeshes[k].SetVertices(MapGenerationData.verticesShaded[k]);
+                MapGenerationData.shadedMeshes[k].SetTriangles(MapGenerationData.indicesShaded[k], 0);
+                MapGenerationData.shadedMeshes[k].SetUVs(1, MapGenerationData.uv2Shaded[k]);
+                mf.sharedMesh = MapGenerationData.shadedMeshes[k];
+
+                //Назначаем ему компонент мешрендерера и заполняем данные
+                MeshRenderer mr = go.AddComponent<MeshRenderer>();
+                MapGenerationData.shadedMRs[k] = mr;
+
+
+                mr.sharedMaterial = mapGenerationData.Value.regionMaterial;
+            }
+        }
+
+        void MapUpdateShadedMaterials(
+            bool isInitializationUpdate = false)
+        {
+            //Берём индекс первого чанка
+            int chunkIndex = 0;
+
+            //Создаём списки вершин и индексов
+            List<Vector4> uvChunk = MapGenerationData.CheckList(ref MapGenerationData.uvShaded[chunkIndex]);
+            List<Color32> colorChunk = MapGenerationData.CheckList(ref MapGenerationData.colorShaded[chunkIndex]);
+
+            //Если белая текстура не существует, создаём её
+            if (mapGenerationData.Value.whiteTex == null)
+            {
+                mapGenerationData.Value.whiteTex = MapGetCachedSolidTexture(Color.white);
+            }
+
+            //Очищаем массив текстур и заносим в него белую текстуру
+            MapGenerationData.texArray.Clear();
+            MapGenerationData.texArray.Add(mapGenerationData.Value.whiteTex);
+
+            //Создаём счётчик вершин
+            int verticesCount = 0;
+
+            //Определяем количество регионов
+            int tileCount = RegionsData.regionPEs.Length;
+
+            //Определяем стандартный цвет региона
+            Color32 color = MapGenerationData.DefaultShadedColor;
+
+            //Для каждого региона
+            for (int k = 0; k < tileCount; k++)
+            {
+                //Берём компонент региона
+                RegionsData.regionPEs[k].Unpack(world.Value, out int regionEntity);
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Если количество вершин больше максимального количества вершин на чанк
+                if (verticesCount > MapGenerationData.maxVertexCountPerChunk)
+                {
+                    //Увеличиваем индекс чанка
+                    chunkIndex++;
+
+                    //Обновляем списки вершин и индексов
+                    uvChunk = MapGenerationData.CheckList(ref MapGenerationData.uvShaded[chunkIndex]);
+                    colorChunk = MapGenerationData.CheckList(ref MapGenerationData.colorShaded[chunkIndex]);
+
+                    //Обнуляем счётчик вершин
+                    verticesCount = 0;
+                }
+
+                //Берём массив вершин региона
+                DHexaspherePoint[] tileVertices = region.vertexPoints;
+
+                //Определяем количество вершин
+                int tileVerticesCount = tileVertices.Length;
+
+                //Создаём массив UV-координат
+                Vector2[] uvArray;
+
+                //Если количество вершин равно шести
+                if (tileVerticesCount == 6)
+                {
+                    //Переносим индексы
+                    uvArray = MapGenerationData.hexagonUVsExtruded;
+                }
+                //Иначе это пентагон
+                else
+                {
+                    //Переносим индексы
+                    uvArray = MapGenerationData.pentagonUVsExtruded;
+                }
+
+                //Помещаем цвет региона или текстуру в массив текстур
+                Texture2D tileTexture;
+
+                //Определяем индекс, масштаб и смещение текстуры
+                int textureIndex = 0;
+                Vector2 textureScale;
+                Vector2 textureOffset;
+
+                //Если регион имеет собственный материал, этот материал имеет текстуру и текстура не пуста
+                if (region.customMaterial && region.customMaterial.HasProperty(ShaderParameters.MainTex) && region.customMaterial.mainTexture != null)
+                {
+                    //Берём параметры этой текстуры
+                    tileTexture = (Texture2D)region.customMaterial.mainTexture;
+                    textureIndex = MapGenerationData.texArray.IndexOf(tileTexture);
+                    textureScale = region.customMaterial.mainTextureScale;
+                    textureOffset = region.customMaterial.mainTextureOffset;
+                }
+                //Иначе
+                else
+                {
+                    //Берём параметры стандартной текстуры
+                    tileTexture = mapGenerationData.Value.whiteTex;
+                    textureScale = Vector2.one;
+                    textureOffset = Vector2.zero;
+                }
+
+                //Если индекс текстуры меньше нуля
+                if (textureIndex < 0)
+                {
+                    //Заносим текстуру в массив и обновляем индекс
+                    MapGenerationData.texArray.Add(tileTexture);
+                    textureIndex = MapGenerationData.texArray.Count - 1;
+                }
+
+                //Если требуется обновление цветов
+                if (mapGenerationData.Value.isColorUpdated == true)
+                {
+                    //Если регион имеет собственный материал, то берём его цвет
+                    if (region.customMaterial != null)
                     {
-                        //Триангулируем ребро с началом или концом реки
-                        TriangulateWithRiverBeginOrEnd(
-                            ref chunk,
-                            ref cell,
-                            direction,
-                            center,
-                            e);
+                        color = region.customMaterial.color;
+                    }
+                    //Иначе берём стандартный цвет
+                    else
+                    {
+                        color = MapGenerationData.DefaultShadedColor;
+                    }
+                }
+
+                //Если это обновление на этапе инициализации
+                if (isInitializationUpdate == true)
+                {
+                    //Заполняем индексы UV-координат региона
+                    region.uvShadedChunkStart = verticesCount;
+                    region.uvShadedChunkIndex = chunkIndex;
+                    region.uvShadedChunkLength = uvArray.Length;
+                }
+
+                //Для каждых UV-координат в списке
+                for (int b = 0; b < uvArray.Length; b++)
+                {
+                    //Собираем UV4-координаты
+                    Vector4 uv4;
+                    uv4.x = uvArray[b].x * textureScale.x + textureOffset.x;
+                    uv4.y = uvArray[b].y * textureScale.y + textureOffset.y;
+                    uv4.z = textureIndex;
+                    uv4.w = region.ExtrudeAmount;
+
+                    //Если это не обновление на этапе инициализации
+                    if (isInitializationUpdate == false)
+                    {
+                        //Обновляем координаты в списке
+                        uvChunk[verticesCount] = uv4;
+
+                        //Если требуется обновление цветов
+                        if (mapGenerationData.Value.isColorUpdated == true)
+                        {
+                            //Обновляем цвет в списке
+                            colorChunk[verticesCount] = color;
+                        }
                     }
                     //Иначе
                     else
                     {
-                        //Триангулируем ребро с рекой
-                        TriangulateWithRiver(
-                            ref chunk,
-                            ref cell,
-                            direction,
-                            center,
-                            e);
-                    }
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем ребро около реки
-                    TriangulateAdjacentToRiver(
-                        ref chunk,
-                        ref cell,
-                        direction,
-                        center,
-                        e);
-                }
-            }
-            //Иначе
-            else
-            {
-                //Триангулируем ребро без реки
-                TriangulateWithoutRiver(
-                    ref chunk,
-                    ref cell,
-                    direction,
-                    center,
-                    e);
-
-                //Если ячейка не под водой и не имеет дороги через ребро
-                if (cell.IsUnderwater == false
-                    && cell.HasRoadThroughEdge(direction) == false)
-                {
-                    //Добавляем объект
-                    chunk.features.AddFeature(
-                        ref cell,
-                        (center + e.v1 + e.v5) * (1f / 3f));
-                }
-            }
-
-            //Если направление меньше или равно юго-востоку
-            if (direction <= HexDirection.SE)
-            {
-                //Триангулируем соединение
-                TriangulateConnection(
-                    ref chunk,
-                    ref cell,
-                    direction, 
-                    e);
-            }
-
-            //Если ячейка находится под водой
-            if (cell.IsUnderwater == true)
-            {
-                //Триангулируем воду
-                TriangulateWater(
-                    ref chunk,
-                    ref cell,
-                    direction,
-                    center);
-            }
-        }
-
-        void SimpleTriangulateEdge(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction)
-        {
-            //Берём основные вершины треугольника
-            Vector3 center = cell.Position;
-            DHexEdgeVertices e = new(
-                center + MapGenerationData.GetFirstCorner(direction),
-                center + MapGenerationData.GetSecondCorner(direction));
-
-            //Триангулируем треугольник без реки
-            SimpleTriangulateWithoutRiver(
-                ref chunk,
-                ref cell,
-                direction,
-                center,
-                e);
-        }
-
-        void TriangulateWithoutRiver(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Триангулируем веер ребра
-            TriangulateEdgeFan(
-                ref chunk,
-                center,
-                e,
-                cell.Index);
-
-            //Если ячейка имеет дорогу через данное ребро
-            if (cell.HasRoads == true)
-            {
-                //Определяем смешение
-                Vector2 interpolators
-                    = GetRoadInterpolators(
-                        ref cell,
-                        direction);
-
-                //Триангулируем дорогу
-                TriangulateRoad(
-                    ref chunk,
-                    center,
-                    Vector3.Lerp(
-                        center, e.v1,
-                        interpolators.x),
-                    Vector3.Lerp(
-                        center, e.v5,
-                        interpolators.y), 
-                    e,
-                    cell.HasRoadThroughEdge(direction),
-                    cell.Index);
-            }
-        }
-
-        void SimpleTriangulateWithoutRiver(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Определяем, какую текстуру требуется отобразить
-            float textureIndex = -1;
-
-            //Если не активен какой-либо режим карты
-            if (inputData.Value.mapMode == UI.MapMode.Default)
-            {
-                textureIndex = cell.Index;
-            }
-            //Иначе, если активен режим расстояния
-            else if (inputData.Value.mapMode == UI.MapMode.Distance)
-            {
-                textureIndex = cell.mapDistance;
-            }
-
-            //Триангулируем веер ребра
-            TriangulateEdgeFan(
-                ref chunk,
-                center,
-                e,
-                textureIndex);
-        }
-
-        void TriangulateConnection(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            DHexEdgeVertices e1)
-        {
-            //Если у ячейки есть сосед с данного направления
-            if (cell.GetNeighbour(direction).Unpack(world.Value, out int neighbourCellEntity))
-            {
-                //Берём компонент соседней ячейки
-                ref CHexRegion neighbourCell
-                    = ref regionPool.Value.Get(neighbourCellEntity);
-
-                //Берём основные данные квада
-                Vector3 bridge
-                    = MapGenerationData.GetBridge(
-                        direction);
-                bridge.y = neighbourCell.Position.y - cell.Position.y;
-                DHexEdgeVertices e2
-                    = new(
-                        e1.v1 + bridge,
-                        e1.v5 + bridge);
-
-                //Определяем, имеет ли ячейка реку или дорогу через ребро
-                bool hasRiver = cell.HasRiverThroughEdge(direction);
-                bool hasRoad = cell.HasRoadThroughEdge(direction);
-
-                //Если ячейка имеет реку через данное ребро
-                if (hasRiver == true)
-                {
-                    //Опускаем центральную вершину ребра
-                    e2.v3.y = neighbourCell.StreamBedY;
-
-                    //Определяем данные шейдера
-                    Vector3 indices;
-                    indices.x = indices.z = cell.Index;
-                    indices.y = neighbourCell.Index;
-
-                    //Если ячейка не находится под водой
-                    if (cell.IsUnderwater == false)
-                    {
-                        //Если сосед не находится под водой
-                        if (neighbourCell.IsUnderwater == false)
-                        {
-                            //Триангулируем течение реки
-                            TriangulateRiverQuad(
-                                ref chunk,
-                                e1.v2, e1.v4, e2.v2, e2.v4,
-                                cell.RiverSurfaceY, neighbourCell.RiverSurfaceY,
-                                0.8f,
-                                cell.HasIncomingRiver && cell.IncomingRiver == direction,
-                                indices);
-                        }
-                        //Иначе
-                        else
-                        {
-                            //Триангулируем водопад
-                            TriangulateWaterfallInWater(
-                                ref chunk,
-                                e1.v2, e1.v4, e2.v2, e2.v4,
-                                cell.RiverSurfaceY, neighbourCell.RiverSurfaceY,
-                                neighbourCell.WaterSurfaceY,
-                                indices);
-                        }
-                    }
-                    //Иначе, если сосед не находится под водой
-                    else if (neighbourCell.IsUnderwater == false
-                        //И высота соседа больше уровня воды ячейки
-                        && neighbourCell.Elevation > cell.WaterLevel)
-                    {
-                        //Триангулируем водопад
-                        TriangulateWaterfallInWater(
-                            ref chunk,
-                            e2.v4, e2.v2, e1.v4, e1.v2,
-                            neighbourCell.RiverSurfaceY, cell.RiverSurfaceY,
-                            cell.WaterSurfaceY,
-                            indices);
+                        //Заносим координаты и цвет в списки
+                        uvChunk.Add(uv4);
+                        colorChunk.Add(color);
                     }
                 }
 
-                //Если тип ребра - наклон
-                if (MapGenerationData.GetEdgeType(cell.Elevation, neighbourCell.Elevation) == HexEdgeType.Slope)
+                //Обновляем количество вершин
+                verticesCount += uvArray.Length;
+            }
+
+            //Для каждого чанка
+            for (int k = 0; k <= chunkIndex; k++)
+            {
+                //Заполняем данные UV-координат
+                MapGenerationData.uvShadedDirty[k] = false;
+                MapGenerationData.shadedMeshes[k].SetUVs(0, MapGenerationData.uvShaded[k]);
+
+                //Если требуется обновление цветов
+                if (mapGenerationData.Value.isColorUpdated == true)
                 {
-                    //Триангулируем террасы ребра
-                    TriangulateEdgeTerraces(
-                        ref chunk,
-                        ref cell, e1,
-                        ref neighbourCell, e2,
-                        hasRoad);
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем полосу ребра
-                    TriangulateEdgeStrip(
-                        ref chunk,
-                        e1, MapGenerationData.weights1, cell.Index,
-                        e2, MapGenerationData.weights2, neighbourCell.Index,
-                        hasRoad);
+                    MapGenerationData.colorShadedDirty[k] = false;
+                    MapGenerationData.shadedMeshes[k].SetColors(MapGenerationData.colorShaded[k]);
                 }
 
-                //Заносим стену в меш
-                chunk.features.AddWall(
-                    ref cell, e1,
-                    ref neighbourCell, e2,
-                    hasRiver,
-                    hasRoad);
+                MapGenerationData.shadedMFs[k].sharedMesh = MapGenerationData.shadedMeshes[k];
+                MapGenerationData.shadedMRs[k].sharedMaterial = mapGenerationData.Value.regionMaterial;
+            }
 
-                //Если направление меньше или равно востоку
-                if (direction <= HexDirection.E
-                    //И у ячейки есть сосед со следующего направления
-                    && cell.GetNeighbour(direction.Next()).Unpack(world.Value, out int nextNeighbourCellEntity))
+            //Если требуется обновление массива текстур
+            if (mapGenerationData.Value.isTextureArrayUpdated)
+            {
+                //Определяем количество текстур в массиве
+                int textureArrayCount = MapGenerationData.texArray.Count;
+
+                //Определяем размер текстуры
+                mapGenerationData.Value.currentTextureSize = 256;
+
+                //Если конечный массив текстур не пуст, удаляем его
+                if (mapGenerationData.Value.finalTexArray != null)
                 {
-                    //Берём компонент следующего соседа
-                    ref CHexRegion nextNeighbourCell
-                        = ref regionPool.Value.Get(nextNeighbourCellEntity);
+                    GameObject.DestroyImmediate(mapGenerationData.Value.finalTexArray);
+                }
 
-                    //Определяем высоту вершины треугольника
-                    Vector3 v5 
-                        = e1.v5 + MapGenerationData.GetBridge(
-                            direction.Next());
-                    v5.y = nextNeighbourCell.Position.y;
+                //Создаём новый массив текстур
+                mapGenerationData.Value.finalTexArray = new(
+                    mapGenerationData.Value.currentTextureSize, mapGenerationData.Value.currentTextureSize,
+                    textureArrayCount,
+                    TextureFormat.ARGB32,
+                    true);
 
-                    //Если высота ячейки меньше высоты соседа
-                    if (cell.Elevation <= neighbourCell.Elevation)
+                //Для каждой текстуры
+                for (int a = 0; a < textureArrayCount; a++)
+                {
+                    //Если размер текстуры в массиве не соответствует стандартному
+                    if (MapGenerationData.texArray[a].width != mapGenerationData.Value.currentTextureSize
+                        || MapGenerationData.texArray[a].height != mapGenerationData.Value.currentTextureSize)
                     {
-                        //Если высота ячейки меньше высоты следующего соседа
-                        if (cell.Elevation <= nextNeighbourCell.Elevation)
+                        //Создаём текстуру и заполняем её данные
+                        MapGenerationData.texArray[a] = GameObject.Instantiate(MapGenerationData.texArray[a]);
+                        MapGenerationData.texArray[a].hideFlags = HideFlags.DontSave;
+                        TextureScaler.Scale(
+                            MapGenerationData.texArray[a],
+                            mapGenerationData.Value.currentTextureSize, mapGenerationData.Value.currentTextureSize);
+                    }
+                    //Заносим текстуру в конечный массив
+                    mapGenerationData.Value.finalTexArray.SetPixels32(
+                        MapGenerationData.texArray[a].GetPixels32(),
+                        a);
+                }
+                //Применяем конечный массив и задаём его как массив текстур для материала
+                mapGenerationData.Value.finalTexArray.Apply();
+                mapGenerationData.Value.regionMaterial.SetTexture(
+                    ShaderParameters.MainTex,
+                    mapGenerationData.Value.finalTexArray);
+
+                //Отмечаем, что массив текстур был обновлён
+                mapGenerationData.Value.isTextureArrayUpdated = false;
+            }
+
+            //Отмечаем, что цвета и UV-координаты были обновлены
+            mapGenerationData.Value.isColorUpdated = false;
+            mapGenerationData.Value.isUVUpdatedFast = false;
+
+            //Обновляем количество чанков UV-координат
+            mapGenerationData.Value.uvChunkCount = chunkIndex + 1;
+        }
+
+        void MapUpdateShadedMaterialsFast()
+        {
+            //Если требуется обновление цветов
+            if (mapGenerationData.Value.isColorUpdated == true)
+            {
+                //Для каждого чанка
+                for (int a = 0; a < mapGenerationData.Value.uvChunkCount; a++)
+                {
+                    //Если цвета "грязны"
+                    if (MapGenerationData.colorShadedDirty[a] == true)
+                    {
+                        //Обновляем записи
+                        MapGenerationData.colorShadedDirty[a] = false;
+                        MapGenerationData.shadedMeshes[a].SetColors(MapGenerationData.colorShaded[a]);
+                    }
+                }
+            }
+
+            //Если требуется обновление UV-координат
+            if (mapGenerationData.Value.isUVUpdatedFast == true)
+            {
+                //Для каждого чанка
+                for (int a = 0; a < mapGenerationData.Value.uvChunkCount; a++)
+                {
+                    //Если UV-координаты "грязны"
+                    if (MapGenerationData.uvShadedDirty[a] == true)
+                    {
+                        //Обновляем записи
+                        MapGenerationData.uvShadedDirty[a] = false;
+                        MapGenerationData.shadedMeshes[a].SetUVs(0, MapGenerationData.uvShaded[a]);
+                    }
+                }
+            }
+        }
+
+        void MapUpdateLightingMode()
+        {
+            //Обновляем материалы
+            MapUpdateLightingMaterial(mapGenerationData.Value.regionMaterial);
+            MapUpdateLightingMaterial(mapGenerationData.Value.regionColoredMaterial);
+
+            mapGenerationData.Value.regionMaterial.EnableKeyword("HEXA_ALPHA");
+        }
+
+        void MapUpdateLightingMaterial(
+            Material material)
+        {
+            //Заполняем данные материала
+            material.SetInt("_SrcBlend", (int)UnityEngine.Rendering.BlendMode.One);
+            material.SetInt("_DstBlend", (int)UnityEngine.Rendering.BlendMode.Zero);
+            material.SetInt("_ZWrite", 1);
+            if (material.renderQueue >= 3000)
+            {
+                material.renderQueue -= 2000;
+            }
+            material.SetInt("_Cull", (int)UnityEngine.Rendering.CullMode.Back);
+
+            material.EnableKeyword("HEXA_LIT");
+        }
+
+        void MapUpdateBevel()
+        {
+            //Определяем размер текстуры
+            const int textureSize = 256;
+
+            //Если текстура отсутствует или её ширина неверна
+            if (MapGenerationData.bevelNormals == null || MapGenerationData.bevelNormals.width != textureSize)
+            {
+                //Создаём новую текстуру
+                MapGenerationData.bevelNormals = new(
+                    textureSize, textureSize,
+                    TextureFormat.ARGB32,
+                    false);
+            }
+
+            //Определяем размер текстуры
+            int textureHeight = MapGenerationData.bevelNormals.height;
+            int textureWidth = MapGenerationData.bevelNormals.width;
+
+            //Если массив цветов текстуры отсутствует или его длина не соответствует текстуре
+            if (MapGenerationData.bevelNormalsColors == null || MapGenerationData.bevelNormalsColors.Length != textureHeight * textureWidth)
+            {
+                //Создаём новый массив
+                MapGenerationData.bevelNormalsColors = new Color[textureHeight * textureWidth];
+            }
+
+            //Создаём структуру для координат пикселя
+            Vector2 texturePixel;
+
+            //Определяем ширину скоса и квадрат ширины
+            const float bevelWidth = 0.1f;
+            float bevelWidthSqr = bevelWidth * bevelWidth;
+
+            //Для каждого пикселя по высоте
+            for (int y = 0, index = 0; y < textureHeight; y++)
+            {
+                //Определяем его положение по Y
+                texturePixel.y = (float)y / textureHeight;
+
+                //Для каждого пикселя по ширине
+                for (int x = 0; x < textureWidth; x++)
+                {
+                    //Определяем его положение по X
+                    texturePixel.x = (float)x / textureWidth;
+
+                    //Обнуляем R-компонент
+                    MapGenerationData.bevelNormalsColors[index].r = 0f;
+
+                    //Определяем расстояние до данного пикселя
+                    float minDistSqr = float.MaxValue;
+
+                    //Для каждого ребра шестиугольника
+                    for (int a = 0; a < 6; a++)
+                    {
+                        //Берём индексы вершин
+                        Vector2 t0 = MapGenerationData.hexagonUVsExtruded[a];
+                        Vector2 t1 = a < 5 ? MapGenerationData.hexagonUVsExtruded[a + 1] : MapGenerationData.hexagonUVsExtruded[0];
+
+                        //Определяем длину ребра
+                        float l2 = Vector2.SqrMagnitude(t0 - t1);
+                        //
+                        float t = Mathf.Max(0, Mathf.Min(1, Vector2.Dot(texturePixel - t0, t1 - t0) / l2));
+                        //
+                        Vector2 projection = t0 + t * (t1 - t0);
+                        //
+                        float distSqr = Vector2.SqrMagnitude(texturePixel - projection);
+
+                        //Если расстояние меньше минимального, то обновляем минимальное
+                        if (distSqr < minDistSqr)
                         {
-                            //Триангулируем угол
-                            TriangulateCorner(
-                                ref chunk,
-                                ref cell, e1.v5,
-                                ref neighbourCell, e2.v5,
-                                ref nextNeighbourCell, v5);
-                        }
-                        //Иначе
-                        else
-                        {
-                            //Триангулируем угол
-                            TriangulateCorner(
-                                ref chunk,
-                                ref nextNeighbourCell, v5,
-                                ref cell, e1.v5,
-                                ref neighbourCell, e2.v5);
+                            minDistSqr = distSqr;
                         }
                     }
-                    //Иначе, если высота соседа меньше высоты следующего соседа
-                    else if (neighbourCell.Elevation <= nextNeighbourCell.Elevation)
+
+                    //Определяем градиент
+                    float f = minDistSqr / bevelWidthSqr;
+                    //Если градиент больше единицы, ограничиваем его
+                    if (f > 1f)
                     {
-                        //Триангулируем угол
-                        TriangulateCorner(
-                            ref chunk,
-                            ref neighbourCell, e2.v5,
-                            ref nextNeighbourCell, v5,
-                            ref cell, e1.v5);
-                    }
-                    //Иначе
-                    else
-                    {
-                        //Триангулируем угол
-                        TriangulateCorner(
-                            ref chunk,
-                            ref nextNeighbourCell, v5,
-                            ref cell, e1.v5,
-                            ref neighbourCell, e2.v5);
-                    }
-                }
-            }
-        }
-
-        void TriangulateWithRiver(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Определяем боковые вершины "центра"
-            Vector3 centerL;
-            Vector3 centerR;
-            //Если ячейка имеет реку через противоположное ребро
-            if (cell.HasRiverThroughEdge(direction.Opposite()) == true)
-            {
-                //Определяем положения вершин
-                centerL
-                    = center 
-                    + MapGenerationData.GetFirstSolidCorner(direction.Previous()) * 0.25f;
-                centerR
-                    = center 
-                    + MapGenerationData.GetSecondSolidCorner(direction.Next()) * 0.25f;
-            }
-            //Иначе, если ячейка имеет реку через следующее ребро
-            else if(cell.HasRiverThroughEdge(direction.Next()) == true)
-            {
-                //Определяем положения вершин
-                centerL = center;
-                centerR
-                    = Vector3.Lerp(
-                        center, e.v5, 
-                        2f / 3f);
-            }
-            //Иначе, если ячейка имеет реку через предыдущее ребро
-            else if(cell.HasRiverThroughEdge(direction.Previous()) == true)
-            {
-                //Определяем положения вершин
-                centerL
-                    = Vector3.Lerp(
-                        center, e.v1,
-                        2f / 3f);
-                centerR = center;
-            }
-            //Иначе, если ячейка имеет реку через дважды следующее ребро
-            else if(cell.HasRiverThroughEdge(direction.Next2()) == true)
-            {
-                //Определяем положение вершин
-                centerL = center;
-                centerR 
-                    = center 
-                    + MapGenerationData.GetSolidEdgeMiddle(direction.Next()) 
-                    * (0.5f * MapGenerationData.innerToOuter);
-            }
-            //Иначе
-            else
-            {
-                //Определяем положения вершин
-                centerL 
-                    = center 
-                    + MapGenerationData.GetSolidEdgeMiddle(direction.Previous()) 
-                    * (0.5f * MapGenerationData.innerToOuter);
-                centerR = center;
-            }
-            //Уточняем положение центральной вершины
-            center
-                = Vector3.Lerp(
-                    centerL, centerR, 
-                    0.5f);
-
-            //Определяем среднюю линию
-            DHexEdgeVertices m
-                = new(
-                    Vector3.Lerp(
-                        centerL, e.v1,
-                        0.5f),
-                    Vector3.Lerp(
-                        centerR, e.v5,
-                        0.5f),
-                    1f / 6f);
-
-            //Опускаем центральные вершины
-            m.v3.y = center.y = e.v3.y;
-
-            //Триангулируем русло
-            TriangulateEdgeStrip(
-                ref chunk,
-                m, MapGenerationData.weights1, cell.Index,
-                e, MapGenerationData.weights1, cell.Index);
-
-            //Заносим русло в меш
-            chunk.terrain.AddTriangle(
-                centerL, m.v1, m.v2);
-            chunk.terrain.AddQuad(
-                centerL, center, m.v2, m.v3);
-            chunk.terrain.AddQuad(
-                center, centerR, m.v3, m.v4);
-            chunk.terrain.AddTriangle(
-                centerR, m.v4, m.v5);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.y = indices.z = cell.Index;
-            chunk.terrain.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.terrain.AddQuadCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.terrain.AddQuadCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.terrain.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-
-            //Если ячейка не находится под водой
-            if (cell.IsUnderwater == false)
-            {
-                //Определяем, должна ли быть развёрнута река
-                bool reversed
-                    = cell.IncomingRiver == direction;
-
-                //Заносим течение реки в меш
-                TriangulateRiverQuad(
-                    ref chunk,
-                    centerL, centerR, m.v2, m.v4,
-                    cell.RiverSurfaceY,
-                    0.4f,
-                    reversed,
-                    indices);
-                TriangulateRiverQuad(
-                    ref chunk,
-                    m.v2, m.v4, e.v2, e.v4,
-                    cell.RiverSurfaceY,
-                    0.6f,
-                    reversed,
-                    indices);
-            }
-        }
-
-        void TriangulateWithRiverBeginOrEnd(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Определяем среднюю линию
-            DHexEdgeVertices m 
-                = new(
-                    Vector3.Lerp(center, e.v1, 0.5f),
-                    Vector3.Lerp(center, e.v5, 0.5f));
-
-            //Опускаем центральную вершину
-            m.v3.y = e.v3.y;
-
-            //Триангулируем исток
-            TriangulateEdgeStrip(
-                ref chunk,
-                m, MapGenerationData.weights1, cell.Index,
-                e, MapGenerationData.weights1, cell.Index);
-            TriangulateEdgeFan(
-                ref chunk,
-                center,
-                m,
-                cell.Index);
-
-            //Если ячейка не находится под водой
-            if (cell.IsUnderwater == false)
-            {
-                //Определяем, должна ли быть развёрнута река
-                bool reversed = cell.HasIncomingRiver;
-
-                //Определяем данные шейдера
-                Vector3 indices;
-                indices.x = indices.y = indices.z = cell.Index;
-
-                //Заносим течение реки в меш
-                TriangulateRiverQuad(
-                    ref chunk,
-                    m.v2, m.v4, e.v2, e.v4,
-                    cell.RiverSurfaceY,
-                    0.6f,
-                    reversed,
-                    indices);
-
-                //Определяем положене центра течения
-                center.y = m.v2.y = m.v4.y = cell.RiverSurfaceY;
-
-                //Заносим треугольник в меш
-                chunk.rivers.AddTriangle(center, m.v2, m.v4);
-                //Если течение развёрнуто
-                if (reversed == true)
-                {
-                    //Заносим UV-координаты в меш
-                    chunk.rivers.AddTriangleUV(
-                        new(0.5f, 0.4f), new(1f, 0.2f), new(0f, 0.2f));
-                }
-                else
-                {
-                    //Заносим UV-координаты в меш
-                    chunk.rivers.AddTriangleUV(
-                        new(0.5f, 0.4f), new(0f, 0.6f), new(1f, 0.6f));
-                }
-
-                //Заносим данные шейдера
-                chunk.rivers.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights1);
-            }
-        }
-
-        void TriangulateAdjacentToRiver(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Если ячейка имеет дороги
-            if(cell.HasRoads == true)
-            {
-                //Триангулируем дорогу возле реки
-                TriangulateRoadAdjacentToRiver(
-                    ref chunk,
-                    ref cell,
-                    direction,
-                    center,
-                    e);
-            }   
-            
-            //Если ячейка имеет реку через следующее ребро
-            if (cell.HasRiverThroughEdge(direction.Next()) == true)
-            {
-                //Если ячейка имеет реку через предыдущее ребро
-                if (cell.HasRiverThroughEdge(direction.Previous()) == true)
-                {
-                    //Смещаем центр
-                    center
-                        += MapGenerationData.GetSolidEdgeMiddle(direction)
-                        * (MapGenerationData.innerToOuter * 0.5f);
-                }
-                //Иначе, если ячейка имеет реку через дважды предыдущее ребро
-                else if(cell.HasRiverThroughEdge(direction.Previous2()) == true)
-                {
-                    //Смещаем центр
-                    center
-                        += MapGenerationData.GetFirstSolidCorner(direction)
-                        * 0.25f;
-                }
-            }
-            //Иначе, если ячейка имеет реку через предыдущее и дважды следующее рёбра
-            else if(cell.HasRiverThroughEdge(direction.Previous())
-                && cell.HasRiverThroughEdge(direction.Next2()))
-            {
-                //Смещаем центр
-                center += MapGenerationData.GetSecondSolidCorner(direction) * 0.25f;
-            }
-
-            //Определяем среднюю линию
-            DHexEdgeVertices m 
-                = new(
-                    Vector3.Lerp(
-                        center, e.v1, 
-                        0.5f),
-                    Vector3.Lerp(
-                        center, e.v5, 
-                        0.5f));
-
-            //Триангулируем ребро
-            TriangulateEdgeStrip(
-                ref chunk,
-                m, MapGenerationData.weights1, cell.Index, 
-                e, MapGenerationData.weights1, cell.Index);
-            TriangulateEdgeFan(
-                ref chunk,
-                center, 
-                m,
-                cell.Index);
-
-            //Если ячейка не под водой и не имеет дороги через ребро
-            if (cell.IsUnderwater == false
-                && cell.HasRoadThroughEdge(direction) == false)
-            {
-                //Добавляем объект
-                chunk.features.AddFeature(
-                    ref cell,
-                    (center + e.v1 + e.v5) * (1f / 3f));
-            }
-        }
-
-        void TriangulateWaterfallInWater(
-            ref CHexChunk chunk,
-            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
-            float y1, float y2, 
-            float waterY,
-            Vector3 indices)
-        {
-            //Определяем вершины водопада
-            v1.y = v2.y = y1;
-            v3.y = v4.y = y2;
-            v1 = MapGenerationData.Perturb(v1);
-            v2 = MapGenerationData.Perturb(v2);
-            v3 = MapGenerationData.Perturb(v3);
-            v4 = MapGenerationData.Perturb(v4);
-            float t 
-                = (waterY - y2) / (y1 - y2);
-            v3 = Vector3.Lerp(
-                v3, v1, 
-                t);
-            v4 = Vector3.Lerp(
-                v4, v2, 
-                t);
-
-            //Заносим квад в меш
-            chunk.rivers.AddQuadUnperturbed(v1, v2, v3, v4);
-            chunk.rivers.AddQuadUV(0f, 1f, 0.8f, 1f);
-
-            //Заносим данные шейдера
-            chunk.rivers.AddQuadCellData(
-                indices,
-                MapGenerationData.weights1, MapGenerationData.weights2);
-        }
-
-        void TriangulateEdgeTerraces(
-            ref CHexChunk chunk,
-            ref CHexRegion beginCell, DHexEdgeVertices begin,
-            ref CHexRegion endCell, DHexEdgeVertices end,
-            bool hasRoad)
-        {
-            //Определяем конечные вершины первого квада
-            DHexEdgeVertices e2 = DHexEdgeVertices.TerraceLerp(
-                begin, end,
-                1);
-            Color w2 = MapGenerationData.TerraceLerp(
-                MapGenerationData.weights1, MapGenerationData.weights2, 
-                1);
-            float i1 = beginCell.Index;
-            float i2 = endCell.Index;
-
-            //Заносим первую полосу в меш
-            TriangulateEdgeStrip(
-                ref chunk,
-                begin, MapGenerationData.weights1, i1,
-                e2, w2, i2,
-                hasRoad);
-
-            //Для каждого промежуточного квада
-            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
-            {
-                //Определяем начальные данные квада
-                DHexEdgeVertices e1 = e2;
-                Color c1 = w2;
-
-                //Определяем конечные данные квада
-                e2 = DHexEdgeVertices.TerraceLerp(
-                    begin, end,
-                    a);
-                w2 = MapGenerationData.TerraceLerp(
-                    MapGenerationData.weights1, MapGenerationData.weights2,
-                    a);
-
-                //Заносим промежуточную полосу в меш
-                TriangulateEdgeStrip(
-                    ref chunk,
-                    e1, c1, i1,
-                    e2, w2, i2,
-                    hasRoad);
-            }
-
-            //Заносим последнюю полосу в меш
-            TriangulateEdgeStrip(
-                ref chunk,
-                e2, w2, i1,
-                end, MapGenerationData.weights2, i2,
-                hasRoad);
-        }
-
-        void TriangulateCorner(
-            ref CHexChunk chunk,
-            ref CHexRegion bottomCell, Vector3 bottom,
-            ref CHexRegion leftCell, Vector3 left,
-            ref CHexRegion rightCell, Vector3 right)
-        {
-            //Определяем типы рёбер
-            HexEdgeType leftEdgeType
-                = MapGenerationData.GetEdgeType(
-                    bottomCell.Elevation, leftCell.Elevation);
-            HexEdgeType rightEdgeType
-                = MapGenerationData.GetEdgeType(
-                    bottomCell.Elevation, rightCell.Elevation);
-
-            //Если тип левого ребра - склон
-            if (leftEdgeType == HexEdgeType.Slope)
-            {
-                //Если тип правого ребра - склон
-                if (rightEdgeType == HexEdgeType.Slope)
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerTerraces(
-                        ref chunk,
-                        ref bottomCell, bottom,
-                        ref leftCell, left,
-                        ref rightCell, right);
-                }
-                //Иначе, если тип правого ребра - плоскость
-                else if (rightEdgeType == HexEdgeType.Flat)
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerTerraces(
-                        ref chunk,
-                        ref leftCell, left,
-                        ref rightCell, right,
-                        ref bottomCell, bottom);
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем стык террас и обрыва
-                    TriangulateCornerTerracesCliff(
-                        ref chunk,
-                        ref bottomCell, bottom,
-                        ref leftCell, left,
-                        ref rightCell, right);
-                }
-            }
-            //Иначе, если тип правого ребра - склон
-            else if (rightEdgeType == HexEdgeType.Slope)
-            {
-                //Если тип левого ребра - плоскость
-                if (leftEdgeType == HexEdgeType.Flat)
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerTerraces(
-                        ref chunk,
-                        ref rightCell, right,
-                        ref bottomCell, bottom,
-                        ref leftCell, left);
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerCliffTerraces(
-                        ref chunk,
-                        ref bottomCell, bottom,
-                        ref leftCell, left,
-                        ref rightCell, right);
-                }
-            }
-            //Иначе, если тип ребра между левым и правым соседом - склон
-            else if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
-            {
-                //Если высота левого соседа меньше высоты правого
-                if (leftCell.Elevation < rightCell.Elevation)
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerCliffTerraces(
-                        ref chunk,
-                        ref rightCell, right,
-                        ref bottomCell, bottom,
-                        ref leftCell, left);
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем угловые террасы
-                    TriangulateCornerTerracesCliff(
-                        ref chunk,
-                        ref leftCell, left,
-                        ref rightCell, right,
-                        ref bottomCell, bottom);
-                }
-            }
-            //Иначе
-            else
-            {
-                //Заносим треугольник в меш
-                chunk.terrain.AddTriangle(
-                    bottom,left,right);
-
-                //Заносим данные шейдера
-                Vector3 indices;
-                indices.x = bottomCell.Index;
-                indices.y = leftCell.Index;
-                indices.z = rightCell.Index;
-                chunk.terrain.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
-            }
-
-            //Триангулируем стену
-            chunk.features.AddWall(
-                ref bottomCell, bottom,
-                ref leftCell, left,
-                ref rightCell, right);
-        }
-
-        void TriangulateCornerTerraces(
-            ref CHexChunk chunk,
-            ref CHexRegion beginCell, Vector3 begin,
-            ref CHexRegion leftCell, Vector3 left,
-            ref CHexRegion rightCell, Vector3 right)
-        {
-            //Определяем вершины треугольника
-            Vector3 v3 
-                = MapGenerationData.TerraceLerp(
-                    begin, left, 
-                    1);
-            Vector3 v4 
-                = MapGenerationData.TerraceLerp(
-                    begin, right, 
-                    1);
-            Color w3 
-                = MapGenerationData.TerraceLerp(
-                    MapGenerationData.weights1, MapGenerationData.weights2, 
-                    1);
-            Color w4 
-                = MapGenerationData.TerraceLerp(
-                    MapGenerationData.weights1, MapGenerationData.weights3, 
-                    1);
-            Vector3 indices;
-            indices.x = beginCell.Index;
-            indices.y = leftCell.Index;
-            indices.z = rightCell.Index;
-
-            //Заносим первый треугольник в меш
-            chunk.terrain.AddTriangle(
-                begin, v3, v4);
-            chunk.terrain.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1, w3, w4);
-
-            //Для каждого промежуточного квада
-            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
-            {
-                //Определяем начальные данные квада
-                Vector3 v1 = v3;
-                Vector3 v2 = v4;
-                Color w1 = w3;
-                Color w2 = w4;
-
-                //Определяем конечные данные квада
-                v3 = MapGenerationData.TerraceLerp(
-                    begin, left, 
-                    a);
-                v4 = MapGenerationData.TerraceLerp(
-                    begin, right, 
-                    a);
-                w3 = MapGenerationData.TerraceLerp(
-                    MapGenerationData.weights1, MapGenerationData.weights2, 
-                    a);
-                w4 = MapGenerationData.TerraceLerp(
-                    MapGenerationData.weights1, MapGenerationData.weights3, 
-                    a);
-
-                //Заносим промежуточный квад в меш
-                chunk.terrain.AddQuad(
-                    v1, v2, v3, v4);
-                chunk.terrain.AddQuadCellData(
-                    indices,
-                    w1, w2, w3, w4);
-            }
-
-            //Заносим последний квад в меш
-            chunk.terrain.AddQuad(
-                v3, v4, left, right);
-            chunk.terrain.AddQuadCellData(
-                indices,
-                w3, w4, MapGenerationData.weights2, MapGenerationData.weights3);
-        }
-
-        void TriangulateCornerTerracesCliff(
-            ref CHexChunk chunk,
-            ref CHexRegion beginCell, Vector3 begin,
-            ref CHexRegion leftCell, Vector3 left,
-            ref CHexRegion rightCell, Vector3 right)
-        {
-            //Определяем положение вершины схождения террас
-            float b = 1f 
-                / (rightCell.Elevation - beginCell.Elevation);
-            if (b < 0)
-            {
-                b = -b;
-            }
-            Vector3 boundary
-                = Vector3.Lerp(
-                    MapGenerationData.Perturb(begin), MapGenerationData.Perturb(right),
-                    b);
-            Color boundaryWeights
-                = Color.Lerp(
-                    MapGenerationData.weights1, MapGenerationData.weights3,
-                    b);
-            Vector3 indices;
-            indices.x = beginCell.Index;
-            indices.y = leftCell.Index;
-            indices.z = rightCell.Index;
-
-            //Триангулируем пограничный треугольник
-            TriangulateBoundaryTriangle(
-                ref chunk,
-                MapGenerationData.weights1, begin,
-                MapGenerationData.weights2, left,
-                boundaryWeights, boundary,
-                indices);
-            
-            //Если граница между левым и правым соседом - склон
-            if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
-            {
-                //Триангулируем пограничный треугольник
-                TriangulateBoundaryTriangle(
-                    ref chunk,
-                    MapGenerationData.weights2, left,
-                    MapGenerationData.weights3, right,
-                    boundaryWeights, boundary,
-                    indices);
-            }
-            //Иначе
-            else
-            {
-                //Заносим треугольник в меш
-                chunk.terrain.AddTriangleUnperturbed(
-                    MapGenerationData.Perturb(left), MapGenerationData.Perturb(right), boundary);
-                chunk.terrain.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights2, MapGenerationData.weights3, boundaryWeights);
-            }
-        }
-
-        void TriangulateCornerCliffTerraces(
-            ref CHexChunk chunk,
-            ref CHexRegion beginCell, Vector3 begin,
-            ref CHexRegion leftCell, Vector3 left,
-            ref CHexRegion rightCell, Vector3 right)
-        {
-            //Определяем положение вершины схождения террас
-            float b = 1f
-                / (leftCell.Elevation - beginCell.Elevation);
-            if (b < 0)
-            {
-                b = -b;
-            }
-            Vector3 boundary
-                = Vector3.Lerp(
-                    MapGenerationData.Perturb(begin), MapGenerationData.Perturb(left),
-                    b);
-            Color boundaryWeights
-                = Color.Lerp(
-                    MapGenerationData.weights1, MapGenerationData.weights2,
-                    b);
-            Vector3 indices;
-            indices.x = beginCell.Index;
-            indices.y = leftCell.Index;
-            indices.z = rightCell.Index;
-
-            //Триангулируем пограничный треугольник
-            TriangulateBoundaryTriangle(
-                ref chunk,
-                MapGenerationData.weights3, right,
-                MapGenerationData.weights1, begin,
-                boundaryWeights, boundary,
-                indices);
-
-            //Если граница между левым и правым соседом - склон
-            if (MapGenerationData.GetEdgeType(leftCell.Elevation, rightCell.Elevation) == HexEdgeType.Slope)
-            {
-                //Триангулируем пограничный треугольник
-                TriangulateBoundaryTriangle(
-                    ref chunk,
-                    MapGenerationData.weights2, left,
-                    MapGenerationData.weights3, right,
-                    boundaryWeights, boundary,
-                    indices);
-            }
-            //Иначе
-            else
-            {
-                //Заносим треугольник в меш
-                chunk.terrain.AddTriangleUnperturbed(
-                    MapGenerationData.Perturb(left), MapGenerationData.Perturb(right), boundary);
-                chunk.terrain.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights2, MapGenerationData.weights3, boundaryWeights);
-            }
-        }
-
-        void TriangulateBoundaryTriangle(
-            ref CHexChunk chunk,
-            Color beginWeights, Vector3 begin,
-            Color leftWeights, Vector3 left,
-            Color boundaryWeights, Vector3 boundary,
-            Vector3 indices)
-        {
-            //Определяем начальную вершину схождения
-            Vector3 v2 = MapGenerationData.Perturb(
-                MapGenerationData.TerraceLerp(
-                    begin, left,
-                    1));
-            Color w2 = MapGenerationData.TerraceLerp(
-                beginWeights, leftWeights,
-                1);
-
-            //Заносим первый треугольник в меш
-            chunk.terrain.AddTriangleUnperturbed(
-                MapGenerationData.Perturb(begin), v2, boundary);
-            chunk.terrain.AddTriangleCellData(
-                indices,
-                beginWeights, w2, boundaryWeights);
-
-            //Для каждого промежуточного треугольника
-            for (int a = 2; a < MapGenerationData.terraceSteps; a++)
-            {
-                //Определяем начальные данные треугольника
-                Vector3 v1 = v2;
-                Color w1 = w2;
-
-                //Определяем конечные данные треугольника
-                v2 = MapGenerationData.Perturb(
-                    MapGenerationData.TerraceLerp(
-                        begin, left,
-                        a));
-                w2 = MapGenerationData.TerraceLerp(
-                    beginWeights, leftWeights,
-                    a);
-
-                //Заносим промежуточный треугольник в меш
-                chunk.terrain.AddTriangleUnperturbed(
-                    v1, v2, boundary);
-                chunk.terrain.AddTriangleCellData(
-                    indices,
-                    w1, w2, boundaryWeights);
-            }
-
-            //Заносим последний треугольник в меш
-            chunk.terrain.AddTriangleUnperturbed(
-                v2, MapGenerationData.Perturb(left), boundary);
-            chunk.terrain.AddTriangleCellData(
-                indices,
-                w2, leftWeights, boundaryWeights);
-        }
-
-        void TriangulateEdgeFan(
-            ref CHexChunk chunk,
-            Vector3 center,
-            DHexEdgeVertices edge,
-            float index)
-        {
-            //Заносим треугольники в меш
-            chunk.terrain.AddTriangle(
-                center, edge.v1, edge.v2);
-            chunk.terrain.AddTriangle(
-                center, edge.v2, edge.v3);
-            chunk.terrain.AddTriangle(
-                center, edge.v3, edge.v4);
-            chunk.terrain.AddTriangle(
-                center, edge.v4, edge.v5);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.y = indices.z = index;
-            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
-            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
-            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
-            chunk.terrain.AddTriangleCellData(indices, MapGenerationData.weights1);
-        }
-
-        void TriangulateEdgeStrip(
-            ref CHexChunk chunk,
-            DHexEdgeVertices e1, Color w1, float index1,
-            DHexEdgeVertices e2, Color w2, float index2,
-            bool hasRoad = false)
-        {
-            //Заносим квады в меш
-            chunk.terrain.AddQuad(
-                e1.v1, e1.v2, e2.v1, e2.v2);
-            chunk.terrain.AddQuad(
-                e1.v2, e1.v3, e2.v2, e2.v3);
-            chunk.terrain.AddQuad(
-                e1.v3, e1.v4, e2.v3, e2.v4);
-            chunk.terrain.AddQuad(
-                e1.v4, e1.v5, e2.v4, e2.v5);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.z = index1;
-            indices.y = index2;
-            chunk.terrain.AddQuadCellData(indices, w1, w2);
-            chunk.terrain.AddQuadCellData(indices, w1, w2);
-            chunk.terrain.AddQuadCellData(indices, w1, w2);
-            chunk.terrain.AddQuadCellData(indices, w1, w2);
-
-            //Если в данном направлении присутствует дорога
-            if (hasRoad == true)
-            {
-                //Триангулируем сегмент дороги
-                TriangulateRoadSegment(
-                    ref chunk,
-                    e1.v2, e1.v3, e1.v4, e2.v2, e2.v3, e2.v4,
-                    w1, w2,
-                    indices);
-            }
-        }
-
-        void TriangulateRiverQuad(
-            ref CHexChunk chunk,
-            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
-            float y,
-            float v,
-            bool reversed,
-            Vector3 indices)
-        {
-            //Триангулируем течение реки
-            TriangulateRiverQuad(
-                ref chunk,
-                v1, v2, v3, v4,
-                y, y,
-                v,
-                reversed,
-                indices);
-        }
-
-        void TriangulateRiverQuad(
-            ref CHexChunk chunk,
-            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4,
-            float y1, float y2,
-            float v,
-            bool reversed,
-            Vector3 indices)
-        {
-            //Опускаем вершины
-            v1.y = v2.y = y1; 
-            v3.y = v4.y = y2;
-
-            //Заносим квад в меш
-            chunk.rivers.AddQuad(
-                v1, v2, v3, v4);
-            
-            //Если река развёрнута
-            if (reversed == true)
-            {
-                //Заносим UV-координаты в меш
-                chunk.rivers.AddQuadUV(
-                    1f, 0f, 0.8f - v, 0.6f - v);
-            }
-            //Иначе
-            else
-            {
-                //Заносим UV-координаты в меш
-                chunk.rivers.AddQuadUV(
-                    0f, 1f, v, v + 0.2f);
-            }
-
-            //Заносим данные шейдера
-            chunk.rivers.AddQuadCellData(
-                indices,
-                MapGenerationData.weights1, MapGenerationData.weights2);
-        }
-
-        void TriangulateRoad(
-            ref CHexChunk chunk,
-            Vector3 center, Vector3 mL, Vector3 mR,
-            DHexEdgeVertices e,
-            bool hasRoadThroughEdge,
-            float index)
-        {
-            //Если ячейка имеет дорогу через ребро
-            if(hasRoadThroughEdge == true)
-            {
-                //Определяем данные шейдера
-                Vector3 indices;
-                indices.x = indices.y = indices.z = index;
-
-                //Определяем центральную вершину
-                Vector3 mC
-                    = Vector3.Lerp(
-                        mL, mR,
-                        0.5f);
-
-                //Триангулируем сегмент дороги
-                TriangulateRoadSegment(
-                    ref chunk,
-                    mL, mC, mR, e.v2, e.v3, e.v4,
-                    MapGenerationData.weights1, MapGenerationData.weights1,
-                    indices);
-
-                //Заносим треугольники в меш
-                chunk.roads.AddTriangle(
-                    center, mL, mC);
-                chunk.roads.AddTriangle(
-                    center, mC, mR);
-                chunk.roads.AddTriangleUV(
-                    new(1f, 0f), new(0f, 0f), new(1f, 0f));
-                chunk.roads.AddTriangleUV(
-                    new(1f, 0f), new(1f, 0f), new(0f, 0f));
-
-                //Заносим данные шейдера
-                chunk.roads.AddTriangleCellData(
-                    indices, 
-                    MapGenerationData.weights1);
-                chunk.roads.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights1);
-            }
-            //Иначе
-            else
-            {
-                //Триангулируем ребро дороги
-                TriangulateRoadEdge(
-                    ref chunk,
-                    center, mL, mR,
-                    index);
-            }
-        }
-
-        void TriangulateRoadAdjacentToRiver(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center,
-            DHexEdgeVertices e)
-        {
-            //Определяем, имеет ли ячейка дорогу через данное ребро
-            bool hasRoadThroughEdge
-                = cell.HasRoadThroughEdge(direction);
-            //Определяем, имеет ли ячейка реки через предыдущее и следующее рёбра
-            bool previousHasRiver
-                = cell.HasRiverThroughEdge(direction.Previous());
-            bool nextHasRiver
-                = cell.HasRiverThroughEdge(direction.Next());
-
-            //Определяем смешение
-            Vector2 interpolators
-                = GetRoadInterpolators(
-                    ref cell,
-                    direction);
-
-            //Определяем вершины дороги
-            Vector3 roadCenter = center;
-            //Если ячейка имеет начало или конец реки
-            if (cell.HasRiverBeginOrEnd == true)
-            {
-                //Смещаем центр дороги к твёрдому ребру ячейки
-                roadCenter
-                    += MapGenerationData.GetSolidEdgeMiddle(
-                        cell.RiverBeginOrEndDirection.Opposite()) * (1f / 3f);
-            }
-            //Иначе, если река идёт в противоположных направлениях
-            else if (cell.IncomingRiver == cell.OutgoingRiver.Opposite())
-            {
-                //Определяем угол
-                Vector3 corner;
-
-                //Если ячейка имеет реку через предыдущее ребро
-                if (previousHasRiver == true)
-                {
-                    //Если ячейка не имеет дорогу через текущее ребро 
-                    if(hasRoadThroughEdge == false
-                        //И не имеет дорогу через следующее ребро
-                        && cell.HasRoadThroughEdge(direction.Next()) == false)
-                    {
-                        //Выходим из функции
-                        return;
+                        f = 1f;
                     }
 
-                    corner = MapGenerationData.GetSecondSolidCorner(direction);
-                }
-                //Иначе
-                else
-                {
-                    //Если ячейка не имеет дорогу через текущее ребро 
-                    if (hasRoadThroughEdge == false
-                        //И не имеет дорогу через предыдущее ребро
-                        && cell.HasRoadThroughEdge(direction.Previous()) == false)
-                    {
-                        //Выходим из функции
-                        return;
-                    }
+                    //Обновляем R-компонент
+                    MapGenerationData.bevelNormalsColors[index].r = f;
 
-                    corner = MapGenerationData.GetFirstSolidCorner(direction);
-                }
-
-                //Смещаем центр дороги
-                roadCenter
-                    += corner * 0.5f;
-
-                //Если исходящая река идёт через следующее направление
-                if (cell.IncomingRiver == direction.Next()
-                    //И дорога есть по обе стороны от реки
-                    && (cell.HasRoadThroughEdge(direction.Next2())
-                    || cell.HasRoadThroughEdge(direction.Opposite())))
-                {
-                    //Создаём мост
-                    chunk.features.AddBridge(
-                        roadCenter, center - corner * 0.5f);
-                }
-
-                center
-                    += corner * 0.25f;
-            }
-            //Иначе, если ячейка имеет входящую реку через ребро, предыдущее исходящей
-            else if(cell.IncomingRiver == cell.OutgoingRiver.Previous() == true)
-            {
-                //Смещаем центр дороги
-                roadCenter
-                    -= MapGenerationData.GetSecondCorner(cell.IncomingRiver) * 0.2f;
-            }
-            //Иначе, если ячейка имеет входящую реку через ребро, следующее исходящей
-            else if(cell.IncomingRiver == cell.OutgoingRiver.Next() == true)
-            {
-                //Смещаем центр дороги
-                roadCenter
-                    -= MapGenerationData.GetFirstCorner(cell.IncomingRiver) * 0.2f;
-            }
-            //Иначе, если ячейка имеет реки через оба соседних ребра
-            else if(previousHasRiver && nextHasRiver == true)
-            {
-                //Если ячейка не имеет дороги в данном направлении
-                if (hasRoadThroughEdge == false)
-                {
-                    //Выходим из функции
-                    return;
-                }
-
-                //Смещаем центр дороги
-                Vector3 offset
-                    = MapGenerationData.GetSolidEdgeMiddle(direction)
-                    * MapGenerationData.innerToOuter;
-                roadCenter
-                    += offset * 0.7f;
-                center
-                    += offset * 0.5f;
-            }
-            //Иначе
-            else
-            {
-                //Определяем центральное направление
-                HexDirection middle;
-                //Если ячейка имеет реку через предыдущее направление
-                if (previousHasRiver == true)
-                {
-                    middle = direction.Next();
-                }
-                //Иначе, если ячейка имеет реку через следующее направление
-                else if (nextHasRiver == true)
-                {
-                    middle = direction.Previous();
-                }
-                //Иначе
-                else
-                {
-                    middle = direction;
-                }
-
-                //Если ячейка не имеет дороги ни через одно направление из соседних
-                if (cell.HasRoadThroughEdge(middle) == false
-                    && cell.HasRoadThroughEdge(middle.Previous()) == false
-                    && cell.HasRoadThroughEdge(middle.Next()) == false)
-                {
-                    //Выходим из функции
-                    return;
-                }
-
-                //Определяем смещение
-                Vector3 offset = MapGenerationData.GetSolidEdgeMiddle(middle);
-                //Смещаем центр дороги
-                roadCenter += offset * 0.25f;
-
-                //Если направление - центральное
-                if (direction == middle
-                    //И дорога есть по обе стороны от реки
-                    && cell.HasRoadThroughEdge(direction.Opposite()) == true)
-                {
-                    //Создаём мост
-                    chunk.features.AddBridge(
-                        roadCenter, center - offset * (MapGenerationData.innerToOuter * 0.7f));
+                    //Увеличиваем индекс пикселя
+                    index++;
                 }
             }
 
-            Vector3 mL = Vector3.Lerp(
-                roadCenter, e.v1,
-                interpolators.x);
-            Vector3 mR = Vector3.Lerp(
-                roadCenter, e.v5,
-                interpolators.y);
+            //Задаём массив пикселей текстуре
+            MapGenerationData.bevelNormals.SetPixels(MapGenerationData.bevelNormalsColors);
 
-            //Триангулируем дорогу
-            TriangulateRoad(
-                ref chunk,
-                roadCenter, mL, mR,
-                e, 
-                hasRoadThroughEdge,
-                cell.Index);
+            //Применяем текстуру
+            MapGenerationData.bevelNormals.Apply();
 
-            //Если ячейка имеет реку через предыдущее ребро
-            if (previousHasRiver == true)
-            {
-                //Триангулируем ребро дороги
-                TriangulateRoadEdge(
-                    ref chunk,
-                    roadCenter, center, mL,
-                    cell.Index);
-            }
-            //Если ячейка имеет реку через следующее ребро
-            if (nextHasRiver == true)
-            {
-                //Триангулируем ребро дороги
-                TriangulateRoadEdge(
-                    ref chunk,
-                    roadCenter, mR, center,
-                    cell.Index);
-            }
+            //Задаём текстуру материалу
+            mapGenerationData.Value.regionMaterial.SetTexture("_BumpMask", MapGenerationData.bevelNormals);
         }
 
-        void TriangulateRoadSegment(
-            ref CHexChunk chunk,
-            Vector3 v1, Vector3 v2, Vector3 v3, Vector3 v4, Vector3 v5, Vector3 v6,
-            Color w1, Color w2,
-            Vector3 indices)
+        void MapUpdateMeshRenderersShadowSupport()
         {
-            //Заносим квады в меш
-            chunk.roads.AddQuad(v1, v2, v4, v5);
-            chunk.roads.AddQuad(v2, v3, v5, v6);
-            chunk.roads.AddQuadUV(0f, 1f, 0f, 0f);
-            chunk.roads.AddQuadUV(1f, 0f, 0f, 0f);
-
-            //Заносим данные шейдера
-            chunk.roads.AddQuadCellData(
-                indices, 
-                w1, w2);
-            chunk.roads.AddQuadCellData(
-                indices, 
-                w1, w2);
-        }
-
-        void TriangulateRoadEdge(
-            ref CHexChunk chunk,
-            Vector3 center, Vector3 mL, Vector3 mR,
-            float index)
-        {
-            //Заносим треугольник в меш
-            chunk.roads.AddTriangle(center, mL, mR);
-            chunk.roads.AddTriangleUV(new(1f, 0f), new(0f, 0f), new(0f, 0f));
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.y = indices.z = index;
-            chunk.roads.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-        }
-
-        void TriangulateWater(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center)
-        {
-            //Определяем положение центра
-            center.y = cell.WaterSurfaceY;
-
-            //Если у ячейки есть сосед с данного направления
-            if (cell.GetNeighbour(direction).Unpack(world.Value, out int neighbourCellEntity))
+            //Для каждого мешрендерера регионов
+            for (int a = 0; a < MapGenerationData.shadedMRs.Length; a++)
             {
-                //Берём компонент соседа
-                ref CHexRegion neighbourCell
-                    = ref regionPool.Value.Get(neighbourCellEntity);
-
-                //Если сосед находится под водой
-                if (neighbourCell.IsUnderwater == true)
+                //Если рендерер не пуст и его имя верно
+                if (MapGenerationData.shadedMRs[a] != null
+                    && MapGenerationData.shadedMRs[a].name.Equals(MapGenerationData.shaderframeGOName))
                 {
-                    //Триангулируем водоём
-                    TriangulateOpenWater(
-                        ref chunk,
-                        ref cell, ref neighbourCell,
-                        direction,
-                        center);
-                }
-                //Иначе
-                else
-                {
-                    //Триангулируем побережье
-                    TriangulateShore(
-                        ref chunk,
-                        ref cell, ref neighbourCell,
-                        direction,
-                        center);
-                }
-            }
-            //Иначе
-            else
-            {
-                //Триангулируем воду на краю карты
-                TriangulateOpenWater(
-                    ref chunk,
-                    ref cell,
-                    direction,
-                    center);
-            }
-        }
-
-        void TriangulateOpenWater(
-            ref CHexChunk chunk,
-            ref CHexRegion cell, ref CHexRegion neighbourCell,
-            HexDirection direction,
-            Vector3 center)
-        {
-            //Определяем положение углов
-            Vector3 c1
-                = center + MapGenerationData.GetFirstWaterCorner(direction);
-            Vector3 c2
-                = center + MapGenerationData.GetSecondWaterCorner(direction);
-
-            //Заносим треугольник в меш
-            chunk.water.AddTriangle(
-                center, c1, c2);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.y = indices.z = cell.Index;
-            chunk.water.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-
-            //Если направление меньше или равно юго-востоку
-            if (direction <= HexDirection.SE)
-            {
-                //Определяем вершины соединения
-                Vector3 bridge = MapGenerationData.GetWaterBridge(direction);
-                Vector3 e1 
-                    = c1 + bridge;
-                Vector3 e2 
-                    = c2 + bridge;
-
-                //Заносим квад в меш
-                chunk.water.AddQuad(
-                    c1, c2, e1, e2);
-
-                //Заносим данные шейдера
-                indices.y = neighbourCell.Index;
-                chunk.water.AddQuadCellData(
-                    indices,
-                    MapGenerationData.weights1, MapGenerationData.weights2);
-
-                //Если направление меньше или равно востоку
-                if (direction <= HexDirection.E)
-                {
-                    //Если у ячейки есть следующий сосед
-                    if (cell.GetNeighbour(direction.Next()).Unpack(world.Value, out int nextNeighbourCellEntity))
-                    {
-                        //Берём компонент следующего соседа
-                        ref CHexRegion nextNeighbourCell
-                            = ref regionPool.Value.Get(nextNeighbourCellEntity);
-
-                        //Если сосед не находится под водой
-                        if (nextNeighbourCell.IsUnderwater == false)
-                        {
-                            //Выходим из функции
-                            return;
-                        }
-
-                        //Заносим треугольник в меш
-                        chunk.water.AddTriangle(
-                            c2, e2, c2 + MapGenerationData.GetWaterBridge(direction.Next()));
-
-                        //Заносим данные шейдера
-                        indices.z = nextNeighbourCell.Index;
-                        chunk.water.AddTriangleCellData(
-                            indices,
-                            MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
-                    }
+                    //Настраиваем отбрасывание принятие и отбрасывание теней
+                    MapGenerationData.shadedMRs[a].receiveShadows = true;
+                    MapGenerationData.shadedMRs[a].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.On;
                 }
             }
         }
 
-        void TriangulateOpenWater(
-            ref CHexChunk chunk,
-            ref CHexRegion cell,
-            HexDirection direction,
-            Vector3 center)
+        Texture2D MapGetCachedSolidTexture(
+            Color color)
         {
-            //Определяем положение углов
-            Vector3 c1
-                = center + MapGenerationData.GetFirstWaterCorner(direction);
-            Vector3 c2
-                = center + MapGenerationData.GetSecondWaterCorner(direction);
+            Texture2D texture;
 
-            //Заносим треугольник в меш
-            chunk.water.AddTriangle(
-                center, c1, c2);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.y = indices.z = cell.Index;
-            chunk.water.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-        }
-
-        void TriangulateShore(
-            ref CHexChunk chunk,
-            ref CHexRegion cell, ref CHexRegion neighbourCell,
-            HexDirection direction,
-            Vector3 center)
-        {
-            //Определяем вершины ребра
-            DHexEdgeVertices e1
-                = new(
-                    center + MapGenerationData.GetFirstWaterCorner(direction),
-                    center + MapGenerationData.GetSecondWaterCorner(direction));
-
-            //Заносим треугольники в меш
-            chunk.water.AddTriangle(
-                center, e1.v1, e1.v2);
-            chunk.water.AddTriangle(
-                center, e1.v2, e1.v3);
-            chunk.water.AddTriangle(
-                center, e1.v3, e1.v4);
-            chunk.water.AddTriangle(
-                center, e1.v4, e1.v5);
-
-            //Заносим данные шейдера
-            Vector3 indices;
-            indices.x = indices.z = cell.Index;
-            indices.y = neighbourCell.Index;
-            chunk.water.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.water.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.water.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1);
-            chunk.water.AddTriangleCellData(
-                indices, 
-                MapGenerationData.weights1);
-
-            //Определяем вершины соединения
-            Vector3 center2 = neighbourCell.Position;
-            //Если сосед находится на восточном краю карты
-            if (neighbourCell.ColumnIndex < cell.ColumnIndex - 1)
+            if (MapGenerationData.solidTexCache.TryGetValue(color, out texture))
             {
-                center2.x += MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
-            }
-            //Иначе, если сосед находится на западном краю карты
-            else if(neighbourCell.ColumnIndex > cell.ColumnIndex + 1)
-            {
-                center2.x -= MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
-            }
-
-            center2.y = center.y;
-            DHexEdgeVertices e2 = new(
-                center2 + MapGenerationData.GetSecondSolidCorner(direction.Opposite()),
-                center2 + MapGenerationData.GetFirstSolidCorner(direction.Opposite()));
-
-            //Если ячейка имеет реку через данное ребро
-            if (cell.HasRiverThroughEdge(direction) == true)
-            {
-                //Триангулируем устье
-                TriangulateEstuary(
-                    ref chunk,
-                    e1, e2,
-                    cell.HasIncomingRiver && cell.IncomingRiver == direction,
-                    indices);
+                return texture;
             }
             else
             {
-                //Заносим квады в меш
-                chunk.waterShore.AddQuad(e1.v1, e1.v2, e2.v1, e2.v2);
-                chunk.waterShore.AddQuad(e1.v2, e1.v3, e2.v2, e2.v3);
-                chunk.waterShore.AddQuad(e1.v3, e1.v4, e2.v3, e2.v4);
-                chunk.waterShore.AddQuad(e1.v4, e1.v5, e2.v4, e2.v5);
-                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
-                chunk.waterShore.AddQuadUV(0f, 0f, 0f, 1f);
+                texture = new Texture2D(
+                    mapGenerationData.Value.TileTextureSize, mapGenerationData.Value.TileTextureSize,
+                    TextureFormat.ARGB32,
+                    true);
+                texture.hideFlags = HideFlags.DontSave;
 
-                //Заносим данные шейдера
-                chunk.waterShore.AddQuadCellData(
-                    indices, 
-                    MapGenerationData.weights1, MapGenerationData.weights2);
-                chunk.waterShore.AddQuadCellData(
-                    indices, 
-                    MapGenerationData.weights1, MapGenerationData.weights2);
-                chunk.waterShore.AddQuadCellData(
-                    indices, 
-                    MapGenerationData.weights1, MapGenerationData.weights2);
-                chunk.waterShore.AddQuadCellData(
-                    indices, 
-                    MapGenerationData.weights1, MapGenerationData.weights2);
-            }
+                int length = texture.width * texture.height;
+                Color32[] colors32 = new Color32[length];
+                Color32 color32 = color;
 
-            //Если у ячейки есть следующий сосед
-            if (cell.GetNeighbour(direction.Next()).Unpack(world.Value, out int nextNeighbourCellEntity))
-            {
-                //Берём компонент следующего соседа
-                ref CHexRegion nextNeighbourCell
-                    = ref regionPool.Value.Get(nextNeighbourCellEntity);
-
-                //Определяем центр следующего соседа
-                Vector3 center3 = nextNeighbourCell.Position;
-                //Если сосед находится на восточном краю карты
-                if (nextNeighbourCell.ColumnIndex < cell.ColumnIndex - 1)
+                //Для каждого пикселя
+                for (int a = 0; a < length; a++)
                 {
-                    center3.x += MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
-                }
-                //Иначе, если сосед находится на западном краю карты
-                else if(nextNeighbourCell.ColumnIndex > cell.ColumnIndex +1)
-                {
-                    center3.x -= MapGenerationData.wrapSize * MapGenerationData.innerDiameter;
+                    colors32[a] = color32;
                 }
 
-                //Определяем вершину треугольника
-                Vector3 v3 
-                    = center3 
-                    + (nextNeighbourCell.IsUnderwater 
-                    ? MapGenerationData.GetFirstWaterCorner(direction.Previous()) 
-                    : MapGenerationData.GetFirstSolidCorner(direction.Previous()));
-                v3.y = center.y;
+                texture.SetPixels32(colors32);
+                texture.Apply();
 
-                //Заносим треугольник в меш
-                chunk.waterShore.AddTriangle(e1.v5, e2.v5, v3);
-                chunk.waterShore.AddTriangleUV(new(0f, 0f), new(0f, 1f), new(0f, nextNeighbourCell.IsUnderwater ? 0f : 1f));
+                MapGenerationData.solidTexCache[color] = texture;
 
-                //Заносим данные шейдера
-                indices.z = nextNeighbourCell.Index;
-                chunk.waterShore.AddTriangleCellData(
-                    indices,
-                    MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights3);
+                return texture;
             }
         }
 
-        void TriangulateEstuary(
-            ref CHexChunk chunk,
-            DHexEdgeVertices e1, DHexEdgeVertices e2,
-            bool incomingRiver,
-            Vector3 indices)
+        GameObject MapCreateGOAndParent(
+            Transform parent,
+            string name)
         {
-            //Заносим треугольники в меш
-            chunk.waterShore.AddTriangle(e2.v1, e1.v2, e1.v1);
-            chunk.waterShore.AddTriangle(e2.v5, e1.v5, e1.v4);
-            chunk.waterShore.AddTriangleUV(new(0f, 1f), new(0f, 0f), new(0f, 0f));
-            chunk.waterShore.AddTriangleUV(new(0f, 1f), new(0f, 0f), new(0f, 0f));
+            //Создаём GO
+            GameObject gO = new GameObject(name);
 
-            //Заносим данные шейдера
-            chunk.waterShore.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights1);
-            chunk.waterShore.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights1);
+            //Заполняем основные данные GO
+            gO.layer = parent.gameObject.layer;
+            gO.transform.SetParent(parent, false);
+            gO.transform.localPosition = Vector3.zero;
+            gO.transform.localScale = Vector3.one;
+            gO.transform.localRotation = Quaternion.Euler(0, 0, 0);
 
-            //Заносим объекты в меш
-            chunk.estuaries.AddQuad(e2.v1, e1.v2, e2.v2, e1.v3);
-            chunk.estuaries.AddTriangle(e1.v3, e2.v2, e2.v4);
-            chunk.estuaries.AddQuad(e1.v3, e1.v4, e2.v4, e2.v5);
-
-            chunk.estuaries.AddQuadUV(new Vector2(0f, 1f), new (0f, 0f), new (1f, 1f), new (0f, 0f));
-            chunk.estuaries.AddTriangleUV(new (0f, 0f), new (1f, 1f), new (1f, 1f));
-            chunk.estuaries.AddQuadUV(new Vector2(0f, 0f), new (0f, 0f), new (1f, 1f), new (0f, 1f));
-
-            chunk.estuaries.AddQuadCellData(
-                indices,
-                MapGenerationData.weights2, MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights1);
-            chunk.estuaries.AddTriangleCellData(
-                indices,
-                MapGenerationData.weights1, MapGenerationData.weights2, MapGenerationData.weights2);
-            chunk.estuaries.AddQuadCellData(
-                indices,
-                MapGenerationData.weights1, MapGenerationData.weights2);
-
-            //Если река входящая
-            if (incomingRiver)
-            {
-                chunk.estuaries.AddQuadUV2(new Vector2(1.5f, 1f), new (0.7f, 1.15f), new (1f, 0.8f), new (0.5f, 1.1f));
-                chunk.estuaries.AddTriangleUV2(new (0.5f, 1.1f), new (1f, 0.8f), new (0f, 0.8f));
-                chunk.estuaries.AddQuadUV2(new Vector2(0.5f, 1.1f), new (0.3f, 1.15f), new (0f, 0.8f), new (-0.5f, 1f));
-            }
-            //Иначе
-            else
-            {
-                chunk.estuaries.AddQuadUV2(new Vector2(-0.5f, -0.2f), new (0.3f, -0.35f), new (0f, 0f), new (0.5f, -0.3f));
-                chunk.estuaries.AddTriangleUV2(new (0.5f, -0.3f), new (0f, 0f), new (1f, 0f));
-                chunk.estuaries.AddQuadUV2(new Vector2(0.5f, -0.3f), new (0.7f, -0.35f), new (1f, 0f), new (1.5f, -0.2f));
-            }
-        }
-
-        Vector2 GetRoadInterpolators(
-            ref CHexRegion cell,
-            HexDirection direction)
-        {
-            //Определяем смешение
-            Vector2 interpolators;
-
-            //Если ячейка имеет дорогу через данное ребро
-            if (cell.HasRoadThroughEdge(direction))
-            {
-                //Определяем положение вершины
-                interpolators.x = interpolators.y = 0.5f;
-            }
-            //Иначе
-            else
-            {
-                //Определяем положение вершины
-                interpolators.x =
-                    cell.HasRoadThroughEdge(direction.Previous()) ? 0.5f : 0.25f;
-                interpolators.y =
-                    cell.HasRoadThroughEdge(direction.Next()) ? 0.5f : 0.25f;
-            }
-            return interpolators;
-        }
-
-        EcsPackedEntity GetRegionPE(
-            DHexCoordinates coordinates)
-        {
-            int z = coordinates.Z;
-
-            //Если координата выходит за границы карты
-            if (z < 0 || z >= mapGenerationData.Value.regionCountZ)
-            {
-                return new();
-            }
-
-            int x = coordinates.X + z / 2;
-
-            //Если координата выходит за границы ячейки
-            if (x < 0 || x >= mapGenerationData.Value.regionCountX)
-            {
-                return new();
-            }
-
-            return mapGenerationData.Value.regionPEs[x + z * mapGenerationData.Value.regionCountX];
-        }
-
-
-        void ChunkRefreshSelfRequest(
-            ref CHexRegion region)
-        {
-            //Берём компонент родительского чанка региона
-            region.parentChunkPE.Unpack(world.Value, out int parentChunkEntity);
-            ref CHexChunk parentChunk = ref chunkPool.Value.Get(parentChunkEntity);
-
-            //Если ещё не существует самозапроса обновления чанка
-            if (mapChunkRefreshSelfRequestPool.Value.Has(parentChunkEntity) == false)
-            {
-                //Назначаем сущности самозапрос обновления чанка
-                mapChunkRefreshSelfRequestPool.Value.Add(parentChunkEntity);
-            }
-
-            //Для каждого соседа региона
-            for (int a = 0; a < region.neighbourRegionPEs.Length; a++)
-            {
-                //Если сосед существует 
-                if (region.neighbourRegionPEs[a].Unpack(world.Value, out int neighbourRegionEntity))
-                {
-                    //Берём компонент соседа
-                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
-
-                    //Берём сущность родительского чанка региона
-                    neighbourRegion.parentChunkPE.Unpack(world.Value, out int neighbourParentChunkEntity);
-
-                    //Если ещё не существует самозапроса обновления чанка
-                    if (mapChunkRefreshSelfRequestPool.Value.Has(neighbourParentChunkEntity) == false)
-                    {
-                        //Назначаем сущности самозапрос обновления чанка
-                        mapChunkRefreshSelfRequestPool.Value.Add(neighbourParentChunkEntity);
-                    }
-                }
-            }
+            return gO;
         }
     }
 }

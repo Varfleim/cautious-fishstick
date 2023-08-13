@@ -3,8 +3,6 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-using Leopotam.EcsLite;
-
 namespace SandOcean.Map
 {
     public enum HexDirection
@@ -17,13 +15,6 @@ namespace SandOcean.Map
         NW
     }
 
-    public enum HexEdgeType : byte
-    {
-        Flat,
-        Slope,
-        Cliff
-    }
-
     public class MapGenerationData : MonoBehaviour
     {
         //Сектора
@@ -31,320 +22,164 @@ namespace SandOcean.Map
 
 
         //Карта
-        public static int ChunkSize
+        public const float PHI = 1.61803399f;
+        public const string shaderframeName = "ShadedFrame";
+        public const string shaderframeGOName = "Shade";
+        public const string regionsRootName = "TilesRoot";
+        const int maxHexasphereParts = 50;
+        public const int maxVertexCountPerChunk = 65500;
+        const int vertexArraySize = 65530;
+
+
+        public readonly static int[] hexagonIndices = new int[] {
+            0, 1, 5,
+            1, 2, 5,
+            4, 5, 2,
+            3, 4, 2
+        };
+        public readonly static int[] hexagonIndicesExtruded = new int[] 
+        {
+            0, 1, 6,
+            5, 0, 6,
+            1, 2, 5,
+            4, 5, 2,
+            2, 3, 7,
+            3, 4, 7
+        };
+        public readonly static Vector2[] hexagonUVs = new Vector2[] {
+            new Vector2 (0, 0.5f),
+            new Vector2 (0.25f, 1f),
+            new Vector2 (0.75f, 1f),
+            new Vector2 (1f, 0.5f),
+            new Vector2 (0.75f, 0f),
+            new Vector2 (0.25f, 0f)
+        };
+        public readonly static Vector2[] hexagonUVsExtruded = new Vector2[] 
+        {
+            new Vector2 (0, 0.5f),
+            new Vector2 (0.25f, 1f),
+            new Vector2 (0.75f, 1f),
+            new Vector2 (1f, 0.5f),
+            new Vector2 (0.75f, 0f),
+            new Vector2 (0.25f, 0f),
+            new Vector2 (0.25f, 0.5f),
+            new Vector2 (0.75f, 0.5f)
+        };
+        public readonly static int[] pentagonIndices = new int[] {
+            0, 1, 4,
+            1, 2, 4,
+            3, 4, 2
+        };
+        public readonly static int[] pentagonIndicesExtruded = new int[] 
+        {
+            0, 1, 5,
+            4, 0, 5,
+            1, 2, 4,
+            2, 3, 6,
+            3, 4, 6
+        };
+        public readonly static Vector2[] pentagonUVs = new Vector2[] {
+            new Vector2 (0, 0.33f),
+            new Vector2 (0.25f, 1f),
+            new Vector2 (0.75f, 1f),
+            new Vector2 (1f, 0.33f),
+            new Vector2 (0.5f, 0f),
+        };
+        public readonly static Vector2[] pentagonUVsExtruded = new Vector2[] 
+        {
+            new Vector2 (0, 0.33f),
+            new Vector2 (0.25f, 1f),
+            new Vector2 (0.75f, 1f),
+            new Vector2 (1f, 0.33f),
+            new Vector2 (0.5f, 0f),
+            new Vector2 (0.375f, 0.5f),
+            new Vector2 (0.625f, 0.5f)
+        };
+
+        public static float hexasphereScale;
+        public int subdivisions;
+        public int currentTextureSize;
+        public float gradientIntensity;
+        public static float extrudeMultiplier;
+        public Color tileTintColor;
+        public Color ambientColor;
+        public float minimumLight;
+
+        public int uvChunkCount;
+        public Texture2DArray finalTexArray;
+
+        public static Texture2D bevelNormals;
+        public static Color[] bevelNormalsColors;
+
+        public bool isInitializationUpdate;
+        public bool isMaterialUpdated;
+        public bool isRegionUpdated;
+        public bool isColorUpdated;
+        public bool isTextureArrayUpdated;
+        public bool isUVUpdatedFast;
+
+        public readonly static Dictionary<DHexaspherePoint, DHexaspherePoint> points = new();
+        public readonly static Dictionary<DHexaspherePoint, int> verticesIndices = new();
+        public readonly static List<Vector3>[] verticesShaded = new List<Vector3>[maxHexasphereParts];
+        public readonly static List<int>[] indicesShaded = new List<int>[maxHexasphereParts];
+        public readonly static List<Vector4>[] uvShaded = new List<Vector4>[maxHexasphereParts];
+        public readonly static List<Vector4>[] uv2Shaded = new List<Vector4>[maxHexasphereParts];
+        public readonly static List<Color32>[] colorShaded = new List<Color32>[maxHexasphereParts];
+
+        public readonly static List<Texture2D> texArray = new List<Texture2D>(255);
+        public readonly static Dictionary<Color, Texture2D> solidTexCache = new Dictionary<Color, Texture2D>();
+        public readonly static Mesh[] shadedMeshes = new Mesh[maxHexasphereParts];
+        public readonly static MeshFilter[] shadedMFs = new MeshFilter[maxHexasphereParts];
+        public readonly static MeshRenderer[] shadedMRs = new MeshRenderer[maxHexasphereParts];
+        public readonly static bool[] colorShadedDirty = new bool[maxHexasphereParts];
+        public readonly static bool[] uvShadedDirty = new bool[maxHexasphereParts];
+        public readonly static Dictionary<Color, Material> colorCache = new Dictionary<Color, Material>();
+
+
+        public static Color DefaultShadedColor
+        {
+            get 
+            { 
+                return defaultShadedColor; 
+            }
+        }
+        [SerializeField]
+        [ColorUsage(true, true)]
+        static Color defaultShadedColor = new Color(0.56f, 0.71f, 0.54f);
+
+        public int TileTextureSize
         {
             get
             {
-                return chunkSizeX * chunkSizeZ;
+                return tileTextureSize;
             }
         }
-        public const int chunkSizeX = 5;
-        public const int chunkSizeZ = 5;
-        public int chunkCountX;
-        public int chunkCountZ;
-        public int regionCountX;
-        public int regionCountZ;
-        public int regionCount;
+        int tileTextureSize = 256;
 
-        public const float outerToInner = 0.866025404f;
-        public const float innerToOuter = 1f / outerToInner;
-        public const float outerRadius = 10f;
-        public const float innerRadius = outerRadius * outerToInner;
-        public const float innerDiameter = innerRadius * 2f;
+        public Texture2D whiteTex;
+        public Material regionMaterial;
+        public Material regionColoredMaterial;
+        public Material regionHighlightMaterial;
 
-        public const float solidFactor = 0.8f;
-        public const float blendFactor = 1f - solidFactor;
-        public const float waterFactor = 0.6f;
-        public const float waterBlendFactor = 1f - waterFactor;
-
-        public const float elevationStep = 3f;
-        public const int terracesPerSlope = 2;
-        public const int terraceSteps = terracesPerSlope * 2 + 1;
-        public const float horizontalTerraceStepSize = 1f / terraceSteps;
-        public const float verticalTerraceStepSize = 1f / (terracesPerSlope + 1);
-
-        public const float streamBedElevationOffset = -1.75f;
-        public const float waterElevationOffset = -0.5f;
-
-        static Vector3[] corners =
+        public static List<T> CheckList<T>(
+            ref List<T> l)
         {
-            new Vector3(0f, 0f, outerRadius),
-            new Vector3(innerRadius, 0f, 0.5f * outerRadius),
-            new Vector3(innerRadius, 0f, -0.5f * outerRadius),
-            new Vector3(0f, 0f, -outerRadius),
-            new Vector3(-innerRadius, 0f, -0.5f * outerRadius),
-            new Vector3(-innerRadius, 0f, 0.5f * outerRadius),
-            new Vector3(0f, 0f, outerRadius)
-        };
-        public static Vector3 GetFirstCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction];
-        }
-        public static Vector3 GetSecondCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction + 1];
-        }
-        public static Vector3 GetFirstSolidCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction] * solidFactor;
-        }
-        public static Vector3 GetSecondSolidCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction + 1] * solidFactor;
-        }
-        public static Vector3 GetSolidEdgeMiddle(
-            HexDirection direction)
-        {
-            return (corners[(int)direction] + corners[(int)direction + 1])
-                * (0.5f * solidFactor);
-        }
-        public static Vector3 GetBridge(
-            HexDirection direction)
-        {
-            return (corners[(int)direction] + corners[(int)direction + 1])
-                * blendFactor;
-        }
-        public static Vector3 GetFirstWaterCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction] * waterFactor;
-        }
-        public static Vector3 GetSecondWaterCorner(
-            HexDirection direction)
-        {
-            return corners[(int)direction + 1] * waterFactor;
-        }
-        public static Vector3 GetWaterBridge(
-            HexDirection direction)
-        {
-            return (corners[(int)direction] + corners[(int)direction + 1])
-                * waterBlendFactor;
-        }
-
-        public static Vector3 TerraceLerp(
-            Vector3 a,
-            Vector3 b,
-            int step)
-        {
-            float h
-                = step * horizontalTerraceStepSize;
-            a.x
-                += (b.x - a.x) * h;
-            a.z
-                += (b.z - a.z) * h;
-
-            float v
-                = (step + 1) / 2
-                * verticalTerraceStepSize;
-            a.y
-                += (b.y - a.y)
-                * v;
-
-            return a;
-        }
-        public static Color TerraceLerp(
-            Color a,
-            Color b,
-            int step)
-        {
-            float h
-                = step
-                * horizontalTerraceStepSize;
-
-            return Color.Lerp(a, b, h);
-        }
-
-        public static HexEdgeType GetEdgeType(
-            int elevation1,
-            int elevation2)
-        {
-            //Если высоты равны
-            if (elevation1
-                == elevation2)
+            //Если список пуст
+            if (l == null)
             {
-                //То тип ребра - плоскость
-                return HexEdgeType.Flat;
-            }
-
-            //Определяем разницу высот
-            int delta
-                = elevation2 - elevation1;
-
-            //Если разница равна единице
-            if (delta == 1
-                || delta == -1)
-            {
-                //То тип ребра - наклон
-                return HexEdgeType.Slope;
+                //Создаём новый с максимальным размером массива вершин
+                l = new List<T>(vertexArraySize);
             }
             //Иначе
             else
             {
-                //Тип ребра - обрыв
-                return HexEdgeType.Cliff;
-            }
-        }
-
-        public const float cellPerturbStrength = 0f;//4f;
-        public const float elevationPerturbStrength = 1.5f;
-        public const float noiseScale = 0.003f;
-
-        public Texture2D noiseTexture;
-        public static Texture2D noiseSource;
-
-        public static Vector4 SampleNoise(
-            Vector3 position)
-        {
-            Vector4 sample = noiseSource.GetPixelBilinear(
-                position.x * noiseScale,
-                position.z * noiseScale);
-
-            //Если позиция находится внутри диаметра
-            if (position.x < innerDiameter * 1.5f)
-            {
-                Vector4 sample2 = noiseSource.GetPixelBilinear(
-                    (position.x + wrapSize * innerDiameter) * noiseScale,
-                    position.z * noiseScale);
-
-                sample = Vector4.Lerp(sample2, sample, position.x * (1f / innerDiameter) - 0.5f);
+                //Очищаем список
+                l.Clear();
             }
 
-            return sample;
+            //Возвращаем список
+            return l;
         }
-        public static Vector3 Perturb(
-            Vector3 position)
-        {
-            //Берём шум
-            Vector4 sample = SampleNoise(position);
-
-            //Смещаем вершину по горизонтали
-            position.x
-                += (sample.x * 2f - 1f)
-                * cellPerturbStrength;
-            position.z
-                += (sample.z * 2f - 1f)
-                * cellPerturbStrength;
-
-            //Возвращаем смещённую вершину
-            return position;
-        }
-
-        public const int hashGridSize = 256;
-        public const float hashGridScale = 0.25f;
-        static DHexHash[] hashGrid;
-
-        public static void InitializeHashGrid()
-        {
-            hashGrid = new DHexHash[hashGridSize * hashGridSize];
-
-            for (int a = 0; a < hashGrid.Length; a++)
-            {
-                hashGrid[a] = DHexHash.Create();
-            }
-        }
-        public static DHexHash SampleHashGrid(
-            Vector3 postition)
-        {
-            int x = (int)(postition.x + hashGridScale) % hashGridSize;
-            if (x < 0)
-            {
-                x += hashGridSize;
-            }
-            int z = (int)(postition.z + hashGridScale) % hashGridSize;
-            if (z < 0)
-            {
-                z += hashGridSize;
-            }
-
-            return hashGrid[x + z * hashGridSize];
-        }
-
-        static float[][] featureThresholds =
-            {
-            new float[] {0.0f, 0.0f, 0.4f},
-            new float[] {0.0f, 0.4f, 0.6f},
-            new float[] {0.4f, 0.6f, 0.8f}
-        };
-        public static float[] GetFeatureThresholds(int level)
-        {
-            return featureThresholds[level];
-        }
-
-        public const float wallHeight = 4f;
-        public const float wallYOffset = -1f;
-        public const float wallThickness = 1.25f;
-        public const float wallElevationOffset = verticalTerraceStepSize;
-        public const float wallTowerTreshhold = 0.5f;
-
-        public static Vector3 WallThicknessOffset(
-            Vector3 near, Vector3 far)
-        {
-            //Определяем смещение 
-            Vector3 offset;
-            offset.x = far.x - near.x;
-            offset.y = 0f;
-            offset.z = far.z - near.z;
-
-            //Возвращаем смещение
-            return offset.normalized * (wallThickness * 0.5f);
-        }
-        public static Vector3 WallLerp(
-            Vector3 near, Vector3 far)
-        {
-            //Определяем смещение вершины
-            near.x += (far.x - near.x) * 0.5f;
-            near.z += (far.z - near.z) * 0.5f;
-
-            float v = near.y < far.y ? wallElevationOffset : 1f - wallElevationOffset;
-
-            near.y += (far.y - near.y) * v + wallYOffset;
-
-            //Возвращаем смещённую вершину
-            return near;
-        }
-
-        public const float bridgeDesignLength = 7f;
-
-        public static Vector2[] chunkNeighbours =
-        {
-            new Vector2(0, 1),
-            new Vector2(1, 1),
-            new Vector2(1, 0),
-            new Vector2(1, -1),
-            new Vector2(0, -1),
-            new Vector2(-1, -1),
-            new Vector2(-1, 0),
-            new Vector2(-1, 1)
-        };
-
-        public Transform[] columns;
-        public EcsPackedEntity[] chunkPEs;
-        public EcsPackedEntity[] regionPEs;
-        public EcsPackedEntity GetRegionPEFromPosition(
-            Vector3 position)
-        {
-            //Вычисляем координаты ячейки
-            DHexCoordinates coordinates = DHexCoordinates.FromPosition(position);
-
-            //Вычисляем индекс региона 
-            int index = coordinates.X + coordinates.Z * regionCountX + coordinates.Z / 2;
-
-            //Возвращаем PE региона
-            return regionPEs[index];
-        }
-
-        public static Color weights1 = new Color(1f, 0f, 0f);
-        public static Color weights2 = new Color(0f, 1f, 0f);
-        public static Color weights3 = new Color(0f, 0f, 1f);
-
-        public Material terrainMaterial;
-
-        public HexRegionShaderData regionShaderData;
-
 
         [Range(0f, 0.5f)]
         public float jitterProbability = 0.25f; 
@@ -355,7 +190,7 @@ namespace SandOcean.Map
 
         [Range(5, 100)]
         public int landPercentage = 50;
-        [Range(1, 5)]
+        [Range(0, 5)]
         public int waterLevel = 3;
         [Range(0f, 1f)]
         public float highRiseProbability = 0.25f;
@@ -366,17 +201,6 @@ namespace SandOcean.Map
         public int elevationMinimum = -2;
         [Range(6, 10)]
         public int elevationMaximum = 8;
-
-        [Range(0, 10)]
-        public int mapBorderX = 5;
-        [Range(0, 10)]
-        public int mapBorderZ = 5;
-
-        public DMapArea[] mapAreas; 
-        [Range(0, 10)]
-        public int areaBorder = 5; 
-        [Range(1, 2)]
-        public int areaCount = 1; 
         
         [Range(0, 100)]
         public int erosionPercentage = 50;
@@ -411,42 +235,5 @@ namespace SandOcean.Map
         new DBiome(0, 0), new DBiome(1, 0), new DBiome(1, 1), new DBiome(1, 2),
         new DBiome(0, 0), new DBiome(1, 1), new DBiome(1, 2), new DBiome(1, 3)
         };
-
-        public static int wrapSize;
-    }
-
-    public static class HexDirectionExtensions
-    {
-        public static HexDirection Opposite(
-            this HexDirection direction)
-        {
-            return (int)direction < 3 ? direction + 3 : direction - 3;
-        }
-
-        public static HexDirection Previous(
-            this HexDirection direction)
-        {
-            return direction == HexDirection.NE ? HexDirection.NW : direction - 1;
-        }
-
-        public static HexDirection Previous2(
-            this HexDirection direction)
-        {
-            direction -= 2;
-            return direction >= HexDirection.NE ? direction : direction + 6;
-        }
-
-        public static HexDirection Next(
-            this HexDirection direction)
-        {
-            return direction == HexDirection.NW ? HexDirection.NE : direction + 1;
-        }
-
-        public static HexDirection Next2(
-            this HexDirection direction)
-        {
-            direction += 2;
-            return direction <= HexDirection.NW ? direction : direction - 6;
-        }
     }
 }

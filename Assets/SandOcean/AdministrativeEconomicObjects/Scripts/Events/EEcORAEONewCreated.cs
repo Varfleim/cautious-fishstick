@@ -7,15 +7,15 @@ namespace SandOcean.AEO.RAEO
     {
         public EEcORAEONewCreated(
             EcsPackedEntity organizationPE, 
-            EcsPackedEntity oLAEOPE)
+            EcsPackedEntity oRAEOPE)
         {
             this.organizationPE = organizationPE;
 
-            this.oLAEOPE = oLAEOPE;
+            this.oRAEOPE = oRAEOPE;
         }
 
         public readonly EcsPackedEntity organizationPE;
 
-        public readonly EcsPackedEntity oLAEOPE;
+        public readonly EcsPackedEntity oRAEOPE;
     }
 }

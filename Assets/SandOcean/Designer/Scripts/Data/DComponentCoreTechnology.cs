@@ -3,47 +3,29 @@ using System;
 namespace SandOcean.Designer.Game
 {
     [Serializable]
-    public struct DComponentCoreTechnology : IContentObjectRef, IComponentCoreTechnology
+    public struct DComponentCoreTechnology : IComponentCoreTechnology
     {
         public DComponentCoreTechnology(
-            int contentSetIndex,
-            int technologyIndex,
+            DContentObjectLink contentObjectLink,
             float modifierValue)
         {
-            this.contentSetIndex = contentSetIndex;
-
-            this.technologyIndex = technologyIndex;
+            this.contentObjectLink = contentObjectLink;
 
             this.modifierValue = modifierValue;
         }
 
-        public int ContentSetIndex
+        public DContentObjectLink ContentObjectLink
         {
             get
             {
-                return contentSetIndex;
+                return contentObjectLink;
             }
             set
             {
-                contentSetIndex
-                    = value;
+                contentObjectLink = value;
             }
         }
-        int contentSetIndex;
-
-        public int ObjectIndex
-        {
-            get
-            {
-                return technologyIndex;
-            }
-            set
-            {
-                technologyIndex
-                    = value;
-            }
-        }
-        int technologyIndex;
+        DContentObjectLink contentObjectLink;
 
         public float ModifierValue
         {

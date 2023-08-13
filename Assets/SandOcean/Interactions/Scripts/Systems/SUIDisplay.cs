@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
+using Leopotam.EcsLite.ExtendedSystems;
 
 using SandOcean.UI.Events;
 using SandOcean.Player;
@@ -26,6 +27,7 @@ namespace SandOcean.UI
     {
         //Миры
         readonly EcsWorldInject world = default;
+
 
         //Игроки
 
@@ -48,66 +50,69 @@ namespace SandOcean.UI
         readonly EcsFilterInject<Inc<CShipGroup>> shipGroupFilter = default;
         readonly EcsPoolInject<CShipGroup> shipGroupPool = default;
 
+
         //События главного меню
-        readonly EcsFilterInject<Inc<EMainMenuAction>> mainMenuActionEventFilter = default;
-        readonly EcsPoolInject<EMainMenuAction> mainMenuActionEventPool = default;
+        readonly EcsFilterInject<Inc<RMainMenuAction>> mainMenuActionRequestFilter = default;
+        readonly EcsPoolInject<RMainMenuAction> mainMenuActionRequestPool = default;
 
         //События меню новой игры
-        readonly EcsFilterInject<Inc<ENewGameMenuAction>> newGameMenuActionEventFilter = default;
-        readonly EcsPoolInject<ENewGameMenuAction> newGameMenuActionEventPool = default;
+        readonly EcsFilterInject<Inc<RNewGameMenuAction>> newGameMenuActionRequestFilter = default;
+        readonly EcsPoolInject<RNewGameMenuAction> newGameMenuActionRequestPool = default;
 
         //События меню загрузки
 
         //События мастерской
-        readonly EcsFilterInject<Inc<EWorkshopAction>> workshopActionEventFilter = default;
-        readonly EcsPoolInject<EWorkshopAction> workshopActionEventPool = default;
+        readonly EcsFilterInject<Inc<RWorkshopAction>> workshopActionRequestFilter = default;
+        readonly EcsPoolInject<RWorkshopAction> workshopActionRequestPool = default;
 
         //События дизайнера
-        readonly EcsFilterInject<Inc<EDesignerAction>> designerActionEventFilter = default;
-        readonly EcsPoolInject<EDesignerAction> designerActionEventPool = default;
+        readonly EcsFilterInject<Inc<RDesignerAction>> designerActionRequestFilter = default;
+        readonly EcsPoolInject<RDesignerAction> designerActionRequestPool = default;
 
         //События дизайнера кораблей
-        readonly EcsFilterInject<Inc<EDesignerShipClassAction>> designerShipClassActionEventFilter = default;
-        readonly EcsPoolInject<EDesignerShipClassAction> designerShipClassActionEventPool = default;
+        readonly EcsFilterInject<Inc<RDesignerShipClassAction>> designerShipClassActionRequestFilter = default;
+        readonly EcsPoolInject<RDesignerShipClassAction> designerShipClassActionRequestPool = default;
         //События дизайнера компонентов
-        readonly EcsFilterInject<Inc<EDesignerComponentAction>> designerComponentActionEventFilter = default;
-        readonly EcsPoolInject<EDesignerComponentAction> designerComponentActionEventPool = default;
+        readonly EcsFilterInject<Inc<RDesignerComponentAction>> designerComponentActionRequestFilter = default;
+        readonly EcsPoolInject<RDesignerComponentAction> designerComponentActionRequestPool = default;
 
         //События игры
-        readonly EcsFilterInject<Inc<EGameAction>> gameActionEventFilter = default;
-        readonly EcsPoolInject<EGameAction> gameActionEventPool = default;
+        readonly EcsFilterInject<Inc<RGameCreatePanel>> gameCreatePanelRequestFilter = default;
+        readonly EcsPoolInject<RGameCreatePanel> gameCreatePanelRequestPool = default;
 
-        readonly EcsFilterInject<Inc<EGameOpenDesigner>> gameOpenDesignerEventFilter = default;
-        readonly EcsPoolInject<EGameOpenDesigner> gameOpenDesignerEventPool = default;
+        readonly EcsFilterInject<Inc<RGameAction>> gameActionRequestFilter = default;
+        readonly EcsPoolInject<RGameAction> gameActionRequestPool = default;
+
+        readonly EcsFilterInject<Inc<RGameOpenDesigner>> gameOpenDesignerEventFilter = default;
+        readonly EcsPoolInject<RGameOpenDesigner> gameOpenDesignerEventPool = default;
 
         //События административно-экономических объектов
-        readonly EcsFilterInject<Inc<SRORAEOCreate, COrganization>> oRAEOCreateSelfRequestFilter = default;
-        readonly EcsPoolInject<SRORAEOCreate> oRAEOCreateSelfRequestPool = default;
-
         readonly EcsFilterInject<Inc<SRRefreshRAEOObjectPanel, CRegionAEO>> refreshRAEOObjectPanelSelfRequestFilter = default;
         readonly EcsPoolInject<SRRefreshRAEOObjectPanel> refreshRAEOObjectPanelSelfRequestPool = default;
 
-        readonly EcsFilterInject<Inc<EGameDisplayObjectPanel>> gameDisplayObjectPanelEventFilter = default;
-        readonly EcsPoolInject<EGameDisplayObjectPanel> gameDisplayObjectPanelEventPool = default;
+        readonly EcsFilterInject<Inc<RGameDisplayObjectPanel>> gameDisplayObjectPanelRequestFilter = default;
+        readonly EcsPoolInject<RGameDisplayObjectPanel> gameDisplayObjectPanelRequestPool = default;
 
         //readonly EcsFilterInject<Inc<RChangeMapMode>> changeMapModeRequestFilter = default;
         //readonly EcsPoolInject<RChangeMapMode> changeMapModeRequestPool = default;
 
         //Общие события
         //readonly EcsFilterInject<Inc<EStartNewGame>> startNewGameEventFilter = default;
-        readonly EcsPoolInject<EStartNewGame> startNewGameEventPool = default;
+        readonly EcsPoolInject<RStartNewGame> startNewGameEventPool = default;
 
-        readonly EcsPoolInject<ETechnologyCalculateModifiers> technologyCalculateModifiersEventPool = default;
+        readonly EcsPoolInject<RTechnologyCalculateModifiers> technologyCalculateModifiersEventPool = default;
 
-        readonly EcsPoolInject<ESaveContentSetArray> saveContentSetArrayEventPool = default;
+        readonly EcsPoolInject<RSaveContentSet> saveContentSetRequestPool = default;
 
+        readonly EcsPoolInject<EcsGroupSystemState> ecsGroupSystemStatePool = default;
 
-        readonly EcsFilterInject<Inc<EQuitGame>> quitGameEventFilter = default;
-        readonly EcsPoolInject<EQuitGame> quitGameEventPool = default;
+        readonly EcsFilterInject<Inc<RQuitGame>> quitGameRequestFilter = default;
+        readonly EcsPoolInject<RQuitGame> quitGameRequestPool = default;
+
 
         //Данные
         //readonly EcsCustomInject<StaticData> staticData = default;
-        readonly EcsCustomInject<SceneData> sceneData = default;
+        //readonly EcsCustomInject<SceneData> sceneData = default;
         readonly EcsCustomInject<ContentData> contentData = default;
         //readonly EcsCustomInject<MapData> mapData = default;
         readonly EcsCustomInject<MapGenerationData> mapGenerationData = default;
@@ -144,17 +149,15 @@ namespace SandOcean.UI
 
         public void Run(IEcsSystems systems)
         {
-            //Для каждого события выхода из игры
-            foreach (int quitGameEventEntity in quitGameEventFilter.Value)
+            //Для каждого запроса выхода из игры
+            foreach (int quitGameRequestEntity in quitGameRequestFilter.Value)
             {
-                //Берём компонент события
-                ref EQuitGame quitGameEvent
-                    = ref quitGameEventPool.Value.Get(quitGameEventEntity);
+                //Берём компонент запроса
+                ref RQuitGame quitGameRequest = ref quitGameRequestPool.Value.Get(quitGameRequestEntity);
 
-                Debug.LogError(
-                    "Quit game!");
+                Debug.LogError("Quit game!");
 
-                world.Value.DelEntity(quitGameEventEntity);
+                world.Value.DelEntity(quitGameRequestEntity);
 
                 //Выходим из игры
                 Application.Quit();
@@ -167,53 +170,62 @@ namespace SandOcean.UI
                 //Берём окно игры
                 UIGameWindow gameWindow = eUI.Value.gameWindow;
 
-                //Если фильтр событий создания ORAEO не пуст
-                if (oRAEOCreateSelfRequestFilter.Value.GetEntitiesCount() > 0)
+                //Для каждого запроса создания панели
+                foreach (int requestEntity in gameCreatePanelRequestFilter.Value)
                 {
-                    //Создаём панели ORAEO
-                    GameCreateORAEOBriefInfoPanels();
+                    //Берём запрос
+                    ref RGameCreatePanel requestComp = ref gameCreatePanelRequestPool.Value.Get(requestEntity);
+
+                    //Если запрашивается создание обзорной панели ORAEO
+                    if (requestComp.creatingPanelType == CreatingPanelType.ORAEOBriefInfoPanel)
+                    {
+                        //Создаём обзорную панель ORAEO
+                        ORAEOCreateBriefInfoPanels(ref requestComp);
+                    }
+
+                    world.Value.DelEntity(requestEntity);
                 }
 
-                //Для каждого события действия в игре
-                foreach (int gameActionEventEntity in gameActionEventFilter.Value)
+                //Для каждого запроса действия в игре
+                foreach (int requestEntity in gameActionRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EGameAction gameActionEvent= ref gameActionEventPool.Value.Get(gameActionEventEntity);
+                    //Берём запрос
+                    ref RGameAction requestComp = ref gameActionRequestPool.Value.Get(requestEntity);
 
                     //Изменяем состояние паузы
-                    GamePause(gameActionEvent.actionType);
+                    GamePause(requestComp.actionType);
 
-                    world.Value.DelEntity(gameActionEventEntity);
+                    world.Value.DelEntity(requestEntity);
                 }
 
-                //Для каждого события, запрашивающего открытие окна дизайнера
-                foreach (int gameOpenDesignerEventEntity in gameOpenDesignerEventFilter.Value)
+                //Для каждого запроса открытия окна дизайнера
+                foreach (int requestEntity in gameOpenDesignerEventFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EGameOpenDesigner gameOpenDesignerEvent = ref gameOpenDesignerEventPool.Value.Get(gameOpenDesignerEventEntity);
+                    //Берём запрос
+                    ref RGameOpenDesigner requestComp = ref gameOpenDesignerEventPool.Value.Get(requestEntity);
 
                     //Активируем паузу
                     GamePause(GameActionType.PauseOn);
 
                     //Отображаем нужное окно дизайнера
                     DesignerOpenWindow(
-                        gameOpenDesignerEvent.contentSetIndex,
-                        gameOpenDesignerEvent.designerType,
+                        requestComp.contentSetIndex,
+                        requestComp.designerType,
                         true,
                         inputData.Value.playerOrganizationPE);
 
-                    world.Value.DelEntity(gameOpenDesignerEventEntity);
+                    world.Value.DelEntity(requestEntity);
                 }
 
                 //Для каждого самозапроса обновления панели объекта RAEO
-                foreach (int refreshRAEOObjectPanelSREntity in refreshRAEOObjectPanelSelfRequestFilter.Value)
+                foreach (int selfRequestEntity in refreshRAEOObjectPanelSelfRequestFilter.Value)
                 {
                     //Если активна подпанель RAEO
                     if (gameWindow.objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Region)
                     {
                         //Берём компонент RAEO
-                        ref CHexRegion region = ref regionPool.Value.Get(refreshRAEOObjectPanelSREntity);
-                        ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(refreshRAEOObjectPanelSREntity);
+                        ref CHexRegion region = ref regionPool.Value.Get(selfRequestEntity);
+                        ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(selfRequestEntity);
 
                         //Если активна панель того же RAEO, что имеет самозапрос
                         if (gameWindow.objectPanel.activeObjectPE.EqualsTo(rAEO.selfPE))
@@ -242,35 +254,35 @@ namespace SandOcean.UI
                     }
 
                     //Удаляем с сущности RAEO компонент самозапроса
-                    refreshRAEOObjectPanelSelfRequestPool.Value.Del(refreshRAEOObjectPanelSREntity);
+                    refreshRAEOObjectPanelSelfRequestPool.Value.Del(selfRequestEntity);
                 }
 
-                //Для каждого события, запрашивающего отображение панели объекта
-                foreach (int gameDisplayObjectPanelEventEntity in gameDisplayObjectPanelEventFilter.Value)
+                //Для каждого запроса отображения панели объекта
+                foreach (int requestEntity in gameDisplayObjectPanelRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent = ref gameDisplayObjectPanelEventPool.Value.Get(gameDisplayObjectPanelEventEntity);
+                    //Берём запрос
+                    ref RGameDisplayObjectPanel requestComp = ref gameDisplayObjectPanelRequestPool.Value.Get(requestEntity);
 
                     //Активируем панель объекта
                     GameActivateObjectPanel();
 
-                    //Если событие запрашивает отображение панели организации
-                    if (gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.Organization)
+                    //Если запрашивается отображение панели организации
+                    if (requestComp.requestType == DisplayObjectPanelRequestType.Organization)
                     {
                         //Отображаем панель организации
-                        GameDisplayOrganizationObjectSubpanel(ref gameDisplayObjectPanelEvent);
+                        GameDisplayOrganizationObjectSubpanel(ref requestComp);
                     }
-                    //Иначе, если событие запрашивает отображение панели региона
-                    else if(gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.Region)
+                    //Иначе, если запрашивается отображение панели региона
+                    else if(requestComp.requestType == DisplayObjectPanelRequestType.Region)
                     {
                         //Отображаем панель региона
-                        GameDisplayRegionObjectSubpanel(ref gameDisplayObjectPanelEvent);
+                        GameDisplayRegionObjectSubpanel(ref requestComp);
                     }
-                    //Иначе, если событие запрашивает отображение панели ORAEO
-                    else if(gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.ORAEO)
+                    //Иначе, если запрашивается отображение панели ORAEO
+                    else if(requestComp.requestType == DisplayObjectPanelRequestType.ORAEO)
                     {
                         //Отображаем панель ORAEO
-                        GameDisplayORAEOObjectSubpanel(ref gameDisplayObjectPanelEvent);
+                        GameDisplayORAEOObjectSubpanel(ref requestComp);
                     }
 
                     //Иначе, если активна подпанель организации
@@ -281,11 +293,11 @@ namespace SandOcean.UI
                     //Иначе, если активна подпанель региона
                     else if (gameWindow.objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Region)
                     {
-                        //Если событие запрашивает отображение обзорной вкладки 
-                        if (gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.RegionOverview)
+                        //Если запрашиваетсяся отображение обзорной вкладки 
+                        if (requestComp.requestType == DisplayObjectPanelRequestType.RegionOverview)
                         {
                             //Берём компоненты региона и RAEO
-                            gameDisplayObjectPanelEvent.objectPE.Unpack(world.Value, out int regionEntity);
+                            requestComp.objectPE.Unpack(world.Value, out int regionEntity);
                             ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
                             ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
@@ -293,29 +305,29 @@ namespace SandOcean.UI
                             GameDisplayRegionOSbPOverviewTab(
                                 ref region,
                                 ref rAEO,
-                                gameDisplayObjectPanelEvent.isRefresh);
+                                requestComp.isRefresh);
                         }
-                        //Иначе, если событие запрашивает отображение вкладки организаций
-                        else if (gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.RegionOrganizations)
+                        //Иначе, если запрашивается отображение вкладки организаций
+                        else if (requestComp.requestType == DisplayObjectPanelRequestType.RegionOrganizations)
                         {
                             //Берём компонент RAEO
-                            gameDisplayObjectPanelEvent.objectPE.Unpack(world.Value, out int regionEntity);
+                            requestComp.objectPE.Unpack(world.Value, out int regionEntity);
                             ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
                             //Отображаем вкладку организаций RAEO
                             GameDisplayRegionOSbPOrganizationsTab(
                                 ref rAEO,
-                                gameDisplayObjectPanelEvent.isRefresh);
+                                requestComp.isRefresh);
                         }
                     }
                     //Иначе, если активна подпанель ORAEO
                     else if(gameWindow.objectPanel.activeObjectSubpanelType == ObjectSubpanelType.ORAEO)
                     {
-                        //Если событие запрашивает отображение обзорной вкладки
-                        if (gameDisplayObjectPanelEvent.eventType == DisplayObjectPanelEventType.ORAEOOverview)
+                        //Если запрашивается отображение обзорной вкладки
+                        if (requestComp.requestType == DisplayObjectPanelRequestType.ORAEOOverview)
                         {
                             //Берём компоненты ExORAEO и EcORAEO
-                            gameDisplayObjectPanelEvent.objectPE.Unpack(world.Value, out int oRAEOEntity);
+                            requestComp.objectPE.Unpack(world.Value, out int oRAEOEntity);
                             ref CExplorationORAEO exORAEO = ref explorationORAEOPool.Value.Get(oRAEOEntity);
                             ref CEconomicORAEO ecORAEO = ref economicORAEOPool.Value.Get(oRAEOEntity);
 
@@ -323,83 +335,72 @@ namespace SandOcean.UI
                             GameDisplayORAEOOSbPOverviewTab(
                                 ref exORAEO,
                                 ref ecORAEO,
-                                gameDisplayObjectPanelEvent.isRefresh);
+                                requestComp.isRefresh);
 
-                            Debug.LogWarning(gameDisplayObjectPanelEvent.eventType);
+                            Debug.LogWarning(requestComp.requestType);
                         }
                     }
 
-                    world.Value.DelEntity(gameDisplayObjectPanelEventEntity);
+                    world.Value.DelEntity(requestEntity);
                 }
             }
             //Иначе, если активно главное меню
-            else if (eUI.Value.activeMainWindowType
-                == MainWindowType.MainMenu)
+            else if (eUI.Value.activeMainWindowType == MainWindowType.MainMenu)
             {
-                //Для каждого события действия в главном меню
-                foreach (int mainMenuActionEventEntity in mainMenuActionEventFilter.Value)
+                //Для каждого запроса действия в главном меню
+                foreach (int mainMenuActionRequestEntity in mainMenuActionRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EMainMenuAction mainMenuActionEvent
-                        = ref mainMenuActionEventPool.Value.Get(mainMenuActionEventEntity);
+                    //Берём компонент запроса
+                    ref RMainMenuAction mainMenuActionRequest = ref mainMenuActionRequestPool.Value.Get(mainMenuActionRequestEntity);
 
-                    //Если событие запрашивает открытие меню новой игры
-                    if (mainMenuActionEvent.actionType
-                        == MainMenuActionType.OpenNewGameMenu)
+                    //Если запрашивается открытие меню новой игры
+                    if (mainMenuActionRequest.actionType == MainMenuActionType.OpenNewGameMenu)
                     {
                         //Открываем окно меню новой игры
                         NewGameMenuOpenWindow();
                     }
-                    //Иначе, если событие запрашивает открытие меню загрузки игры
-                    else if (mainMenuActionEvent.actionType
-                        == MainMenuActionType.OpenLoadGameMenu)
+                    //Иначе, если запрашивается открытие меню загрузки игры
+                    else if (mainMenuActionRequest.actionType == MainMenuActionType.OpenLoadGameMenu)
                     {
                         //Открываем окно меню загрузки игры
 
                     }
-                    //Иначе, если событие запрашивает открытие окна мастерской
-                    else if (mainMenuActionEvent.actionType
-                        == MainMenuActionType.OpenWorkshop)
+                    //Иначе, если запрашивается открытие окна мастерской
+                    else if (mainMenuActionRequest.actionType == MainMenuActionType.OpenWorkshop)
                     {
                         //Открываем окно мастерской
                         WorkshopOpenWindow();
                     }
-                    //Иначе, если событие запрашивает открытие окна главных настроек
-                    else if (mainMenuActionEvent.actionType
-                        == MainMenuActionType.OpenMainSettings)
+                    //Иначе, если запрашивается открытие окна главных настроек
+                    else if (mainMenuActionRequest.actionType == MainMenuActionType.OpenMainSettings)
                     {
                         //Открываем окно главных настроек
 
                     }
 
-                    world.Value.DelEntity(
-                        mainMenuActionEventEntity);
+                    world.Value.DelEntity(mainMenuActionRequestEntity);
                 }
             }
             //Иначе, если активно меню новой игры
-            else if (eUI.Value.activeMainWindowType
-                == MainWindowType.NewGameMenu)
+            else if (eUI.Value.activeMainWindowType == MainWindowType.NewGameMenu)
             {
-                //Для каждого события действия в меню новой игры
-                foreach (int newGameMenuActionEventEntity in newGameMenuActionEventFilter.Value)
+                //Для каждого запроса действия в меню новой игры
+                foreach (int newGameMenuActionRequestEntity in newGameMenuActionRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref ENewGameMenuAction newGameMenuActionEvent
-                        = ref newGameMenuActionEventPool.Value.Get(newGameMenuActionEventEntity);
+                    //Берём компонент запроса
+                    ref RNewGameMenuAction newGameMenuActionRequest = ref newGameMenuActionRequestPool.Value.Get(newGameMenuActionRequestEntity);
 
-                    //Если событие запрашивает открытие главного меню
-                    if (newGameMenuActionEvent.actionType
-                        == NewGameMenuActionType.OpenMainMenu)
+                    //Если запрашивается открытие главного меню
+                    if (newGameMenuActionRequest.actionType == NewGameMenuActionType.OpenMainMenu)
                     {
                         //Открываем главное меню
                         MainMenuOpenWindow();
                     }
-                    //Иначе, если событие запрашивает начало новой игры
-                    else if (newGameMenuActionEvent.actionType
-                        == NewGameMenuActionType.StartNewGame)
+                    //Иначе, если запрашивается начало новой игры
+                    else if (newGameMenuActionRequest.actionType == NewGameMenuActionType.StartNewGame)
                     {
-                        //Создаём событие, запрашивающее создание новой игры
-                        NewGameMenuStartNewGameEvent();
+                        //Создаём запрос создания новой игры
+                        NewGameMenuStartNewGameRequest();
 
                         //Инициализируем настройки новой игры по окну меню новой игры
                         NewGameInitialization();
@@ -408,115 +409,98 @@ namespace SandOcean.UI
                         GameOpenWindow();
                     }
 
-                    world.Value.DelEntity(newGameMenuActionEventEntity);
+                    world.Value.DelEntity(newGameMenuActionRequestEntity);
                 }
             }
             //Иначе, если активна мастерская
-            else if (eUI.Value.activeMainWindowType
-                == MainWindowType.Workshop)
+            else if (eUI.Value.activeMainWindowType == MainWindowType.Workshop)
             {
-                //Для каждого события действия в мастерской
-                foreach (int workshopActionEventEntity in workshopActionEventFilter.Value)
+                //Для каждого запроса действия в мастерской
+                foreach (int workshopActionRequestEntity in workshopActionRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EWorkshopAction workshopActionEvent
-                        = ref workshopActionEventPool.Value.Get(workshopActionEventEntity);
+                    //Берём компонент запроса
+                    ref RWorkshopAction workshopActionRequest = ref workshopActionRequestPool.Value.Get(workshopActionRequestEntity);
 
-                    //Если событие запрашивает открытие главного меню
-                    if (workshopActionEvent.actionType
-                        == WorkshopActionType.OpenMainMenu)
+                    //Если запрашивается открытие главного меню
+                    if (workshopActionRequest.actionType == WorkshopActionType.OpenMainMenu)
                     {
                         //Открываем главное меню
                         MainMenuOpenWindow();
                     }
-                    //Иначе, если событие запрашивает отображение набора контента
-                    else if (workshopActionEvent.actionType
-                        == WorkshopActionType.DisplayContentSet)
+                    //Иначе, если запрашивается отображение набора контента
+                    else if (workshopActionRequest.actionType == WorkshopActionType.DisplayContentSet)
                     {
                         //Отображаем запрошенный набор контента
-                        WorkshopDisplayContentSet(
-                            workshopActionEvent.contentSetIndex);
+                        WorkshopDisplayContentSet(workshopActionRequest.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие окна дизайнера
-                    else if(workshopActionEvent.actionType
-                        == WorkshopActionType.OpenDesigner)
+                    //Иначе, если запрашивается открытие окна дизайнера
+                    else if(workshopActionRequest.actionType == WorkshopActionType.OpenDesigner)
                     {
                         //Отображаем запрошенное окно дизайнера
                         DesignerOpenWindow(
-                            workshopActionEvent.contentSetIndex,
-                            workshopActionEvent.designerType,
+                            workshopActionRequest.contentSetIndex,
+                            workshopActionRequest.designerType,
                             false);
                     }
 
-                    world.Value.DelEntity(workshopActionEventEntity);
+                    world.Value.DelEntity(workshopActionRequestEntity);
                 }
             }
             //Иначе, если активен дизайнер
-            else if (eUI.Value.activeMainWindowType
-                == MainWindowType.Designer)
+            else if (eUI.Value.activeMainWindowType == MainWindowType.Designer)
             {
                 //Берём ссылку на окно дизайнера
-                UIDesignerWindow designerWindow
-                    = eUI.Value.designerWindow;
+                UIDesignerWindow designerWindow = eUI.Value.designerWindow;
 
-                //Для каждого события действия в дизайнере
-                foreach (int designerActionEventEntity in designerActionEventFilter.Value)
+                //Для каждого запроса в дизайнере
+                foreach (int designerActionRequestEntity in designerActionRequestFilter.Value)
                 {
-                    //Берём компонент события
-                    ref EDesignerAction designerActionEvent
-                        = ref designerActionEventPool.Value.Get(designerActionEventEntity);
+                    //Берём компонент запроса
+                    ref RDesignerAction designerActionRequest = ref designerActionRequestPool.Value.Get(designerActionRequestEntity);
 
-                    //Если событие запрашивает сохранение объекта контента
-                    if (designerActionEvent.actionType
-                        == DesignerActionType.SaveContentObject)
+                    //Если запрашивается сохранение объекта контента
+                    if (designerActionRequest.actionType == DesignerActionType.SaveContentObject)
                     {
                         //Если объект требуется сохранить в текущий набор контента
-                        if (designerActionEvent.isCurrentContentSet
-                            == true)
+                        if (designerActionRequest.isCurrentContentSet == true)
                         {
                             //Сохраняем запрошенный объект в текущий набор контента
-                            DesignerSaveContentObject(
-                                designerWindow.currentContentSetIndex);
+                            DesignerSaveContentObject(designerWindow.currentContentSetIndex);
                         }
                     }
-                    //Иначе, если событие запрашивает загрузку объекта контента
-                    else if(designerActionEvent.actionType
-                        == DesignerActionType.LoadContentSetObject)
+                    //Иначе, если запрашивается загрузку объекта контента
+                    else if(designerActionRequest.actionType == DesignerActionType.LoadContentSetObject)
                     {
                         //Загружаем запрошенный объект
                         DesignerLoadContentObject(
-                            designerActionEvent.contentSetIndex,
-                            designerActionEvent.objectIndex);
+                            designerActionRequest.contentSetIndex,
+                            designerActionRequest.objectIndex);
                     }
-                    //Иначе, если событие запрашивает удаление объекта контента
-                    else if(designerActionEvent.actionType
-                        == DesignerActionType.DeleteContentSetObject)
+                    //Иначе, если запрашивается удаление объекта контента
+                    else if(designerActionRequest.actionType == DesignerActionType.DeleteContentSetObject)
                     {
                         //Удаляем запрошенный объект
                         DesignerDeleteContentObject(
-                            designerActionEvent.contentSetIndex,
-                            designerActionEvent.objectIndex);
+                            designerActionRequest.contentSetIndex,
+                            designerActionRequest.objectIndex);
                     }
-                    //Иначе, если событие запрашивает отображение списка на панели набора контента
-                    else if(designerActionEvent.actionType
-                        == DesignerActionType.DisplayContentSetPanelList)
+                    //Иначе, если запрашивается отображение списка на панели набора контента
+                    else if(designerActionRequest.actionType == DesignerActionType.DisplayContentSetPanelList)
                     {
                         //Отображаем список соответственно запросу
                         DesignerDisplayContentSetPanelList(
-                            designerActionEvent.isCurrentContentSet,
-                            designerActionEvent.contentSetIndex);
+                            designerActionRequest.isCurrentContentSet,
+                            designerActionRequest.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает отображение панели набора контента
-                    else if(designerActionEvent.actionType
-                        == DesignerActionType.DisplayContentSetPanel)
+                    //Иначе, если запрашивается отображение панели набора контента
+                    else if(designerActionRequest.actionType == DesignerActionType.DisplayContentSetPanel)
                     {
-                        //Если событие запрашивает отображение панели текущего набора контента
-                        if (designerActionEvent.isCurrentContentSet
-                            == true)
+                        //Если запрашивается отображение панели текущего набора контента
+                        if (designerActionRequest.isCurrentContentSet == true)
                         {
                             //Отображаем панель текущего набора контента
                             DesignerDisplayContentSetPanel(
-                                designerActionEvent.isCurrentContentSet,
+                                designerActionRequest.isCurrentContentSet,
                                 true);
                         }
                         //Иначе
@@ -524,21 +508,19 @@ namespace SandOcean.UI
                         {
                             //Отображаем панель прочих наборов контента
                             DesignerDisplayContentSetPanel(
-                                designerActionEvent.isCurrentContentSet,
+                                designerActionRequest.isCurrentContentSet,
                                 true);
                         }
                     }
-                    //Иначе, если событие запрашивает сокрытие панели набора контента
-                    else if(designerActionEvent.actionType
-                        == DesignerActionType.HideContentSetPanel)
+                    //Иначе, если запрашивается сокрытие панели набора контента
+                    else if(designerActionRequest.actionType == DesignerActionType.HideContentSetPanel)
                     {
-                        //Если событие запрашивает сокрытие панели текущего набора контента
-                        if (designerActionEvent.isCurrentContentSet
-                            == true)
+                        //Если запрашивается сокрытие панели текущего набора контента
+                        if (designerActionRequest.isCurrentContentSet == true)
                         {
                             //Скрываем панель текущего набора контента
                             DesignerDisplayContentSetPanel(
-                                designerActionEvent.isCurrentContentSet,
+                                designerActionRequest.isCurrentContentSet,
                                 false);
                         }
                         //Иначе
@@ -546,13 +528,12 @@ namespace SandOcean.UI
                         {
                             //Скрываем панель прочих наборов контента
                             DesignerDisplayContentSetPanel(
-                                designerActionEvent.isCurrentContentSet,
+                                designerActionRequest.isCurrentContentSet,
                                 false);
                         }
                     }
-                    //Иначе, если событие запрашивает открытие мастерской
-                    else if (designerActionEvent.actionType
-                        == DesignerActionType.OpenWorkshop)
+                    //Иначе, если запрашивается открытие мастерской
+                    else if (designerActionRequest.actionType == DesignerActionType.OpenWorkshop)
                     {
                         //Скрываем панель прочих и текущего наборов контента
                         DesignerDisplayContentSetPanel(
@@ -564,15 +545,13 @@ namespace SandOcean.UI
                             false);
 
                         //Запрашиваем сохранение набора контента
-                        SaveContentSetEvent(
-                            designerWindow.currentContentSetIndex);
+                        SaveContentSetRequest(designerWindow.currentContentSetIndex);
 
                         //Открываем окно мастерской
                         WorkshopOpenWindow();
                     }
-                    //Иначе, если событие запрашивает открытие окна игры
-                    else if (designerActionEvent.actionType
-                        == DesignerActionType.OpenGame)
+                    //Иначе, если запрашивается открытие окна игры
+                    else if (designerActionRequest.actionType == DesignerActionType.OpenGame)
                     {
                         //Скрываем панель прочих и текущего наборов контента
                         DesignerDisplayContentSetPanel(
@@ -587,100 +566,85 @@ namespace SandOcean.UI
                         GameOpenWindow();
                     }
 
-                    world.Value.DelEntity(designerActionEventEntity);
+                    world.Value.DelEntity(designerActionRequestEntity);
                 }
 
                 //Если активен дизайнер кораблей
-                if (designerWindow.designerType
-                    == DesignerType.ShipClass)
+                if (designerWindow.designerType == DesignerType.ShipClass)
                 {
-                    //Для каждого действия в дизайнере классов кораблей
-                    foreach (int designerShipClassActionEventEntity
-                        in designerShipClassActionEventFilter.Value)
+                    //Для каждого запроса действия в дизайнере классов кораблей
+                    foreach (int designerShipClassActionRequestEntity in designerShipClassActionRequestFilter.Value)
                     {
-                        //Берём компонент события
-                        ref EDesignerShipClassAction designerShipClassActionEvent
-                            = ref designerShipClassActionEventPool.Value.Get(designerShipClassActionEventEntity);
+                        //Берём компонент запроса
+                        ref RDesignerShipClassAction designerShipClassActionRequest = ref designerShipClassActionRequestPool.Value.Get(designerShipClassActionRequestEntity);
 
-                        //Если событие запрашивает добавление компонента в класс корабля
-                        if (designerShipClassActionEvent.actionType
-                            == DesignerShipClassActionType.AddComponentToClass)
+                        //Если запрашивается добавление компонента в класс корабля
+                        if (designerShipClassActionRequest.actionType == DesignerShipClassActionType.AddComponentToClass)
                         {
                             //Добавляем запрошенный компонент
                             DesignerShipClassAddComponentFirst(
-                                designerShipClassActionEvent.componentType,
-                                designerShipClassActionEvent.contentSetIndex,
-                                designerShipClassActionEvent.modelIndex,
-                                designerShipClassActionEvent.numberOfComponents);
+                                designerShipClassActionRequest.componentType,
+                                designerShipClassActionRequest.contentSetIndex,
+                                designerShipClassActionRequest.modelIndex,
+                                designerShipClassActionRequest.numberOfComponents);
                         }
-                        //Иначе, если событие запрашивает удаление компонента из класса корабля
-                        else if(designerShipClassActionEvent.actionType
-                            == DesignerShipClassActionType.DeleteComponentFromClass)
+                        //Иначе, если запрашивается удаление компонента из класса корабля
+                        else if(designerShipClassActionRequest.actionType == DesignerShipClassActionType.DeleteComponentFromClass)
                         {
                             //Удаляем запрошенный компонент
                             DesignerShipClassDeleteComponentFirst(
-                                designerShipClassActionEvent.componentType,
-                                designerShipClassActionEvent.contentSetIndex,
-                                designerShipClassActionEvent.modelIndex,
-                                designerShipClassActionEvent.numberOfComponents);
+                                designerShipClassActionRequest.componentType,
+                                designerShipClassActionRequest.contentSetIndex,
+                                designerShipClassActionRequest.modelIndex,
+                                designerShipClassActionRequest.numberOfComponents);
                         }
-                        //Иначе, если событие запрашивает отображение подробной информации о компоненте
-                        else if (designerShipClassActionEvent.actionType
-                            == DesignerShipClassActionType.DisplayComponentDetailedInfo)
+                        //Иначе, если запрашивается отображение подробной информации о компоненте
+                        else if (designerShipClassActionRequest.actionType == DesignerShipClassActionType.DisplayComponentDetailedInfo)
                         {
                             //Отображаем подробную информацию о компоненте
                             DesignerShipClassDisplayComponentDetailedInfo(
                                 true,
-                                designerShipClassActionEvent.contentSetIndex,
-                                designerShipClassActionEvent.modelIndex,
-                                designerShipClassActionEvent.componentType);
+                                designerShipClassActionRequest.contentSetIndex,
+                                designerShipClassActionRequest.modelIndex,
+                                designerShipClassActionRequest.componentType);
 
                         }
-                        //Иначе, если событие запрашивает сокрытие подробной информации о компоненте
-                        else if(designerShipClassActionEvent.actionType
-                            == DesignerShipClassActionType.HideComponentDetailedInfo)
+                        //Иначе, если запрашивается сокрытие подробной информации о компоненте
+                        else if(designerShipClassActionRequest.actionType == DesignerShipClassActionType.HideComponentDetailedInfo)
                         {
                             //Скрываем подробную информацию о компоненте
-                            DesignerShipClassDisplayComponentDetailedInfo(
-                                false);
+                            DesignerShipClassDisplayComponentDetailedInfo(false);
                         }
-                        //Иначе, если событие запрашивает смену типа доступных компонентов
-                        else if(designerShipClassActionEvent.actionType
-                            == DesignerShipClassActionType.ChangeAvailableComponentsType)
+                        //Иначе, если запрашивается смена типа доступных компонентов
+                        else if(designerShipClassActionRequest.actionType == DesignerShipClassActionType.ChangeAvailableComponentsType)
                         {
                             //Отображаем доступные компоненты запрошенного типа
-                            DesignerShipClassDisplayAvailableComponentsType(
-                                designerShipClassActionEvent.componentType);
+                            DesignerShipClassDisplayAvailableComponentsType(designerShipClassActionRequest.componentType);
                         }
 
-                        world.Value.DelEntity(designerShipClassActionEventEntity);
+                        world.Value.DelEntity(designerShipClassActionRequestEntity);
                     }
                 }
                 //Иначе, если активен дизайнер компонентов
-                else if (designerWindow.designerType
-                    >= DesignerType.ComponentEngine
-                    && designerWindow.designerType
-                    <= DesignerType.ComponentGunEnergy)
+                else if (designerWindow.designerType >= DesignerType.ComponentEngine
+                    && designerWindow.designerType <= DesignerType.ComponentGunEnergy)
                 {
-                    //Для каждого события действия в дизайнере компонентов
-                    foreach (int designerComponentActionEventEntity
-                        in designerComponentActionEventFilter.Value)
+                    //Для каждого запроса действия в дизайнере компонентов
+                    foreach (int designerComponentActionRequestEntity in designerComponentActionRequestFilter.Value)
                     {
-                        //Берём компонент события
-                        ref EDesignerComponentAction designerComponentActionEvent
-                            = ref designerComponentActionEventPool.Value.Get(designerComponentActionEventEntity);
+                        //Берём компонент запроса
+                        ref RDesignerComponentAction designerComponentActionRequest = ref designerComponentActionRequestPool.Value.Get(designerComponentActionRequestEntity);
 
-                        //Если событие запрашивает изменение основной технологии
-                        if (designerComponentActionEvent.actionType
-                            == DesignerComponentActionType.ChangeCoreTechnology)
+                        //Если запрашивается изменение основной технологии
+                        if (designerComponentActionRequest.actionType == DesignerComponentActionType.ChangeCoreTechnology)
                         {
                             //Изменяем запрошенную основную технологию
                             DesignerComponentChangeCoreTechnology(
-                                designerComponentActionEvent.componentCoreModifierType,
-                                designerComponentActionEvent.technologyDropdownIndex);
+                                designerComponentActionRequest.componentCoreModifierType,
+                                designerComponentActionRequest.technologyDropdownIndex);
                         }
 
-                        world.Value.DelEntity(designerComponentActionEventEntity);
+                        world.Value.DelEntity(designerComponentActionRequestEntity);
                     }
                 }
             }
@@ -800,16 +764,14 @@ namespace SandOcean.UI
                 = MainWindowType.NewGameMenu;
         }
 
-        void NewGameMenuStartNewGameEvent()
+        void NewGameMenuStartNewGameRequest()
         {
-            //Создаём новую сущность и назначаем ей компонент события начала новой игры
-            int eventEntity = world.Value.NewEntity();
-            ref EStartNewGame startNewGameEvent
-                = ref startNewGameEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса начала новой игры
+            int requestEntity = world.Value.NewEntity();
+            ref RStartNewGame startNewGameRequest = ref startNewGameEventPool.Value.Add(requestEntity);
 
-            //Отмечаем, что технологии не были рассчитаны
-            startNewGameEvent.isTechnologiesCalculated
-                = false;
+            //Запрашиваем включение группы систем "NewGame"
+            EcsGroupSystemStateEvent("NewGame", true);
         }
 
         void NewGameInitialization()
@@ -829,7 +791,7 @@ namespace SandOcean.UI
         {
             //Создаём новую сущность и назначаем ей компонент события рассчёта модификаторов технологий
             int eventEntity = world.Value.NewEntity();
-            ref ETechnologyCalculateModifiers technologyCalculateModifiersEvent
+            ref RTechnologyCalculateModifiers technologyCalculateModifiersEvent
                 = ref technologyCalculateModifiersEventPool.Value.Add(eventEntity);
 
             //Указываем ссылку на сущность фракции, для которой требуется пересчитать модификаторы
@@ -3206,12 +3168,12 @@ namespace SandOcean.UI
                                 = ref engine.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            powerPerSizeTechnology.ContentSetIndex
-                                = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
-                                    engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            powerPerSizeTechnology.ObjectIndex
-                                = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
-                                    engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            powerPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    engineDesignerWindow.powerPerSizeCoreTechnologiesList[
+                                        engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    engineDesignerWindow.powerPerSizeCoreTechnologiesList[
+                                        engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             powerPerSizeTechnology.ModifierValue
                                 = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
@@ -3268,8 +3230,7 @@ namespace SandOcean.UI
                         //Заносим в массив основных технологий двигателя технологию мощности на единицу размера
                         engine.coreTechnologies[0]
                             = new(
-                                powerPerSizeTechnology.Item1,
-                                powerPerSizeTechnology.Item2,
+                                new(powerPerSizeTechnology.Item1, powerPerSizeTechnology.Item2),
                                 powerPerSizeTechnology.Item3);
 
 
@@ -3332,12 +3293,12 @@ namespace SandOcean.UI
                                 = ref engine.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            powerPerSizeTechnology.ContentSetIndex
-                                = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
-                                    engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            powerPerSizeTechnology.ObjectIndex
-                                = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
-                                    engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            powerPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    engineDesignerWindow.powerPerSizeCoreTechnologiesList[
+                                        engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    engineDesignerWindow.powerPerSizeCoreTechnologiesList[
+                                        engineDesignerWindow.powerPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             powerPerSizeTechnology.ModifierValue
                                 = engineDesignerWindow.powerPerSizeCoreTechnologiesList[
@@ -3398,8 +3359,7 @@ namespace SandOcean.UI
                                 TechnologyComponentCoreModifierType.EnginePowerPerSize,
                                 contentData.Value.wDContentSets[powerPerSizeTechnology.Item1].ContentSetName,
                                 contentData.Value.wDContentSets[powerPerSizeTechnology.Item1].technologies[powerPerSizeTechnology.Item2].ObjectName,
-                                powerPerSizeTechnology.Item1,
-                                powerPerSizeTechnology.Item2,
+                                new(powerPerSizeTechnology.Item1, powerPerSizeTechnology.Item2),
                                 true,
                                 powerPerSizeTechnology.Item3);
 
@@ -3477,12 +3437,12 @@ namespace SandOcean.UI
                                 = ref reactor.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            energyPerSizeTechnology.ContentSetIndex
-                                = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
-                                    reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            energyPerSizeTechnology.ObjectIndex
-                                = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
-                                    reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            energyPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
+                                        reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
+                                        reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             energyPerSizeTechnology.ModifierValue
                                 = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
@@ -3539,8 +3499,7 @@ namespace SandOcean.UI
                         //Заносим в массив основных технологий реактора технологию энергии на единицу размера
                         reactor.coreTechnologies[0]
                             = new(
-                                energyPerSizeTechnology.Item1,
-                                energyPerSizeTechnology.Item2,
+                                new(energyPerSizeTechnology.Item1, energyPerSizeTechnology.Item2),
                                 energyPerSizeTechnology.Item3);
 
                         //Обновляем размер массива реакторов
@@ -3601,12 +3560,12 @@ namespace SandOcean.UI
                                 = ref reactor.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            energyPerSizeTechnology.ContentSetIndex
-                                = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
-                                    reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            energyPerSizeTechnology.ObjectIndex
-                                = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
-                                    reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            energyPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
+                                        reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
+                                        reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             energyPerSizeTechnology.ModifierValue
                                 = reactorDesignerWindow.energyPerSizeCoreTechnologiesList[
@@ -3667,8 +3626,7 @@ namespace SandOcean.UI
                                 TechnologyComponentCoreModifierType.ReactorEnergyPerSize,
                                 contentData.Value.wDContentSets[energyPerSizeTechnology.Item1].ContentSetName,
                                 contentData.Value.wDContentSets[energyPerSizeTechnology.Item1].technologies[energyPerSizeTechnology.Item2].ObjectName,
-                                energyPerSizeTechnology.Item1,
-                                energyPerSizeTechnology.Item2,
+                                new(energyPerSizeTechnology.Item1, energyPerSizeTechnology.Item2),
                                 true,
                                 energyPerSizeTechnology.Item3);
 
@@ -3744,12 +3702,12 @@ namespace SandOcean.UI
                                 = ref fuelTank.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            compressionTechnology.ContentSetIndex
-                                = fuelTankDesignerWindow.compressionCoreTechnologiesList[
-                                    fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            compressionTechnology.ObjectIndex
-                                = fuelTankDesignerWindow.compressionCoreTechnologiesList[
-                                    fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            compressionTechnology.ContentObjectLink
+                                = new(
+                                    fuelTankDesignerWindow.compressionCoreTechnologiesList[
+                                        fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    fuelTankDesignerWindow.compressionCoreTechnologiesList[
+                                        fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             compressionTechnology.ModifierValue
                                 = fuelTankDesignerWindow.compressionCoreTechnologiesList[
@@ -3801,8 +3759,7 @@ namespace SandOcean.UI
                         //Заносим в массив основных технологий топливного бака технологию сжатия
                         fuelTank.coreTechnologies[0]
                             = new(
-                                compressionTechnology.Item1,
-                                compressionTechnology.Item2,
+                                new(compressionTechnology.Item1, compressionTechnology.Item2),
                                 compressionTechnology.Item3);
 
                         //Обновляем размер массива топливных баков
@@ -3863,12 +3820,12 @@ namespace SandOcean.UI
                                 = ref fuelTank.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            energyPerSizeTechnology.ContentSetIndex
-                                = fuelTankDesignerWindow.compressionCoreTechnologiesList[
-                                    fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            energyPerSizeTechnology.ObjectIndex
-                                = fuelTankDesignerWindow.compressionCoreTechnologiesList[
-                                    fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            energyPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    fuelTankDesignerWindow.compressionCoreTechnologiesList[
+                                        fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    fuelTankDesignerWindow.compressionCoreTechnologiesList[
+                                        fuelTankDesignerWindow.compressionCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             energyPerSizeTechnology.ModifierValue
                                 = fuelTankDesignerWindow.compressionCoreTechnologiesList[
@@ -3924,8 +3881,7 @@ namespace SandOcean.UI
                                 TechnologyComponentCoreModifierType.FuelTankCompression,
                                 contentData.Value.wDContentSets[compressionTechnology.Item1].ContentSetName,
                                 contentData.Value.wDContentSets[compressionTechnology.Item1].technologies[compressionTechnology.Item2].ObjectName,
-                                compressionTechnology.Item1,
-                                compressionTechnology.Item2,
+                                new(compressionTechnology.Item1, compressionTechnology.Item2),
                                 true,
                                 compressionTechnology.Item3);
 
@@ -4001,12 +3957,12 @@ namespace SandOcean.UI
                                 = ref extractionEquipmentSolid.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            compressionTechnology.ContentSetIndex
-                                = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
-                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            compressionTechnology.ObjectIndex
-                                = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
-                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            compressionTechnology.ContentObjectLink
+                                = new(
+                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
+                                        extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
+                                        extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             compressionTechnology.ModifierValue
                                 = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
@@ -4058,8 +4014,7 @@ namespace SandOcean.UI
                         //Заносим в массив основных технологий оборудования для твёрдой добычи технологию скорости на единицу размера
                         extractionEquipmentSolid.coreTechnologies[0]
                             = new(
-                                compressionTechnology.Item1,
-                                compressionTechnology.Item2,
+                                new(compressionTechnology.Item1, compressionTechnology.Item2),
                                 compressionTechnology.Item3);
 
                         //Обновляем размер массива оборудования для твёрдой добычи
@@ -4120,12 +4075,12 @@ namespace SandOcean.UI
                                 = ref extractionEquipmentSolid.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            energyPerSizeTechnology.ContentSetIndex
-                                = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
-                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            energyPerSizeTechnology.ObjectIndex
-                                = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
-                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            energyPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
+                                        extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
+                                        extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             energyPerSizeTechnology.ModifierValue
                                 = extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[
@@ -4181,8 +4136,7 @@ namespace SandOcean.UI
                                 TechnologyComponentCoreModifierType.ExtractionEquipmentSolidSpeedPerSize,
                                 contentData.Value.wDContentSets[compressionTechnology.Item1].ContentSetName,
                                 contentData.Value.wDContentSets[compressionTechnology.Item1].technologies[compressionTechnology.Item2].ObjectName,
-                                compressionTechnology.Item1,
-                                compressionTechnology.Item2,
+                                new(compressionTechnology.Item1, compressionTechnology.Item2),
                                 true,
                                 compressionTechnology.Item3);
 
@@ -4258,12 +4212,12 @@ namespace SandOcean.UI
                                 = ref energyGun.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            powerPerSizeTechnology.ContentSetIndex
-                                = energyGunDesignerWindow.rechargeCoreTechnologiesList[
-                                    energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            powerPerSizeTechnology.ObjectIndex
-                                = energyGunDesignerWindow.rechargeCoreTechnologiesList[
-                                    energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            powerPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    energyGunDesignerWindow.rechargeCoreTechnologiesList[
+                                        energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    energyGunDesignerWindow.rechargeCoreTechnologiesList[
+                                        energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             powerPerSizeTechnology.ModifierValue
                                 = energyGunDesignerWindow.rechargeCoreTechnologiesList[
@@ -4320,8 +4274,7 @@ namespace SandOcean.UI
                         //Заносим в массив основных технологий энергетического орудия технологию перезарядки
                         energyGun.coreTechnologies[0]
                             = new(
-                                powerPerSizeTechnology.Item1,
-                                powerPerSizeTechnology.Item2,
+                                new(powerPerSizeTechnology.Item1, powerPerSizeTechnology.Item2),
                                 powerPerSizeTechnology.Item3);
 
 
@@ -4384,12 +4337,12 @@ namespace SandOcean.UI
                                 = ref energyGun.coreTechnologies[0];
 
                             //Перезаписываем индексы технологии
-                            powerPerSizeTechnology.ContentSetIndex
-                                = energyGunDesignerWindow.rechargeCoreTechnologiesList[
-                                    energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item1;
-                            powerPerSizeTechnology.ObjectIndex
-                                = energyGunDesignerWindow.rechargeCoreTechnologiesList[
-                                    energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item2;
+                            powerPerSizeTechnology.ContentObjectLink
+                                = new(
+                                    energyGunDesignerWindow.rechargeCoreTechnologiesList[
+                                        energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item1,
+                                    energyGunDesignerWindow.rechargeCoreTechnologiesList[
+                                        energyGunDesignerWindow.rechargeCoreTechnologyPanel.currentTechnologyIndex].Item2);
                             //И значение модификатора
                             powerPerSizeTechnology.ModifierValue
                                 = energyGunDesignerWindow.rechargeCoreTechnologiesList[
@@ -4450,8 +4403,7 @@ namespace SandOcean.UI
                                 TechnologyComponentCoreModifierType.GunEnergyRecharge,
                                 contentData.Value.wDContentSets[powerPerSizeTechnology.Item1].ContentSetName,
                                 contentData.Value.wDContentSets[powerPerSizeTechnology.Item1].technologies[powerPerSizeTechnology.Item2].ObjectName,
-                                powerPerSizeTechnology.Item1,
-                                powerPerSizeTechnology.Item2,
+                                new(powerPerSizeTechnology.Item1, powerPerSizeTechnology.Item2),
                                 true,
                                 powerPerSizeTechnology.Item3);
 
@@ -4599,9 +4551,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией двигателя
                         if (engineDesignerWindow.powerPerSizeCoreTechnologiesList[a].Item1
-                            == engine.coreTechnologies[0].ContentSetIndex
+                            == engine.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && engineDesignerWindow.powerPerSizeCoreTechnologiesList[a].Item2
-                            == engine.coreTechnologies[0].ObjectIndex)
+                            == engine.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             engineDesignerWindow.powerPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4638,9 +4590,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией двигателя
                         if (engineDesignerWindow.powerPerSizeCoreTechnologiesList[a].Item1
-                            == engine.coreTechnologies[0].ContentSetIndex
+                            == engine.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && engineDesignerWindow.powerPerSizeCoreTechnologiesList[a].Item2
-                            == engine.coreTechnologies[0].ObjectIndex)
+                            == engine.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             engineDesignerWindow.powerPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4690,9 +4642,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией реактора
                         if (reactorDesignerWindow.energyPerSizeCoreTechnologiesList[a].Item1
-                            == reactor.coreTechnologies[0].ContentSetIndex
+                            == reactor.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && reactorDesignerWindow.energyPerSizeCoreTechnologiesList[a].Item2
-                            == reactor.coreTechnologies[0].ObjectIndex)
+                            == reactor.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4729,9 +4681,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией реактора
                         if (reactorDesignerWindow.energyPerSizeCoreTechnologiesList[a].Item1
-                            == reactor.coreTechnologies[0].ContentSetIndex
+                            == reactor.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && reactorDesignerWindow.energyPerSizeCoreTechnologiesList[a].Item2
-                            == reactor.coreTechnologies[0].ObjectIndex)
+                            == reactor.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             reactorDesignerWindow.energyPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4781,9 +4733,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией топливного бака
                         if (fuelTankDesignerWindow.compressionCoreTechnologiesList[a].Item1
-                            == fuelTank.coreTechnologies[0].ContentSetIndex
+                            == fuelTank.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && fuelTankDesignerWindow.compressionCoreTechnologiesList[a].Item2
-                            == fuelTank.coreTechnologies[0].ObjectIndex)
+                            == fuelTank.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             fuelTankDesignerWindow.compressionCoreTechnologyPanel.technologiesDropdown.value
@@ -4819,9 +4771,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией топливного бака
                         if (fuelTankDesignerWindow.compressionCoreTechnologiesList[a].Item1
-                            == fuelTank.coreTechnologies[0].ContentSetIndex
+                            == fuelTank.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && fuelTankDesignerWindow.compressionCoreTechnologiesList[a].Item2
-                            == fuelTank.coreTechnologies[0].ObjectIndex)
+                            == fuelTank.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             fuelTankDesignerWindow.compressionCoreTechnologyPanel.technologiesDropdown.value
@@ -4870,9 +4822,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией оборудования для твёрдой добычи
                         if (extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[a].Item1
-                            == extractionEquipmentSolid.coreTechnologies[0].ContentSetIndex
+                            == extractionEquipmentSolid.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[a].Item2
-                            == extractionEquipmentSolid.coreTechnologies[0].ObjectIndex)
+                            == extractionEquipmentSolid.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4908,9 +4860,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией оборудования для твёрдой добычи
                         if (extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[a].Item1
-                            == extractionEquipmentSolid.coreTechnologies[0].ContentSetIndex
+                            == extractionEquipmentSolid.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologiesList[a].Item2
-                            == extractionEquipmentSolid.coreTechnologies[0].ObjectIndex)
+                            == extractionEquipmentSolid.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             extractionEquipmentDesignerWindow.speedPerSizeCoreTechnologyPanel.technologiesDropdown.value
@@ -4959,9 +4911,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией энергетического орудия
                         if (energyGunDesignerWindow.rechargeCoreTechnologiesList[a].Item1
-                            == energyGun.coreTechnologies[0].ContentSetIndex
+                            == energyGun.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && energyGunDesignerWindow.rechargeCoreTechnologiesList[a].Item2
-                            == energyGun.coreTechnologies[0].ObjectIndex)
+                            == energyGun.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             energyGunDesignerWindow.rechargeCoreTechnologyPanel.technologiesDropdown.value
@@ -4998,9 +4950,9 @@ namespace SandOcean.UI
                     {
                         //Если индекс набора контента и индекс технологии совпадают с технологией энергетического орудия
                         if (energyGunDesignerWindow.rechargeCoreTechnologiesList[a].Item1
-                            == energyGun.coreTechnologies[0].ContentSetIndex
+                            == energyGun.coreTechnologies[0].ContentObjectLink.ContentSetIndex
                             && energyGunDesignerWindow.rechargeCoreTechnologiesList[a].Item2
-                            == energyGun.coreTechnologies[0].ObjectIndex)
+                            == energyGun.coreTechnologies[0].ContentObjectLink.ObjectIndex)
                         {
                             //Изменяем выбранную основную технологию в выпадающем списке
                             energyGunDesignerWindow.rechargeCoreTechnologyPanel.technologiesDropdown.value
@@ -6498,7 +6450,7 @@ namespace SandOcean.UI
         }
 
         void DesignerShipClassDeleteComponentRef(
-            IContentObjectRef shipClassComponentRef,
+            IContentObjectLink shipClassComponentRef,
             ShipComponentType componentType,
             int shipClassContentSetIndex,
             int shipClassIndex)
@@ -6941,7 +6893,7 @@ namespace SandOcean.UI
         }
 
         void DesignerShipClassAddComponentRef(
-            IContentObjectRef shipClassComponentRef,
+            IContentObjectLink shipClassComponentRef,
             ShipComponentType componentType,
             int shipClassContentSetIndex,
             int shipClassIndex)
@@ -7439,7 +7391,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на двигатель
                         DesignerComponentDeleteTechnologyRef(
-                            engine.coreTechnologies[a],
+                            engine.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Engine,
                             componentContentSetIndex,
                             componentIndex);
@@ -7459,7 +7411,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на двигатель
                         DesignerComponentDeleteTechnologyRef(
-                            engine.coreTechnologies[a],
+                            engine.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Engine,
                             componentContentSetIndex,
                             componentIndex);
@@ -7485,7 +7437,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на реактор
                         DesignerComponentDeleteTechnologyRef(
-                            reactor.coreTechnologies[a],
+                            reactor.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Reactor,
                             componentContentSetIndex,
                             componentIndex);
@@ -7505,7 +7457,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на реактор
                         DesignerComponentDeleteTechnologyRef(
-                            reactor.coreTechnologies[a],
+                            reactor.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Reactor,
                             componentContentSetIndex,
                             componentIndex);
@@ -7531,7 +7483,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на топливный бак
                         DesignerComponentDeleteTechnologyRef(
-                            fuelTank.coreTechnologies[a],
+                            fuelTank.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.HoldFuelTank,
                             componentContentSetIndex,
                             componentIndex);
@@ -7551,7 +7503,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на топливный бак
                         DesignerComponentDeleteTechnologyRef(
-                            fuelTank.coreTechnologies[a],
+                            fuelTank.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.HoldFuelTank,
                             componentContentSetIndex,
                             componentIndex);
@@ -7577,7 +7529,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentDeleteTechnologyRef(
-                            extractionEquipmentSolid.coreTechnologies[a],
+                            extractionEquipmentSolid.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.ExtractionEquipmentSolid,
                             componentContentSetIndex,
                             componentIndex);
@@ -7597,7 +7549,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentDeleteTechnologyRef(
-                            extractionEquipmentSolid.coreTechnologies[a],
+                            extractionEquipmentSolid.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.ExtractionEquipmentSolid,
                             componentContentSetIndex,
                             componentIndex);
@@ -7623,7 +7575,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на энергетическое орудие
                         DesignerComponentDeleteTechnologyRef(
-                            energyGun.coreTechnologies[a],
+                            energyGun.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.GunEnergy,
                             componentContentSetIndex,
                             componentIndex);
@@ -7643,7 +7595,7 @@ namespace SandOcean.UI
                     {
                         //Удаляем ссылку на энергетическое орудие
                         DesignerComponentDeleteTechnologyRef(
-                            energyGun.coreTechnologies[a],
+                            energyGun.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.GunEnergy,
                             componentContentSetIndex,
                             componentIndex);
@@ -7653,7 +7605,7 @@ namespace SandOcean.UI
         }
 
         void DesignerComponentDeleteTechnologyRef(
-            IContentObjectRef coreTechnologyRef,
+            IContentObjectLink coreTechnologyRef,
             ShipComponentType componentType,
             int componentContentSetIndex,
             int componentIndex)
@@ -7925,7 +7877,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на двигатель
                         DesignerComponentAddTechnologyRef(
-                            engine.coreTechnologies[a],
+                            engine.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Engine,
                             componentContentSetIndex,
                             componentIndex);
@@ -7945,7 +7897,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на двигатель
                         DesignerComponentAddTechnologyRef(
-                            engine.coreTechnologies[a],
+                            engine.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Engine,
                             componentContentSetIndex,
                             componentIndex);
@@ -7971,7 +7923,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на реактор
                         DesignerComponentAddTechnologyRef(
-                            reactor.coreTechnologies[a],
+                            reactor.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Reactor,
                             componentContentSetIndex,
                             componentIndex);
@@ -7991,7 +7943,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на реактор
                         DesignerComponentAddTechnologyRef(
-                            reactor.coreTechnologies[a],
+                            reactor.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.Reactor,
                             componentContentSetIndex,
                             componentIndex);
@@ -8017,7 +7969,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на топливный бак
                         DesignerComponentAddTechnologyRef(
-                            fuelTank.coreTechnologies[a],
+                            fuelTank.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.HoldFuelTank,
                             componentContentSetIndex,
                             componentIndex);
@@ -8037,7 +7989,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на топливный бак
                         DesignerComponentAddTechnologyRef(
-                            fuelTank.coreTechnologies[a],
+                            fuelTank.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.HoldFuelTank,
                             componentContentSetIndex,
                             componentIndex);
@@ -8063,7 +8015,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentAddTechnologyRef(
-                            extractionEquipmentSolid.coreTechnologies[a],
+                            extractionEquipmentSolid.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.ExtractionEquipmentSolid,
                             componentContentSetIndex,
                             componentIndex);
@@ -8083,7 +8035,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentAddTechnologyRef(
-                            extractionEquipmentSolid.coreTechnologies[a],
+                            extractionEquipmentSolid.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.ExtractionEquipmentSolid,
                             componentContentSetIndex,
                             componentIndex);
@@ -8109,7 +8061,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentAddTechnologyRef(
-                            energyGun.coreTechnologies[a],
+                            energyGun.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.GunEnergy,
                             componentContentSetIndex,
                             componentIndex);
@@ -8129,7 +8081,7 @@ namespace SandOcean.UI
                     {
                         //Добавляем ссылку на оборудование для твёрдой добычи
                         DesignerComponentAddTechnologyRef(
-                            energyGun.coreTechnologies[a],
+                            energyGun.coreTechnologies[a].ContentObjectLink,
                             ShipComponentType.GunEnergy,
                             componentContentSetIndex,
                             componentIndex);
@@ -8139,7 +8091,7 @@ namespace SandOcean.UI
         }
 
         void DesignerComponentAddTechnologyRef(
-            IContentObjectRef coreTechnologyRef,
+            IContentObjectLink coreTechnologyRef,
             ShipComponentType componentType,
             int componentContentSetIndex,
             int componentIndex)
@@ -8718,16 +8670,16 @@ namespace SandOcean.UI
         }
 
         void GameDisplayOrganizationObjectSubpanel(
-            ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent)
+            ref RGameDisplayObjectPanel gameDisplayObjectPanelRequest)
         {
 
         }
 
         void GameDisplayRegionObjectSubpanel(
-            ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent)
+            ref RGameDisplayObjectPanel gameDisplayObjectPanelRequest)
         {
             //Берём компонент региона и RAEO
-            gameDisplayObjectPanelEvent.objectPE.Unpack(world.Value, out int regionEntity);
+            gameDisplayObjectPanelRequest.objectPE.Unpack(world.Value, out int regionEntity);
             ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
             ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
@@ -8748,14 +8700,14 @@ namespace SandOcean.UI
             objectPanel.activeObjectSubpanelType = ObjectSubpanelType.Region;
             objectPanel.activeObjectSubpanel = objectPanel.regionObjectSubpanel;
             //Указываем, какой регион отображает панель
-            objectPanel.activeObjectPE = gameDisplayObjectPanelEvent.objectPE;
+            objectPanel.activeObjectPE = gameDisplayObjectPanelRequest.objectPE;
 
             //Берём подпанель региона
             UIRegionObjectSubpanel regionSubpanel = objectPanel.regionObjectSubpanel;
 
 
             //Отображаем название региона
-            objectPanel.objectName.text = region.Position.ToString();
+            objectPanel.objectName.text = region.centerPoint.ToString();
 
             //Отображаем обзорную вкладку региона
             GameDisplayRegionOSbPOverviewTab(
@@ -8862,35 +8814,28 @@ namespace SandOcean.UI
             }
         }
 
-        void GameCreateORAEOBriefInfoPanels()
+        void ORAEOCreateBriefInfoPanels(
+            ref RGameCreatePanel eventComp)
         {
+            //Берём компонент организации
+            eventComp.ownerOrganizationPE.Unpack(world.Value, out int organizationEntity);
+            ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
+
             //Берём вкладку организаций
             UIRegionOSbPOrganizationsTab organizationsTab = eUI.Value.gameWindow.objectPanel.regionObjectSubpanel.organizationsTab;
 
-            //Для каждого самозапроса создания ORAEO
-            foreach (int gameCreateORAEOEventEntity in oRAEOCreateSelfRequestFilter.Value)
-            {
-                //Берём компонент организации
-                ref COrganization organization = ref organizationPool.Value.Get(gameCreateORAEOEventEntity);
+            //Создаём панель
+            UIORAEOBriefInfoPanel briefInfoPanel = organizationsTab.InstantiateORAEOBriefInfoPanel(ref organization);
 
-                //Создаём панель
-                UIORAEOBriefInfoPanel briefInfoPanel = organizationsTab.InstantiateORAEOBriefInfoPanel(ref organization);
-
-                //Скрываем панель
-                briefInfoPanel.gameObject.SetActive(false);
-
-                //Удаляем с сущности организации компонент самозапроса
-                oRAEOCreateSelfRequestPool.Value.Del(gameCreateORAEOEventEntity);
-            }
-
-            //Сортируем список панелей (в алфавитном порядке?)
+            //Скрываем панель
+            briefInfoPanel.gameObject.SetActive(false);
         }
 
         void GameDisplayORAEOObjectSubpanel(
-            ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent)
+            ref RGameDisplayObjectPanel gameDisplayObjectPanelRequest)
         {
             //Берём компонент ExORAEO и EcORAEO
-            gameDisplayObjectPanelEvent.objectPE.Unpack(world.Value, out int oRAEOEntity);
+            gameDisplayObjectPanelRequest.objectPE.Unpack(world.Value, out int oRAEOEntity);
             ref CExplorationORAEO exORAEO = ref explorationORAEOPool.Value.Get(oRAEOEntity);
             ref CEconomicORAEO ecORAEO = ref economicORAEOPool.Value.Get(oRAEOEntity);
 
@@ -8911,7 +8856,7 @@ namespace SandOcean.UI
             objectPanel.activeObjectSubpanelType = ObjectSubpanelType.ORAEO;
             objectPanel.activeObjectSubpanel = objectPanel.oRAEOObjectSubpanel;
             //Указываем, какой ORAEO отображаем панель
-            objectPanel.activeObjectPE = gameDisplayObjectPanelEvent.objectPE;
+            objectPanel.activeObjectPE = gameDisplayObjectPanelRequest.objectPE;
 
             //Берём подпанель ORAEO
             UIORAEOObjectSubpanel oRAEOSubpanel = objectPanel.oRAEOObjectSubpanel;
@@ -8949,17 +8894,29 @@ namespace SandOcean.UI
         }
 
 
-        void SaveContentSetEvent(
+        void SaveContentSetRequest(
             int contentSetIndex)
         {
-            //Создаём событие, требующее сохранить список набора контента
-            int saveEventEntity = world.Value.NewEntity();
-            ref ESaveContentSetArray saveEvent
-                = ref saveContentSetArrayEventPool.Value.Add(saveEventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса сохранения набора контента
+            int requestEntity = world.Value.NewEntity();
+            ref RSaveContentSet saveContentSetRequest = ref saveContentSetRequestPool.Value.Add(requestEntity);
 
             //Указываем индекс набора контента
-            saveEvent.contentSetIndex
-                = contentSetIndex;
+            saveContentSetRequest.contentSetIndex = contentSetIndex;
+        }
+
+        void EcsGroupSystemStateEvent(
+            string systemGroupName,
+            bool systemGroupState)
+        {
+            //Создаём новую сущность и назначаем ей компонент события смены состояния группы систем
+            int eventEntity = world.Value.NewEntity();
+            ref EcsGroupSystemState groupSystemStateEvent = ref ecsGroupSystemStatePool.Value.Add(eventEntity);
+
+            //Указываем название группы систем
+            groupSystemStateEvent.Name = systemGroupName;
+            //Указываем состояние группы систем
+            groupSystemStateEvent.State = systemGroupState;
         }
     }
 }

@@ -24,8 +24,8 @@ namespace SandOcean.Ship
 		readonly EcsPoolInject<CShipGroup> shipGroupPool = default;
 
 		//События кораблей
-		readonly EcsFilterInject<Inc<EShipGroupCreating>> shipGroupCreatingSpaceEventFilter = default;
-		readonly EcsPoolInject<EShipGroupCreating> shipGroupCreatingSpaceEventPool = default;
+		readonly EcsFilterInject<Inc<RShipGroupCreating>> shipGroupCreatingRequestFilter = default;
+		readonly EcsPoolInject<RShipGroupCreating> shipGroupCreatingRequestPool = default;
 
 		//Данные
 		readonly EcsCustomInject<StaticData> staticData = default;
@@ -34,30 +34,28 @@ namespace SandOcean.Ship
 
 		public void Run(IEcsSystems systems)
 		{
-			//Для каждого события создания группы кораблей
-			foreach (int shipGroupCreatingEventEntity
-                in shipGroupCreatingSpaceEventFilter.Value)
+			//Для каждого запроса создания группы кораблей
+			foreach (int shipGroupCreatingRequestEntity in shipGroupCreatingRequestFilter.Value)
             {
-				//Берём компонент события создания группы кораблей
-				ref EShipGroupCreating shipGroupCreatingEvent
-					= ref shipGroupCreatingSpaceEventPool.Value.Get(shipGroupCreatingEventEntity);
+				//Берём компонент запроса создания группы кораблей
+				ref RShipGroupCreating shipGroupCreatingRequest = ref shipGroupCreatingRequestPool.Value.Get(shipGroupCreatingRequestEntity);
 
 				//Берём компонент родительского региона
-				shipGroupCreatingEvent.parentRegionPE.Unpack(world.Value, out int parentRegionEntity);
+				shipGroupCreatingRequest.parentRegionPE.Unpack(world.Value, out int parentRegionEntity);
 				ref CHexRegion parentRegion = ref regionPool.Value.Get(parentRegionEntity);
 
 				//Создаём группу кораблей на карте
 				ShipGroupCreateOnMap(
 					ref parentRegion,
-					ref shipGroupCreatingEvent);
+					ref shipGroupCreatingRequest);
 
-				world.Value.DelEntity(shipGroupCreatingEventEntity);
+				world.Value.DelEntity(shipGroupCreatingRequestEntity);
             }
 		}
 
 		void ShipGroupCreateOnMap(
             ref CHexRegion parentRegion,
-            ref EShipGroupCreating shipGroupCreatingEvent)
+            ref RShipGroupCreating shipGroupCreatingRequest)
         {
 			//Создаём новую сущность и назначаей ей компоненты группы кораблей и MO
 			int shipGroupEntity = world.Value.NewEntity();
@@ -70,9 +68,9 @@ namespace SandOcean.Ship
 			//Заполняем основные данные группы кораблей
 			shipGroup = new(
 				world.Value.PackEntity(shipGroupEntity),
-				shipGroupCreatingEvent.ownerOrganizationPE,
+				shipGroupCreatingRequest.ownerOrganizationPE,
 				parentRegion.selfPE,
-				parentRegion.Position);//shipGroupCreatingEvent.position);
+				parentRegion.centerPoint.ProjectedVector3);//shipGroupCreatingEvent.position);
 
 			//Указываем, что группа кораблей находится в эфире
 			shipGroup.dockingMode = ShipGroupDockingMode.Ether;
@@ -88,7 +86,7 @@ namespace SandOcean.Ship
 			shipGroupMO.Transform.SetParent(sceneData.Value.coreObject, false);
 			
 			//Перемещаем GO на соответствующую позицию
-			shipGroupMO.LocalPosition = shipGroupCreatingEvent.position;
+			shipGroupMO.LocalPosition = shipGroupCreatingRequest.position;
 
 			//Назначаем GO его PE
 			shipGroupGO.gOMapObject.mapObjectPE = shipGroup.selfPE;

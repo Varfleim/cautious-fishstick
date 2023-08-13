@@ -5,6 +5,6 @@ namespace SandOcean.UI
 {
     public abstract class UIOSbPTab : MonoBehaviour
     {
-        public TabButton selfTabButton;
+        public TabGroupButton selfTabButton;
     }
 }

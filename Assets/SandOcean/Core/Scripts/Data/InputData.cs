@@ -40,7 +40,8 @@ namespace SandOcean.UI
         public float movementSpeedMaxZoom;
 
         public float rotationSpeed;
-        public float rotationAngle;
+        public float rotationAngleY;
+        public float rotationAngleX;
         public float minAngleX;
         public float maxAngleX;
 
@@ -58,19 +59,16 @@ namespace SandOcean.UI
 
         public EcsPackedEntity activeShipGroupPE;
 
-        public bool isDrag;
-        public HexDirection dragDirection;
-        public EcsPackedEntity previousRegionPE;
+
+        public static bool isMouseOver;
+        public static int lastHitRegionIndex;
+        public static EcsPackedEntity lastHighlightedRegionPE;
+        public static int lastHighlightedRegionIndex;
+        public static int lastHoverRegionIndex;
+
+
 
         public EcsPackedEntity searchFromRegion;
         public EcsPackedEntity searchToRegion;
-        public HexRegionPriorityQueue searchFrontier;
-        public int searchFrontierPhase;
-
-        public EcsPackedEntity currentPathFrom; 
-        public EcsPackedEntity currentPathTo;
-        public bool currentPathExists;
-
-        public EcsPackedEntity currentRegionPE;
     }
 }

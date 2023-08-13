@@ -4,7 +4,7 @@ using System;
 namespace SandOcean.Designer.Workshop
 {
     [Serializable]
-    public struct WDComponentCoreTechnology : IContentObjectRef, IWorkshopContentObjectRef, IComponentCoreTechnology
+    public struct WDComponentCoreTechnology : IWorkshopContentObjectLink, IComponentCoreTechnology
     {
         public WDComponentCoreTechnology(
             string modifierName,
@@ -21,15 +21,12 @@ namespace SandOcean.Designer.Workshop
             this.technologyName = technologyName;
 
 
-            this.contentSetIndex = 0;
+            contentObjectLink = new();
 
-            this.technologyIndex = 0;
-
-
-            this.isValidRef = false;
+            isValidLink = false;
 
 
-            this.modifierValue = 0;
+            modifierValue = 0;
         }
 
         public WDComponentCoreTechnology(
@@ -37,9 +34,8 @@ namespace SandOcean.Designer.Workshop
             TechnologyComponentCoreModifierType modifierType,
             string contentSetName,
             string technologyName,
-            int contentSetIndex,
-            int technologyIndex,
-            bool isValidRef,
+            DContentObjectLink contentObjectLink,
+            bool isValidLink,
             float modifierValue)
         {
             this.modifierName = modifierName;
@@ -51,12 +47,9 @@ namespace SandOcean.Designer.Workshop
             this.technologyName = technologyName;
 
 
-            this.contentSetIndex = contentSetIndex;
+            this.contentObjectLink = contentObjectLink;
 
-            this.technologyIndex = technologyIndex;
-
-
-            this.isValidRef = isValidRef;
+            this.isValidLink = isValidLink;
 
 
             this.modifierValue = modifierValue;
@@ -71,47 +64,32 @@ namespace SandOcean.Designer.Workshop
         public string technologyName;
 
 
-        public int ContentSetIndex 
-        { 
-            get
-            {
-                return contentSetIndex;
-            }
-            set
-            {
-                contentSetIndex
-                    = value;
-            }
-        }
-        int contentSetIndex;
-
-        public int ObjectIndex 
-        { 
-            get
-            {
-                return technologyIndex;
-            }
-            set
-            {
-                technologyIndex
-                    = value;
-            }
-        }
-        int technologyIndex;
-
-        public bool IsValidRef
+        public DContentObjectLink ContentObjectLink
         {
             get
             {
-                return isValidRef;
+                return contentObjectLink;
             }
             set
             {
-                isValidRef
+                contentObjectLink = value;
+            }
+        }
+        DContentObjectLink contentObjectLink;
+
+        public bool IsValidLink
+        {
+            get
+            {
+                return isValidLink;
+            }
+            set
+            {
+                isValidLink
                     = value;
             }
         }
-        bool isValidRef;
+        bool isValidLink;
 
         public float ModifierValue 
         { 

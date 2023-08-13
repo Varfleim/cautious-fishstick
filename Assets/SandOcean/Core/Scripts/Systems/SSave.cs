@@ -20,8 +20,8 @@ namespace SandOcean
         readonly EcsWorldInject world = default;
 
         //Общие события
-        readonly EcsFilterInject<Inc<ESaveContentSetArray>> saveContentSetArrayEventFilter = default;
-        readonly EcsPoolInject<ESaveContentSetArray> saveContentSetArrayEventPool = default;
+        readonly EcsFilterInject<Inc<RSaveContentSet>> saveContentSetRequestFilter = default;
+        readonly EcsPoolInject<RSaveContentSet> saveContentSetRequestPool = default;
 
         //Данные
         readonly EcsCustomInject<ContentData> contentData = default;
@@ -35,28 +35,24 @@ namespace SandOcean
 
         void SaveContentSets()
         {
-            //Для каждого события сохранения списка набора контента
-            foreach (int saveEventEntity in saveContentSetArrayEventFilter.Value)
+            //Для каждого запроса сохранения списка набора контента
+            foreach (int saveRequestEntity in saveContentSetRequestFilter.Value)
             {
-                //Берём компонент события
-                ref ESaveContentSetArray saveEvent
-                    = ref saveContentSetArrayEventPool.Value.Get(saveEventEntity);
+                //Берём компонент запроса
+                ref RSaveContentSet saveRequest = ref saveContentSetRequestPool.Value.Get(saveRequestEntity);
 
                 //Формируем путь для сохранения
-                string path 
-                    = "";
+                string path = "";
 
                 //Берём путь из описания набора контента
-                path
-                    = contentData.Value
-                    .wDContentSetDescriptions[saveEvent.contentSetIndex].contentSetDirectoryPath;
+                path = contentData.Value.wDContentSetDescriptions[saveRequest.contentSetIndex].contentSetDirectoryPath;
 
                 //Запрашиваем сохранение набора контента
                 WorkshopSaveContentSet(
-                    saveEvent.contentSetIndex,
+                    saveRequest.contentSetIndex,
                     path);
 
-                world.Value.DelEntity(saveEventEntity);
+                world.Value.DelEntity(saveRequestEntity);
             }
         }
 
@@ -570,21 +566,21 @@ namespace SandOcean
             for (int a = 0; a < savingComponentCoreTechnologies.Length; a++)
             {
                 //Если технология существует
-                if (savingComponentCoreTechnologies[a].ContentSetIndex
+                if (savingComponentCoreTechnologies[a].ContentObjectLink.ContentSetIndex
                     >= 0
-                    && savingComponentCoreTechnologies[a].ObjectIndex
+                    && savingComponentCoreTechnologies[a].ContentObjectLink.ObjectIndex
                     >= 0)
                 {
                     //Берём ссылку на данные технологии
                     ref readonly DTechnology technology
                         = ref contentData.Value
-                        .contentSets[savingComponentCoreTechnologies[a].ContentSetIndex]
-                        .technologies[savingComponentCoreTechnologies[a].ObjectIndex];
+                        .contentSets[savingComponentCoreTechnologies[a].ContentObjectLink.ContentSetIndex]
+                        .technologies[savingComponentCoreTechnologies[a].ContentObjectLink.ObjectIndex];
 
                     //Берём название набора контента
                     string contentSetName
                         = contentData.Value
-                        .contentSets[savingComponentCoreTechnologies[a].ContentSetIndex].ContentSetName;
+                        .contentSets[savingComponentCoreTechnologies[a].ContentObjectLink.ContentSetIndex].ContentSetName;
 
                     //Создаём новую структуру для сохраняемых данных основной технологии
                     SDComponentCoreTechnology componentCoreTechnology

@@ -18,8 +18,8 @@ namespace SandOcean
     public class SLoad : IEcsInitSystem, IEcsRunSystem
     {
         //Общие события
-        readonly EcsFilterInject<Inc<EStartNewGame>> startNewGameEventFilter = default;
-        readonly EcsPoolInject<EStartNewGame> startNewGameEventPool = default;
+        readonly EcsFilterInject<Inc<RStartNewGame>> startNewGameEventFilter = default;
+        readonly EcsPoolInject<RStartNewGame> startNewGameEventPool = default;
 
         //Данные
         readonly EcsCustomInject<ContentData> contentData = default;
@@ -133,7 +133,7 @@ namespace SandOcean
                 in startNewGameEventFilter.Value)
             {
                 //Берём компонент события начала новой игры
-                ref EStartNewGame startNewGameEvent
+                ref RStartNewGame startNewGameEvent
                     = ref startNewGameEventPool.Value.Get(startNewGameEventEntity);
 
                 //Загружаем данные мастерской в данные игры
@@ -1101,8 +1101,7 @@ namespace SandOcean
                                 coreTechnology.modifierType,
                                 coreTechnology.contentSetName,
                                 coreTechnology.technologyName,
-                                contentSetIndex,
-                                technologyIndex,
+                                new(contentSetIndex, technologyIndex),
                                 true,
                                 technologyModifierValue);
                     }
@@ -1116,8 +1115,7 @@ namespace SandOcean
                                 coreTechnology.modifierType,
                                 coreTechnology.contentSetName,
                                 coreTechnology.technologyName,
-                                contentSetIndex,
-                                -1,
+                                new(contentSetIndex, -1),
                                 false,
                                 0);
                     }
@@ -1132,8 +1130,7 @@ namespace SandOcean
                             coreTechnology.modifierType,
                             coreTechnology.contentSetName,
                             coreTechnology.technologyName,
-                            -1,
-                            -1,
+                            new(-1, -1),
                             false,
                             0);
                 }
@@ -2054,14 +2051,13 @@ namespace SandOcean
             for (int a = 0; a < loadingCoreTechnologiesArray.Length; a++)
             {
                 //Если основная технология является верной
-                if (loadingCoreTechnologiesArray[a].IsValidRef
+                if (loadingCoreTechnologiesArray[a].IsValidLink
                     == true)
                 {
                     //Записываем данные основной технологии компонента
                     DComponentCoreTechnology coreTechnology
                         = new(
-                            loadingCoreTechnologiesArray[a].ContentSetIndex,
-                            loadingCoreTechnologiesArray[a].ObjectIndex,
+                            new(loadingCoreTechnologiesArray[a].ContentObjectLink.ContentSetIndex, loadingCoreTechnologiesArray[a].ContentObjectLink.ObjectIndex),
                             loadingCoreTechnologiesArray[a].ModifierValue);
 
                     //Заносим её на соответствующую позицию массива
@@ -2207,13 +2203,13 @@ namespace SandOcean
                 //Определяем индекс набора контента в игре
                 int gameContentSetIndex
                     = contentData.Value
-                    .wDContentSets[coreTechnology.ContentSetIndex].gameContentSetIndex;
+                    .wDContentSets[coreTechnology.ContentObjectLink.ContentSetIndex].gameContentSetIndex;
 
                 //Определяем индекс технологии в игре
                 int gameTechnologyIndex
                     = contentData.Value
-                    .wDContentSets[coreTechnology.ContentSetIndex]
-                    .technologies[coreTechnology.ObjectIndex].GameObjectIndex;
+                    .wDContentSets[coreTechnology.ContentObjectLink.ContentSetIndex]
+                    .technologies[coreTechnology.ContentObjectLink.ObjectIndex].GameObjectIndex;
 
                 //Если тип компонента - двигатель
                 if (componentType
@@ -2276,13 +2272,8 @@ namespace SandOcean
                             componentIndex));
                 }
 
-                //Перезаписываем индекс набора контента
-                coreTechnology.ContentSetIndex
-                    = gameContentSetIndex;
-
-                //И индекс технологии 
-                coreTechnology.ObjectIndex
-                    = gameTechnologyIndex;
+                //Перезаписываем ссылку
+                coreTechnology.ContentObjectLink = new(gameContentSetIndex, gameTechnologyIndex);
             }
         }
 
@@ -2378,7 +2369,7 @@ namespace SandOcean
             for (int a = 0; a < loadingShipClassComponentsArray.Length; a++)
             {
                 //Если компонент является верным
-                if (loadingShipClassComponentsArray[a].IsValidRef
+                if (loadingShipClassComponentsArray[a].IsValidLink
                     == true)
                 {
                     //Записываем данные компонента

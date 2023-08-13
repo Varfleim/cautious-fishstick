@@ -39,8 +39,6 @@ namespace SandOcean.UI
         readonly EcsPoolInject<CMapObject> mapObjectPool = default;
 
         //Карта
-        readonly EcsPoolInject<CHexChunk> chunkPool = default;
-
         readonly EcsFilterInject<Inc<CHexRegion>> regionFilter = default;
         readonly EcsPoolInject<CHexRegion> regionPool = default;
 
@@ -53,36 +51,36 @@ namespace SandOcean.UI
         readonly EcsPoolInject<CExplorationORAEO> explorationORAEOPool = default;
 
         //Корабли
-        readonly EcsPoolInject<CShipGroup> shipGroupPool = default;
+        //readonly EcsPoolInject<CShipGroup> shipGroupPool = default;
 
         //readonly EcsPoolInject<CSGMoving> sGMovingPool = default;
 
 
         //События главного меню
-        readonly EcsPoolInject<EMainMenuAction> mainMenuActionEventPool = default;
+        readonly EcsPoolInject<RMainMenuAction> mainMenuActionRequestPool = default;
 
         //События меню новой игры
-        readonly EcsPoolInject<ENewGameMenuAction> newGameMenuActionEventPool = default;
+        readonly EcsPoolInject<RNewGameMenuAction> newGameMenuActionRequestPool = default;
 
         //События меню загрузки
 
         //События мастерской
-        readonly EcsPoolInject<EWorkshopAction> workshopActionEventPool = default;
+        readonly EcsPoolInject<RWorkshopAction> workshopActionRequestPool = default;
 
         //События дизайнера
-        readonly EcsPoolInject<EDesignerAction> designerActionEventPool = default;
+        readonly EcsPoolInject<RDesignerAction> designerActionRequestPool = default;
 
         //События дизайнера кораблей
-        readonly EcsPoolInject<EDesignerShipClassAction> designerShipClassActionEventPool = default;
+        readonly EcsPoolInject<RDesignerShipClassAction> designerShipClassActionRequestPool = default;
         //События дизайнера компонентов
-        readonly EcsPoolInject<EDesignerComponentAction> designerComponentActionEventPool = default;
+        readonly EcsPoolInject<RDesignerComponentAction> designerComponentActionRequestPool = default;
 
         //События игры
-        readonly EcsPoolInject<EGameAction> gameActionEventPool = default;
+        readonly EcsPoolInject<RGameAction> gameActionRequestPool = default;
 
-        readonly EcsPoolInject<EGameOpenDesigner> gameOpenDesignerEventPool = default;
+        readonly EcsPoolInject<RGameOpenDesigner> gameOpenDesignerRequestPool = default;
 
-        readonly EcsPoolInject<EGameDisplayObjectPanel> gameDisplayObjectPanelEventPool = default;
+        readonly EcsPoolInject<RGameDisplayObjectPanel> gameDisplayObjectPanelRequestPool = default;
 
         readonly EcsPoolInject<RChangeMapMode> changeMapModeRequestPool = default;
 
@@ -90,7 +88,7 @@ namespace SandOcean.UI
         readonly EcsPoolInject<SRORAEOAction> oRAEOActionSelfRequestPool = default;
 
         //События карты
-        readonly EcsPoolInject<SRMapChunkRefresh> mapChunkRefreshSelfRequestPool = default;
+
 
         //Общие события
         EcsFilter clickEventSpaceFilter;
@@ -105,7 +103,8 @@ namespace SandOcean.UI
         EcsFilter sliderEventUIFilter;
         EcsPool<EcsUguiSliderChangeEvent> sliderEventUIPool;
 
-        readonly EcsPoolInject<EQuitGame> quitGameEventPool = default;
+        readonly EcsPoolInject<RQuitGame> quitGameRequestPool = default;
+
 
         //Данные
         readonly EcsCustomInject<SceneData> sceneData = default;
@@ -136,11 +135,6 @@ namespace SandOcean.UI
 
             sliderEventUIPool = uguiUIWorld.GetPool<EcsUguiSliderChangeEvent>();
             sliderEventUIFilter = uguiUIWorld.Filter<EcsUguiSliderChangeEvent>().End();
-
-            mapGenerationData.Value.terrainMaterial.EnableKeyword("_SHOW_GRID");
-
-            Shader.EnableKeyword("_HEX_MAP_EDIT_MODE");
-            //Shader.DisableKeyword("_HEX_MAP_EDIT_MODE");
         }
 
         public void Run(IEcsSystems systems)
@@ -156,71 +150,62 @@ namespace SandOcean.UI
                     + clickEvent.WidgetName);
 
                 //Если активно окно игры
-                if (eUI.Value.activeMainWindowType
-                    == MainWindowType.Game)
+                if (eUI.Value.activeMainWindowType == MainWindowType.Game)
                 {
                     //Берём ссылку на окно игры
-                    UIGameWindow gameWindow
-                        = eUI.Value.gameWindow;
+                    UIGameWindow gameWindow = eUI.Value.gameWindow;
 
-                    //Берём компонент фракции игрока
-                    inputData.Value.playerOrganizationPE.Unpack(world.Value, out int playerFactionEntity);
-                    ref COrganization playerFaction
-                        = ref organizationPool.Value.Get(playerFactionEntity);
+                    //Берём компонент организации игрока
+                    inputData.Value.playerOrganizationPE.Unpack(world.Value, out int playerOrganizationEntity);
+                    ref COrganization playerOrganization = ref organizationPool.Value.Get(playerOrganizationEntity);
 
-                    //Если событие запрашивает открытие дизайнера кораблей
-                    if (clickEvent.WidgetName
-                        == "OpenShipClassDesigner")
+                    //Если запрашивается открытие дизайнера кораблей
+                    if (clickEvent.WidgetName == "OpenShipClassDesigner")
                     {
                         //Запрашиваем открытие дизайнера кораблей
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ShipClass,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие дизайнера двигателей
-                    else if (clickEvent.WidgetName
-                        == "OpenEngineDesigner")
+                    //Иначе, если запрашивается открытие дизайнера двигателей
+                    else if (clickEvent.WidgetName == "OpenEngineDesigner")
                     {
                         //Запрашиваем открытие дизайнера двигателей
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ComponentEngine,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие дизайнера реакторов
-                    else if (clickEvent.WidgetName
-                        == "OpenReactorDesigner")
+                    //Иначе, если запрашивается открытие дизайнера реакторов
+                    else if (clickEvent.WidgetName == "OpenReactorDesigner")
                     {
                         //Запрашиваем открытие дизайнера реакторов
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ComponentReactor,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие дизайнера топливных баков
-                    else if (clickEvent.WidgetName
-                        == "OpenFuelTankDesigner")
+                    //Иначе, если запрашивается открытие дизайнера топливных баков
+                    else if (clickEvent.WidgetName == "OpenFuelTankDesigner")
                     {
                         //Запрашиваем открытие дизайнера топливных баков
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ComponentHoldFuelTank,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие дизайнера оборудования для твёрдой добычи
-                    else if (clickEvent.WidgetName
-                        == "OpenExtractionEquipmentSolidDesigner")
+                    //Иначе, если запрашивается открытие дизайнера оборудования для твёрдой добычи
+                    else if (clickEvent.WidgetName == "OpenExtractionEquipmentSolidDesigner")
                     {
                         //Запрашиваем открытие дизайнера оборудования для твёрдой добычи
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ComponentExtractionEquipmentSolid,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
-                    //Иначе, если событие запрашивает открытие дизайнера энергетических орудий
-                    else if (clickEvent.WidgetName
-                        == "OpenEnergyGunDesigner")
+                    //Иначе, если запрашивается открытие дизайнера энергетических орудий
+                    else if (clickEvent.WidgetName == "OpenEnergyGunDesigner")
                     {
                         //Запрашиваем открытие дизайнера энергетических орудий
-                        GameOpenDesignerEvent(
+                        GameOpenDesignerRequest(
                             DesignerType.ComponentGunEnergy,
-                            playerFaction.contentSetIndex);
+                            playerOrganization.contentSetIndex);
                     }
 
                     //Если активна панель объекта
@@ -244,16 +229,16 @@ namespace SandOcean.UI
                             if (clickEvent.WidgetName == "RegionOverviewTab")
                             {
                                 //Запрашиваем отображение обзорной вкладки
-                                GameDisplayObjectPanelEvent(
-                                    DisplayObjectPanelEventType.RegionOverview,
+                                GameDisplayObjectPanelRequest(
+                                    DisplayObjectPanelRequestType.RegionOverview,
                                     objectPanel.activeObjectPE);
                             }
                             //Иначе, если нажата кнопка вкладки организаций
                             else if (clickEvent.WidgetName == "RegionOrganizationsTab")
                             {
                                 //Запрашиваем отображение вкладки организаций
-                                GameDisplayObjectPanelEvent(
-                                    DisplayObjectPanelEventType.RegionOrganizations,
+                                GameDisplayObjectPanelRequest(
+                                    DisplayObjectPanelRequestType.RegionOrganizations,
                                     objectPanel.activeObjectPE);
                             }
 
@@ -289,8 +274,8 @@ namespace SandOcean.UI
                                 if (clickEvent.Sender.TryGetComponent(out UIORAEOBriefInfoPanel briefInfoPanel))
                                 {
                                     //Запрашиваем отображение подпанели ORAEO
-                                    GameDisplayObjectPanelEvent(
-                                        DisplayObjectPanelEventType.ORAEO,
+                                    GameDisplayObjectPanelRequest(
+                                        DisplayObjectPanelRequestType.ORAEO,
                                         briefInfoPanel.organizationRAEOPE);
                                 }
                             }
@@ -305,113 +290,92 @@ namespace SandOcean.UI
                             if (clickEvent.WidgetName == "ORAEOOverviewTab")
                             {
                                 //Запрашиваем отображение обзорной вкладки
-                                GameDisplayObjectPanelEvent(
-                                    DisplayObjectPanelEventType.ORAEOOverview,
+                                GameDisplayObjectPanelRequest(
+                                    DisplayObjectPanelRequestType.ORAEOOverview,
                                     objectPanel.activeObjectPE);
                             }
                         }
                     }
                 }
                 //Если активно окно главного меню
-                if (eUI.Value.activeMainWindowType
-                    == MainWindowType.MainMenu)
+                if (eUI.Value.activeMainWindowType == MainWindowType.MainMenu)
                 {
-                    //Если событие запрашивает открытие меню новой игры
-                    if (clickEvent.WidgetName
-                        == "OpenNewGameMenu")
+                    //Если запрашивается открытие меню новой игры
+                    if (clickEvent.WidgetName == "OpenNewGameMenu")
                     {
-                        //Создаём событие, запрашивающее открытие окна новой игры
-                        MainMenuActionEvent(
-                            MainMenuActionType.OpenNewGameMenu);
+                        //Создаём запрос открытия окна новой игры
+                        MainMenuActionRequest(MainMenuActionType.OpenNewGameMenu);
                     }
-                    //Иначе, если событие запрашивает открытие меню загрузки игры
-                    else if (clickEvent.WidgetName
-                        == "OpenLoadGameMenu")
+                    //Иначе, если запрашивается открытие меню загрузки игры
+                    else if (clickEvent.WidgetName == "OpenLoadGameMenu")
                     {
-                        //Создаём событие, запрашивающее открытие окна загрузки игры
-                        MainMenuActionEvent(
-                            MainMenuActionType.OpenLoadGameMenu);
+                        //Создаём запрос открытия окна загрузки игры
+                        MainMenuActionRequest(MainMenuActionType.OpenLoadGameMenu);
                     }
-                    //Иначе, если событие запрашивает открытие окна мастерской
-                    else if (clickEvent.WidgetName
-                        == "OpenWorkshop")
+                    //Иначе, если запрашивается открытие окна мастерской
+                    else if (clickEvent.WidgetName == "OpenWorkshop")
                     {
-                        //Создаём событие, запрашивающее открытие окна мастерской
-                        MainMenuActionEvent(
-                            MainMenuActionType.OpenWorkshop);
+                        //Создаём запроса открытия окна мастерской
+                        MainMenuActionRequest(MainMenuActionType.OpenWorkshop);
                     }
-                    //Иначе, если событие запрашивает открытие окна главных настроек
-                    else if (clickEvent.WidgetName
-                        == "OpenSettings")
+                    //Иначе, если запрашивается открытие окна главных настроек
+                    else if (clickEvent.WidgetName == "OpenSettings")
                     {
-                        //Создаём событие, запрашивающее открытие окна главных настроек
-                        MainMenuActionEvent(
-                            MainMenuActionType.OpenMainSettings);
+                        //Создаём запрос открытия окна главных настроек
+                        MainMenuActionRequest(MainMenuActionType.OpenMainSettings);
                     }
-                    //Иначе, если событие запрашивает выход из игры
-                    else if (clickEvent.WidgetName
-                        == "QuitGame")
+                    //Иначе, если запрашивается выход из игры
+                    else if (clickEvent.WidgetName == "QuitGame")
                     {
-                        //Создаём событие, запрашивающее выход из игры
-                        QuitGameEvent();
+                        //Создаём запрос выхода из игры
+                        QuitGameRequest();
                     }
                 }
                 //Если активно меню новой игры
-                else if (eUI.Value.activeMainWindowType
-                    == MainWindowType.NewGameMenu)
+                else if (eUI.Value.activeMainWindowType == MainWindowType.NewGameMenu)
                 {
                     //Берём ссылку на окно меню новой игры
-                    UINewGameMenuWindow newGameMenuWindow
-                        = eUI.Value.newGameMenuWindow;
+                    UINewGameMenuWindow newGameMenuWindow = eUI.Value.newGameMenuWindow;
 
-                    //Если событие запрашивает начало новой игры
-                    if (clickEvent.WidgetName
-                        == "StartNewGame")
+                    //Если запрашивается начало новой игры
+                    if (clickEvent.WidgetName == "StartNewGame")
                     {
-                        //Создаём событие, запрашивающее начало новой игры
-                        NewGameMenuActionEvent(
-                            NewGameMenuActionType.StartNewGame);
+                        //Создаём запрос начала новой игры
+                        NewGameMenuActionRequest(NewGameMenuActionType.StartNewGame);
                     }
                 }
                 //Если активна мастерская
-                else if (eUI.Value.activeMainWindowType
-                    == MainWindowType.Workshop)
+                else if (eUI.Value.activeMainWindowType == MainWindowType.Workshop)
                 {
                     //Берём ссылку на окно мастерской
-                    UIWorkshopWindow workshopWindow
-                        = eUI.Value.workshopWindow;
+                    UIWorkshopWindow workshopWindow = eUI.Value.workshopWindow;
 
                     //Если название события отсутствует
-                    if (clickEvent.WidgetName
-                        == "")
+                    if (clickEvent.WidgetName == "")
                     {
                         //Пытаемся получить панель набора контента
-                        if (clickEvent.Sender.TryGetComponent(
-                            out UIWorkshopContentSetPanel workshopContentSetPanel))
+                        if (clickEvent.Sender.TryGetComponent(out UIWorkshopContentSetPanel workshopContentSetPanel))
                         {
                             //Запрашиваем отображение выбранного набора контента
-                            WorkshopActionEvent(
+                            WorkshopActionRequest(
                                 WorkshopActionType.DisplayContentSet,
                                 workshopContentSetPanel.contentSetIndex);
                         }
                     }
                     //Иначе, если событие запрашивает открытие дизайнера контента
-                    else if (clickEvent.WidgetName
-                        == "WorkshopOpenDesigner")
+                    else if (clickEvent.WidgetName == "WorkshopOpenDesigner")
                     {
                         //Берём активный переключатель в списке контента
-                        Toggle activeToggle
-                            = workshopWindow.contentInfoToggleGroup.GetFirstActiveToggle();
+                        Toggle activeToggle = workshopWindow.contentInfoToggleGroup.GetFirstActiveToggle();
 
                         //Если он не пуст
                         if (activeToggle != null)
                         {
                             //Пытаемся получить панель выбранного вида контента
-                            if (activeToggle.TryGetComponent(
-                                out UIWorkshopContentInfoPanel workshopContentInfoPanel))
+                            if (activeToggle.TryGetComponent(out UIWorkshopContentInfoPanel workshopContentInfoPanel))
                             {
                                 //Запрашиваем отображение выбранного дизайнера в текущем наборе контента
-                                WorkshopActionEvent(
+                                WorkshopActionRequest(
                                     WorkshopActionType.OpenDesigner,
                                     workshopWindow.currentContentSetIndex,
                                     workshopContentInfoPanel.designerType);
@@ -436,7 +400,7 @@ namespace SandOcean.UI
                             == true)
                         {
                             //Запрашиваем сохранение объекта контента
-                            DesignerActionEvent(
+                            DesignerActionRequest(
                                 DesignerActionType.SaveContentObject,
                                 true);
                         }
@@ -458,7 +422,7 @@ namespace SandOcean.UI
                                 out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
                             {
                                 //Запрашиваем загрузку объекта контента
-                                DesignerActionEvent(
+                                DesignerActionRequest(
                                     DesignerActionType.LoadContentSetObject,
                                     true,
                                     contentObjectBriefInfoPanel.contentSetIndex,
@@ -483,7 +447,7 @@ namespace SandOcean.UI
                                 out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
                             {
                                 //Запрашиваем загрузку объекта контента
-                                DesignerActionEvent(
+                                DesignerActionRequest(
                                     DesignerActionType.LoadContentSetObject,
                                     false,
                                     contentObjectBriefInfoPanel.contentSetIndex,
@@ -511,7 +475,7 @@ namespace SandOcean.UI
                                     contentObjectBriefInfoPanel))
                                 {
                                     //Запрашиваем удаление объекта контента
-                                    DesignerActionEvent(
+                                    DesignerActionRequest(
                                         DesignerActionType.DeleteContentSetObject,
                                         true,
                                         contentObjectBriefInfoPanel.contentSetIndex,
@@ -525,7 +489,7 @@ namespace SandOcean.UI
                         == "DisplayOtherContentSets")
                     {
                         //Запрашиваем отображение панели прочих наборов контента
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.DisplayContentSetPanel,
                             false);
                     }
@@ -534,7 +498,7 @@ namespace SandOcean.UI
                         == "HideOtherContentSets")
                     {
                         //Запрашиваем сокрытие панели прочих наборов контента
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.HideContentSetPanel,
                             false);
                     }
@@ -543,7 +507,7 @@ namespace SandOcean.UI
                         == "DisplayCurrentContentSet")
                     {
                         //Запрашиваем отображение панели текущего набора контента
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.DisplayContentSetPanel,
                             true);
                     }
@@ -552,119 +516,96 @@ namespace SandOcean.UI
                         == "HideCurrentContentSet")
                     {
                         //Запрашиваем сокрытие панели текущего набора контента
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.HideContentSetPanel,
                             true);
                     }
                     //Иначе, если активен дизайнер кораблей
-                    else if (designerWindow.designerType
-                        == DesignerType.ShipClass)
+                    else if (designerWindow.designerType == DesignerType.ShipClass)
                     {
                         //Берём ссылку на окно дизайнера кораблей
-                        UIShipDesignerWindow shipClassDesignerWindow
-                            = eUI.Value.designerWindow.shipDesigner;
+                        UIShipDesignerWindow shipClassDesignerWindow = eUI.Value.designerWindow.shipDesigner;
 
                         //Если событие не имеет подписи
-                        if (clickEvent.WidgetName
-                            == "")
+                        if (clickEvent.WidgetName == "")
                         {
                             //Берём активный переключатель из списка доступных компонентов
-                            Toggle activeToggleAvailableComponent
-                                = shipClassDesignerWindow.availableComponentsListToggleGroup.GetFirstActiveToggle();
+                            Toggle activeToggleAvailableComponent = shipClassDesignerWindow.availableComponentsListToggleGroup.GetFirstActiveToggle();
 
                             //Берём активный переключатель из списка установленных компонентов
-                            Toggle activeToggleInstalledComponent
-                                = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
+                            Toggle activeToggleInstalledComponent = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
 
                             //Если переключатель в списке доступных компонентов не пуст
-                            if (activeToggleAvailableComponent
-                                != null
+                            if (activeToggleAvailableComponent != null
                                 //И является родительским объектом события
-                                && activeToggleAvailableComponent.gameObject
-                                == clickEvent.Sender)
+                                && activeToggleAvailableComponent.gameObject == clickEvent.Sender)
                             {
                                 //Пытаемся получить панель выбранного компонента
-                                if (activeToggleAvailableComponent.TryGetComponent(
-                                    out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
+                                if (activeToggleAvailableComponent.TryGetComponent(out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
                                 {
                                     //Запрашиваем отображение подробной информации о компоненте
-                                    DesignerShipClassActionEvent(
+                                    DesignerShipClassActionRequest(
                                         DesignerShipClassActionType.DisplayComponentDetailedInfo,
                                         shipClassDesignerWindow.currentAvailableComponentsType,
                                         contentObjectBriefInfoPanel.contentSetIndex,
                                         contentObjectBriefInfoPanel.objectIndex);
 
                                     //Если переключатель в списке установленных компонентов активен
-                                    if (activeToggleInstalledComponent
-                                        != null)
+                                    if (activeToggleInstalledComponent != null)
                                     {
-                                        activeToggleInstalledComponent.isOn
-                                            = false;
+                                        activeToggleInstalledComponent.isOn = false;
                                     }
                                 }
                             }
                             //Иначе, если переключатель в списке установленных компонентов не пуст
-                            else if (activeToggleInstalledComponent
-                                != null
+                            else if (activeToggleInstalledComponent != null
                                 //И является родительским объектом события
-                                && activeToggleInstalledComponent.gameObject
-                                == clickEvent.Sender)
+                                && activeToggleInstalledComponent.gameObject == clickEvent.Sender)
                             {
                                 //Пытаемся получить панель выбранного компонента
-                                if (activeToggleInstalledComponent.TryGetComponent(
-                                    out UIInstalledComponentBriefInfoPanel componentBriefInfoPanel))
+                                if (activeToggleInstalledComponent.TryGetComponent(out UIInstalledComponentBriefInfoPanel componentBriefInfoPanel))
                                 {
                                     //Запрашиваем отображение подробной информации о компоненте
-                                    DesignerShipClassActionEvent(
+                                    DesignerShipClassActionRequest(
                                         DesignerShipClassActionType.DisplayComponentDetailedInfo,
                                         componentBriefInfoPanel.componentType,
                                         componentBriefInfoPanel.contentSetIndex,
                                         componentBriefInfoPanel.componentIndex);
 
                                     //Если переключатель в списке доступных компонентов активен
-                                    if (activeToggleAvailableComponent
-                                        != null)
+                                    if (activeToggleAvailableComponent != null)
                                     {
-                                        activeToggleAvailableComponent.isOn
-                                            = false;
+                                        activeToggleAvailableComponent.isOn = false;
                                     }
                                 }
                             }
                             //Иначе, если родительский объект события имеет компонент Toggle
-                            else if (clickEvent.Sender.TryGetComponent(
-                                out Toggle eventSenderToggle))
+                            else if (clickEvent.Sender.TryGetComponent(out Toggle eventSenderToggle))
                             {
                                 //Если родительской ToggleGroup является список доступных компонентов
-                                if (eventSenderToggle.group
-                                    == shipClassDesignerWindow.availableComponentsListToggleGroup
+                                if (eventSenderToggle.group == shipClassDesignerWindow.availableComponentsListToggleGroup
                                     //ИЛИ если родительской ToggleGroup является список установленных компонентов
-                                    || eventSenderToggle.group
-                                    == shipClassDesignerWindow.installedComponentsListToggleGroup)
+                                    || eventSenderToggle.group == shipClassDesignerWindow.installedComponentsListToggleGroup)
                                 {
                                     //Запрашиваем сокрытие подробной информации о компоненте
-                                    DesignerShipClassActionEvent(
-                                        DesignerShipClassActionType.HideComponentDetailedInfo);
+                                    DesignerShipClassActionRequest(DesignerShipClassActionType.HideComponentDetailedInfo);
                                 }
                             }
                         }
                         //Если событие запрашивает добавление выбранного компонента в редактируемый корабль
-                        if (clickEvent.WidgetName
-                            == "AddComponentToShipClass")
+                        if (clickEvent.WidgetName == "AddComponentToShipClass")
                         {
                             //Берём активный переключатель из списка доступных компонентов
-                            Toggle activeToggleAvailableComponent
-                                = shipClassDesignerWindow.availableComponentsListToggleGroup.GetFirstActiveToggle();
+                            Toggle activeToggleAvailableComponent = shipClassDesignerWindow.availableComponentsListToggleGroup.GetFirstActiveToggle();
 
                             //Если переключатель не пуст
-                            if (activeToggleAvailableComponent
-                                != null)
+                            if (activeToggleAvailableComponent != null)
                             {
                                 //Пытаемся получить панель выбранного компонента
-                                if (activeToggleAvailableComponent.TryGetComponent(
-                                    out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
+                                if (activeToggleAvailableComponent.TryGetComponent(out UIContentObjectBriefInfoPanel contentObjectBriefInfoPanel))
                                 {
                                     //Создаём событие добавления компонента
-                                    DesignerShipClassActionEvent(
+                                    DesignerShipClassActionRequest(
                                         DesignerShipClassActionType.AddComponentToClass,
                                         shipClassDesignerWindow.currentAvailableComponentsType,
                                         contentObjectBriefInfoPanel.contentSetIndex,
@@ -676,19 +617,16 @@ namespace SandOcean.UI
                             else
                             {
                                 //Берём активный переключатель из списка установленных компонентов
-                                Toggle activeToggleInstalledComponent
-                                    = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
+                                Toggle activeToggleInstalledComponent = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
 
                                 //Если переключатель не пуст
-                                if (activeToggleInstalledComponent
-                                    != null)
+                                if (activeToggleInstalledComponent != null)
                                 {
                                     //Пытаемся получить панель выбранного компонента
-                                    if (activeToggleInstalledComponent.TryGetComponent(
-                                        out UIInstalledComponentBriefInfoPanel installedComponentBriefInfoPanel))
+                                    if (activeToggleInstalledComponent.TryGetComponent(out UIInstalledComponentBriefInfoPanel installedComponentBriefInfoPanel))
                                     {
                                         //Создаём событие добавления компонента
-                                        DesignerShipClassActionEvent(
+                                        DesignerShipClassActionRequest(
                                             DesignerShipClassActionType.AddComponentToClass,
                                             installedComponentBriefInfoPanel.componentType,
                                             installedComponentBriefInfoPanel.contentSetIndex,
@@ -699,23 +637,19 @@ namespace SandOcean.UI
                             }
                         }
                         //Иначе, если событие запрашивает удаление выбранного компонента из редактируемого корабля
-                        else if (clickEvent.WidgetName
-                            == "DeleteComponentFromShipClass")
+                        else if (clickEvent.WidgetName == "DeleteComponentFromShipClass")
                         {
                             //Берём активный переключатель из списка установленных компонентов
-                            Toggle activeToggleInstalledComponent
-                                = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
+                            Toggle activeToggleInstalledComponent = shipClassDesignerWindow.installedComponentsListToggleGroup.GetFirstActiveToggle();
 
                             //Если переключатель не пуст
-                            if (activeToggleInstalledComponent
-                                != null)
+                            if (activeToggleInstalledComponent != null)
                             {
                                 //Пытаемся получить панель выбранного компонента
-                                if (activeToggleInstalledComponent.TryGetComponent(
-                                    out UIInstalledComponentBriefInfoPanel componentBriefInfoPanel))
+                                if (activeToggleInstalledComponent.TryGetComponent(out UIInstalledComponentBriefInfoPanel componentBriefInfoPanel))
                                 {
                                     //Создаём событие удаления компонента
-                                    DesignerShipClassActionEvent(
+                                    DesignerShipClassActionRequest(
                                         DesignerShipClassActionType.DeleteComponentFromClass,
                                         componentBriefInfoPanel.componentType,
                                         componentBriefInfoPanel.contentSetIndex,
@@ -726,32 +660,27 @@ namespace SandOcean.UI
                         }
                     }
                     //Иначе, если активен дизайнер двигателей
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentEngine)
+                    else if (designerWindow.designerType == DesignerType.ComponentEngine)
                     {
 
                     }
                     //Иначе, если активен дизайнер реакторов
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentReactor)
+                    else if (designerWindow.designerType == DesignerType.ComponentReactor)
                     {
 
                     }
                     //Иначе, если активен дизайнер топливных баков
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentHoldFuelTank)
+                    else if (designerWindow.designerType == DesignerType.ComponentHoldFuelTank)
                     {
 
                     }
                     //Иначе, если активен дизайнер оборудования для твёрдой добычи
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentExtractionEquipmentSolid)
+                    else if (designerWindow.designerType == DesignerType.ComponentExtractionEquipmentSolid)
                     {
 
                     }
                     //Иначе, если активен дизайнер энергетических орудий
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentGunEnergy)
+                    else if (designerWindow.designerType == DesignerType.ComponentGunEnergy)
                     {
 
                     }
@@ -803,7 +732,7 @@ namespace SandOcean.UI
                         }
 
                         //Запрашиваем смену набора контента на панели прочих наборов контента
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.DisplayContentSetPanelList,
                             false,
                             contentSetIndex);
@@ -821,101 +750,86 @@ namespace SandOcean.UI
                             == "ChangeAvailableComponentsType")
                         {
                             //Запрашиваем изменение типа доступных компонентов
-                            DesignerShipClassActionEvent(
+                            DesignerShipClassActionRequest(
                                 DesignerShipClassActionType.ChangeAvailableComponentsType,
                                 (ShipComponentType)shipDesignerWindow.availableComponentTypeDropdown.value);
                         }
                     }
                     //Иначе, если активен дизайнер двигателей
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentEngine)
+                    else if (designerWindow.designerType == DesignerType.ComponentEngine)
                     {
                         //Берём ссылку на окно дизайнера двигателей
-                        UIEngineDesignerWindow engineDesignerWindow
-                            = designerWindow.engineDesigner;
+                        UIEngineDesignerWindow engineDesignerWindow = designerWindow.engineDesigner;
 
                         //Если событие запрашивает смену основной технологии, определяющей мощность двигателя на единицу размера
-                        if (dropdownEvent.WidgetName
-                            == "ChangeEnginePowerPerSizeTechnology")
+                        if (dropdownEvent.WidgetName == "ChangeEnginePowerPerSizeTechnology")
                         {
                             //Запрашиваем изменение основной технологии в дизайнере двигателей
-                            DesignerComponentActionEvent(
+                            DesignerComponentActionRequest(
                                 DesignerComponentActionType.ChangeCoreTechnology,
                                 TechnologyComponentCoreModifierType.EnginePowerPerSize,
                                 dropdownEvent.Value);
                         }
                     }
                     //Иначе, если активен дизайнер реакторов
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentReactor)
+                    else if (designerWindow.designerType == DesignerType.ComponentReactor)
                     {
                         //Берём ссылку на окно дизайнера реакторов
-                        UIReactorDesignerWindow reactorDesignerWindow
-                            = designerWindow.reactorDesigner;
+                        UIReactorDesignerWindow reactorDesignerWindow = designerWindow.reactorDesigner;
 
                         //Если событие запрашивает смену основной технологии, определяющей энергию реактора на единицу размера
-                        if (dropdownEvent.WidgetName
-                            == "ChangeReactorEnergyPerSizeTechnology")
+                        if (dropdownEvent.WidgetName == "ChangeReactorEnergyPerSizeTechnology")
                         {
                             //Запрашиваем изменение основной технологии в дизайнере реакторов
-                            DesignerComponentActionEvent(
+                            DesignerComponentActionRequest(
                                 DesignerComponentActionType.ChangeCoreTechnology,
                                 TechnologyComponentCoreModifierType.ReactorEnergyPerSize,
                                 dropdownEvent.Value);
                         }
                     }
                     //Иначе, если активен дизайнер топливных баков
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentHoldFuelTank)
+                    else if (designerWindow.designerType == DesignerType.ComponentHoldFuelTank)
                     {
                         //Берём ссылку на окно дизайнера реакторов
-                        UIFuelTankDesignerWindow fuelTankDesignerWindow
-                            = designerWindow.fuelTankDesigner;
+                        UIFuelTankDesignerWindow fuelTankDesignerWindow = designerWindow.fuelTankDesigner;
 
                         //Если событие запрашивает смену основной технологии, определяющей сжатие топливного бака
-                        if (dropdownEvent.WidgetName
-                            == "ChangeFuelTankCompressionTechnology")
+                        if (dropdownEvent.WidgetName == "ChangeFuelTankCompressionTechnology")
                         {
                             //Запрашиваем изменение основной технологии в дизайнере топливных баков
-                            DesignerComponentActionEvent(
+                            DesignerComponentActionRequest(
                                 DesignerComponentActionType.ChangeCoreTechnology,
                                 TechnologyComponentCoreModifierType.FuelTankCompression,
                                 dropdownEvent.Value);
                         }
                     }
                     //Иначе, если активен дизайнер оборудования для твёрдой добычи
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentExtractionEquipmentSolid)
+                    else if (designerWindow.designerType == DesignerType.ComponentExtractionEquipmentSolid)
                     {
                         //Берём ссылку на окно дизайнера добывающего оборудования
-                        UIExtractionEquipmentDesignerWindow extractionEquipmentDesignerWindow
-                            = designerWindow.extractionEquipmentDesigner;
+                        UIExtractionEquipmentDesignerWindow extractionEquipmentDesignerWindow = designerWindow.extractionEquipmentDesigner;
 
                         //Если событие запрашивает смену основной технологии, определяющей скорость на единицу размера
-                        if (dropdownEvent.WidgetName
-                            == "ChangeExtractionEquipmentSolidSpeedPerSizeTechnology")
+                        if (dropdownEvent.WidgetName == "ChangeExtractionEquipmentSolidSpeedPerSizeTechnology")
                         {
                             //Запрашиваем изменение основной технологии в дизайнере оборудования для твёрдой добычи
-                            DesignerComponentActionEvent(
+                            DesignerComponentActionRequest(
                                 DesignerComponentActionType.ChangeCoreTechnology,
                                 TechnologyComponentCoreModifierType.ExtractionEquipmentSolidSpeedPerSize,
                                 dropdownEvent.Value);
                         }
                     }
                     //Иначе, если активен дизайнер энергетических орудий
-                    else if (designerWindow.designerType
-                        == DesignerType.ComponentGunEnergy)
+                    else if (designerWindow.designerType == DesignerType.ComponentGunEnergy)
                     {
                         //Берём ссылку на окно дизайнера энергетических орудий
-                        UIGunEnergyDesignerWindow energyGunDesignerWindow
-                            = designerWindow.energyGunDesigner;
+                        UIGunEnergyDesignerWindow energyGunDesignerWindow = designerWindow.energyGunDesigner;
 
                         //Если событие запрашивает смену основной технологии, определяющей перезарядку
-                        if (dropdownEvent.WidgetName
-                            == "ChangeEnergyGunRechargeTechnology")
+                        if (dropdownEvent.WidgetName == "ChangeEnergyGunRechargeTechnology")
                         {
                             //Запрашиваем изменение основной технологии в дизайнере энергетических орудий
-                            DesignerComponentActionEvent(
+                            DesignerComponentActionRequest(
                                 DesignerComponentActionType.ChangeCoreTechnology,
                                 TechnologyComponentCoreModifierType.GunEnergyRecharge,
                                 dropdownEvent.Value);
@@ -987,13 +901,13 @@ namespace SandOcean.UI
             if (inputData.Value.mapMode != MapMode.None)
             {
                 //Ввод перемещения камеры
-                InputCameraMoving();
+                //InputCameraMoving();
 
                 //Ввод поворота камеры
-                InputCameraRotating();
+                CameraInputRotating();
 
                 //Ввод приближения камеры
-                InputCameraZoom();
+                CameraInputZoom();
             }
 
             //Прочий ввод
@@ -1002,100 +916,138 @@ namespace SandOcean.UI
             //Ввод мыши
             MouseInput();
 
-            if (Input.GetMouseButton(0)
+            /*if (Input.GetMouseButton(0)
                 && UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() == false)
             {
-                HandleInput2();
+                HandleInput();
             }
             else
             {
                 //Очищаем предыдущую ячейку
                 inputData.Value.previousRegionPE = new();
+            }*/
+
+            foreach (int regionEntity in regionFilter.Value)
+            {
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+                ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
+
+                if (region.Elevation < mapGenerationData.Value.waterLevel)
+                {
+                    RegionSetColor(ref region, Color.blue);
+                }
+                else if (region.TerrainTypeIndex == 0)
+                {
+                    RegionSetColor(ref region, Color.yellow);
+                }
+                else if (region.TerrainTypeIndex == 1)
+                {
+                    RegionSetColor(ref region, Color.green);
+                }
+                else if (region.TerrainTypeIndex == 2)
+                {
+                    RegionSetColor(ref region, Color.gray);
+                }
+                else if (region.TerrainTypeIndex == 3)
+                {
+                    RegionSetColor(ref region, Color.red);
+                }
+                else if (region.TerrainTypeIndex == 4)
+                {
+                    RegionSetColor(ref region, Color.white);
+                }
+
+                for (int a = 0; a < rAEO.organizationRAEOs.Length; a++)
+                {
+                    if (rAEO.organizationRAEOs[a].organizationRAEOType == ORAEOType.Economic)
+                    {
+                        RegionSetColor(ref region, Color.blue);
+
+                        /*List<int> regions = RegionsData.GetRegionIndicesWithinSteps(
+                            world.Value,
+                            regionFilter.Value, regionPool.Value,
+                            ref region, 2);
+
+                        for (int b = 0; b < regions.Count; b++)
+                        {
+                            RegionsData.regionPEs[regions[b]].Unpack(world.Value, out int neighbourRegionEntity);
+                            ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                            RegionSetColor(ref neighbourRegion, Color.blue);
+                        }*/
+                    }
+                }
             }
         }
 
         //Главное меню
-        void MainMenuActionEvent(
+        void MainMenuActionRequest(
             MainMenuActionType actionType)
         {
-            //Создаём новую сущность и назначаем ей компонент события действия в главном меню
-            int eventEntity = world.Value.NewEntity();
-            ref EMainMenuAction mainMenuActionEvent
-                = ref mainMenuActionEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса действия в главном меню
+            int requestEntity = world.Value.NewEntity();
+            ref RMainMenuAction mainMenuActionRequest = ref mainMenuActionRequestPool.Value.Add(requestEntity);
 
             //Указываем, какое действие в главном меню запрашивается
-            mainMenuActionEvent.actionType 
-                = actionType;
+            mainMenuActionRequest.actionType = actionType;
         }
 
         //Меню новой игры
-        void NewGameMenuActionEvent(
+        void NewGameMenuActionRequest(
             NewGameMenuActionType actionType)
         {
-            //Создаём новую сущность и назначаем ей компонент события действия в меню новой игры
-            int eventEntity = world.Value.NewEntity();
-            ref ENewGameMenuAction newGameMenuActionEvent
-                = ref newGameMenuActionEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса действия в меню новой игры
+            int requestEntity = world.Value.NewEntity();
+            ref RNewGameMenuAction newGameMenuActionRequest = ref newGameMenuActionRequestPool.Value.Add(requestEntity);
 
             //Указываем, какое действие в меню новой игры запрашивается
-            newGameMenuActionEvent.actionType
-                = actionType;
+            newGameMenuActionRequest.actionType = actionType;
         }
 
         //Меню загрузки
         //
 
         //Мастерская
-        void WorkshopActionEvent(
+        void WorkshopActionRequest(
             WorkshopActionType actionType,
             int contentSetIndex = -1,
             DesignerType designerType = DesignerType.None)
         {
-            //Создаём новую сущность и назначаем ей компонент события действия в мастерской
-            int eventEntity = world.Value.NewEntity();
-            ref EWorkshopAction workshopActionEvent
-                = ref workshopActionEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса действия в мастерской
+            int requestEntity = world.Value.NewEntity();
+            ref RWorkshopAction workshopActionRequest = ref workshopActionRequestPool.Value.Add(requestEntity);
 
             //Указываем, какое действие в мастерской запрашивается
-            workshopActionEvent.actionType
-                = actionType;
+            workshopActionRequest.actionType = actionType;
 
             //Указываем индекс набора контента, который требуется отобразить
-            workshopActionEvent.contentSetIndex
-                = contentSetIndex;
+            workshopActionRequest.contentSetIndex = contentSetIndex;
 
             //Указываем, какой тип дизайнера требуется открыть
-            workshopActionEvent.designerType
-                = designerType;
+            workshopActionRequest.designerType = designerType;
         }
 
         //Дизайнер
-        void DesignerActionEvent(
+        void DesignerActionRequest(
             DesignerActionType actionType,
-            bool isCurrentContentSet = true,
-            int contentSetIndex = -1,
+            bool isCurrentContentSet = true, int contentSetIndex = -1,
             int objectIndex = -1)
         {
-            //Создаёнм новую сущность и назначаем ей компонент события действия в дизайнере
-            int eventEntity = world.Value.NewEntity();
-            ref EDesignerAction designerActionEvent
-                = ref designerActionEventPool.Value.Add(eventEntity);
+            //Создаёнм новую сущность и назначаем ей компонент запроса действия в дизайнере
+            int requestEntity = world.Value.NewEntity();
+            ref RDesignerAction designerActionRequest = ref designerActionRequestPool.Value.Add(requestEntity);
 
             //Указываем, какое действие в дизайнере запрашивается
-            designerActionEvent.actionType
-                = actionType;
+            designerActionRequest.actionType = actionType;
 
             //Указываем, с текущим ли набором контента требуется совершить действие
-            designerActionEvent.isCurrentContentSet
-                = isCurrentContentSet;
+            designerActionRequest.isCurrentContentSet = isCurrentContentSet;
 
             //Указываем индекс набора контента
-            designerActionEvent.contentSetIndex
-                = contentSetIndex;
+            designerActionRequest.contentSetIndex = contentSetIndex;
 
             //Указываем индекс объекта
-            designerActionEvent.objectIndex
-                = objectIndex;
+            designerActionRequest.objectIndex = objectIndex;
         }
 
         bool DesignerContentSavePossible()
@@ -1471,104 +1423,94 @@ namespace SandOcean.UI
         }
 
         //Дизайнер кораблей
-        void DesignerShipClassActionEvent(
+        void DesignerShipClassActionRequest(
             DesignerShipClassActionType actionType,
             ShipComponentType componentType = ShipComponentType.None,
             int contentSetIndex = -1,
             int modelIndex = -1,
             int numberOfComponents = -1)
         {
-            //Создаём новую сущность и назначаем ей компонент события обработки панели обзора компонента
+            //Создаём новую сущность и назначаем ей компонент запроса обработки панели обзора компонента
             int eventEntity = world.Value.NewEntity();
-            ref EDesignerShipClassAction designerShipClassActionEvent
-                = ref designerShipClassActionEventPool.Value.Add(eventEntity);
+            ref RDesignerShipClassAction designerShipClassActionRequest = ref designerShipClassActionRequestPool.Value.Add(eventEntity);
 
             //Указываем, какое действие в дизайнере кораблей запрашивается
-            designerShipClassActionEvent.actionType
-                = actionType;
+            designerShipClassActionRequest.actionType = actionType;
 
 
             //Указываем тип компонента
-            designerShipClassActionEvent.componentType
-                = componentType;
+            designerShipClassActionRequest.componentType = componentType;
 
 
             //Указываем индекс набора контента
-            designerShipClassActionEvent.contentSetIndex
-                = contentSetIndex;
+            designerShipClassActionRequest.contentSetIndex = contentSetIndex;
 
             //Указываем индекс модели
-            designerShipClassActionEvent.modelIndex
-                = modelIndex;
+            designerShipClassActionRequest.modelIndex = modelIndex;
 
 
             //Указываем число компонентов, которое требуется установить/удалить
-            designerShipClassActionEvent.numberOfComponents
-                = numberOfComponents;
+            designerShipClassActionRequest.numberOfComponents = numberOfComponents;
         }
 
 
-        void DesignerComponentActionEvent(
+        void DesignerComponentActionRequest(
             DesignerComponentActionType actionType,
             TechnologyComponentCoreModifierType componentCoreModifierType,
             int technologyIndex)
         {
-            //Создаём новую сущность и назначаем ей компонент события смены основной технологии
+            //Создаём новую сущность и назначаем ей компонент запроса смены основной технологии
             int eventEntity = world.Value.NewEntity();
-            ref EDesignerComponentAction designerComponentActionEvent
-                = ref designerComponentActionEventPool.Value.Add(eventEntity);
+            ref RDesignerComponentAction designerComponentActionRequest = ref designerComponentActionRequestPool.Value.Add(eventEntity);
 
             //Указываем, какое действие в дизайнере компонентов запрашивается
-            designerComponentActionEvent.actionType
-                = actionType;
+            designerComponentActionRequest.actionType = actionType;
 
             //Указываем тип модификатора
-            designerComponentActionEvent.componentCoreModifierType
-                = componentCoreModifierType;
+            designerComponentActionRequest.componentCoreModifierType = componentCoreModifierType;
 
             //Указываем индекс выбранной технологии
-            designerComponentActionEvent.technologyDropdownIndex
-                = technologyIndex;
+            designerComponentActionRequest.technologyDropdownIndex = technologyIndex;
         }
 
         //Игра
-        void GameActionEvent(
+        void GameActionRequest(
             GameActionType actionType)
         {
-            //Создаём новую сущность и назначаем ей компонент события действия в игре
-            int eventEntity = world.Value.NewEntity();
-            ref EGameAction gameActionEvent = ref gameActionEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса действия в игре
+            int requestEntity = world.Value.NewEntity();
+            ref RGameAction gameActionRequest = ref gameActionRequestPool.Value.Add(requestEntity);
 
             //Указываем, какое действие в игре запрашивается
-            gameActionEvent.actionType = actionType;
+            gameActionRequest.actionType = actionType;
         }
 
-        void GameOpenDesignerEvent(
+        void GameOpenDesignerRequest(
             DesignerType designerType,
             int contentSetIndex)
         {
-            //Создаём новую сущность и назначаем ей компонент события открытия дизайнера в игре
-            int eventEntity = world.Value.NewEntity();
-            ref EGameOpenDesigner gameOpenDesignerEvent = ref gameOpenDesignerEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса открытия дизайнера в игре
+            int requestEntity = world.Value.NewEntity();
+            ref RGameOpenDesigner gameOpenDesignerRequest = ref gameOpenDesignerRequestPool.Value.Add(requestEntity);
 
             //Указываем, какой дизайнер требуется открыть
-            gameOpenDesignerEvent.designerType = designerType;
+            gameOpenDesignerRequest.designerType = designerType;
 
             //Указываем, какой набор контента требуется открыть
-            gameOpenDesignerEvent.contentSetIndex = contentSetIndex;
+            gameOpenDesignerRequest.contentSetIndex = contentSetIndex;
         }
 
-        void GameDisplayObjectPanelEvent(
-            DisplayObjectPanelEventType eventType,
+        void GameDisplayObjectPanelRequest(
+            DisplayObjectPanelRequestType eventType,
             EcsPackedEntity objectPE,
             bool isRefresh = false)
         {
-            //Создаём новую сущность и назначаем ей компонент события отображения панели объекта
-            int eventEntity = world.Value.NewEntity();
-            ref EGameDisplayObjectPanel gameDisplayObjectPanelEvent = ref gameDisplayObjectPanelEventPool.Value.Add(eventEntity);
+            //Создаём новую сущность и назначаем ей компонент запроса отображения панели объекта
+            int requestEntity = world.Value.NewEntity();
+            ref RGameDisplayObjectPanel gameDisplayObjectPanelRequest = ref gameDisplayObjectPanelRequestPool.Value.Add(requestEntity);
 
-            //Заполняем данные события
-            gameDisplayObjectPanelEvent = new(
+            //Заполняем данные запроса
+            gameDisplayObjectPanelRequest = new(
                 eventType,
                 objectPE,
                 isRefresh);
@@ -1592,151 +1534,62 @@ namespace SandOcean.UI
         }
 
 
-        void InputCameraMoving()
+        void CameraInputRotating()
         {
-            //Берём движение по осям
-            float xDelta = Input.GetAxis("Horizontal");
-            float zDelta = Input.GetAxis("Vertical");
-            //Если движение не равно нулю
-            if (xDelta != 0f || zDelta != 0f)
+            //Берём Y-вращение
+            float yRotationDelta = Input.GetAxis("Horizontal");
+            //Если оно не равно нулю, то применяем
+            if (yRotationDelta != 0f)
             {
-                //Применяем движение
-                CameraAdjustPosition(xDelta, zDelta);
+                CameraAdjustYRotation(yRotationDelta);
+            }
+
+            //Берём X-вращение
+            float xRotationDelta = Input.GetAxis("Vertical");
+            //Если оно не равно нулю, то применяем
+            if (xRotationDelta != 0f)
+            {
+                CameraAdjustXRotation(xRotationDelta);
             }
         }
 
-        void CameraAdjustPosition(
-            float xDelta, float zDelta)
-        {
-            //Рассчитываем параметры движения
-            Vector3 direction = inputData.Value.mapCamera.localRotation * new Vector3(xDelta, 0f, zDelta).normalized;
-            float damping = Mathf.Max(Mathf.Abs(xDelta), Mathf.Abs(zDelta));
-            float distance = Mathf.Lerp(inputData.Value.movementSpeedMinZoom, inputData.Value.movementSpeedMaxZoom, inputData.Value.zoom)
-                * damping * UnityEngine.Time.deltaTime;
-
-            //Рассчитываем движение камеры
-            Vector3 position = inputData.Value.mapCamera.localPosition;
-            position += direction * distance;
-            position = CameraWrapPosition(position);
-
-            //Применяем движение камеры
-            inputData.Value.mapCamera.localPosition = position;
-        }
-
-        Vector3 CameraWrapPosition(
-            Vector3 position)
-        {
-            //Определяем границы движения камеры
-            float width = mapGenerationData.Value.regionCountX * MapGenerationData.innerDiameter;
-            //Пока координата X меньше нуля
-            while (position.x < 0f)
-            {
-                //Прибавляем ширину
-                position.x += width;
-            }
-            //Пока координата X больше ширины
-            while (position.x > width)
-            {
-                //Вычитаем ширину
-                position.x -= width;
-            }
-
-            //Ограничиваем движение по оси Z
-            float zMax = (mapGenerationData.Value.regionCountZ - 1) * (1.5f * MapGenerationData.outerRadius);
-            position.z = Mathf.Clamp(position.z, 0f, zMax);
-
-            //Проверяем положения столбцов чанков
-            MapCenter(position.x);
-
-            //Возвращаем позицию
-            return position;
-        }
-
-        void MapCenter(float xPosition)
-        {
-            //Определяем индекс столбца, который находится в центре
-            int centerColumnIndex = (int)(xPosition / (MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX));
-
-            //Если текущий центральный столбец равен вычисленному
-            if (inputData.Value.currentCenterColumnIndex == centerColumnIndex)
-            {
-                //Выходим из функции
-                return;
-            }
-            //Иначе
-            else
-            {
-                //Обновляем текущий центральный столбец
-                inputData.Value.currentCenterColumnIndex = centerColumnIndex;
-            }
-
-            //Определяем минимальный и максимальный индексы столбцов
-            int minColumnIndex = centerColumnIndex - mapGenerationData.Value.chunkCountX / 2;
-            int maxColumnIndex = centerColumnIndex + mapGenerationData.Value.chunkCountX / 2;
-
-            //Определяем позиции столбцов
-            Vector3 position;
-            position.y = position.z = 0;
-            //Для каждого столбца
-            for (int a = 0; a < mapGenerationData.Value.columns.Length; a++)
-            {
-                //Если индекс меньше минимального
-                if (a < minColumnIndex)
-                {
-                    //Перемещаем стобец на правый край
-                    position.x = mapGenerationData.Value.chunkCountX * (MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX);
-                }
-                //Иначе, если индекс больше максимального
-                else if (a > maxColumnIndex)
-                {
-                    //Перемещаем столбец на левый край
-                    position.x = mapGenerationData.Value.chunkCountX * -(MapGenerationData.innerDiameter * MapGenerationData.chunkSizeX);
-                }
-                //Иначе
-                else
-                {
-                    //Обнуляем позицию стобца
-                    position.x = 0f;
-                }
-
-                //Обновляем позицию стобца
-                mapGenerationData.Value.columns[a].localPosition = position;
-            }
-        }
-
-        void InputCameraRotating()
-        {
-            //Берём вращение
-            float rotationDelta = Input.GetAxis("Rotation");
-            //Если вращение не равно нулю
-            if (rotationDelta != 0f)
-            {
-                //Применяем вращение
-                CameraAdjustRotation(rotationDelta);
-            }
-        }
-
-        void CameraAdjustRotation(
+        void CameraAdjustYRotation(
             float rotationDelta)
         {
             //Рассчитываем угол вращения
-            inputData.Value.rotationAngle += rotationDelta * inputData.Value.rotationSpeed * UnityEngine.Time.deltaTime;
+            inputData.Value.rotationAngleY -= rotationDelta * inputData.Value.rotationSpeed * UnityEngine.Time.deltaTime;
 
             //Выравниваем угол
-            if (inputData.Value.rotationAngle < 0f)
+            if (inputData.Value.rotationAngleY < 0f)
             {
-                inputData.Value.rotationAngle += 360f;
+                inputData.Value.rotationAngleY += 360f;
             }
-            else if (inputData.Value.rotationAngle >= 360f)
+            else if (inputData.Value.rotationAngleY >= 360f)
             {
-                inputData.Value.rotationAngle -= 360f;
+                inputData.Value.rotationAngleY -= 360f;
             }
 
             //Применяем вращение
-            inputData.Value.mapCamera.localRotation = Quaternion.Euler(0f, inputData.Value.rotationAngle, 0f);
+            inputData.Value.mapCamera.localRotation = Quaternion.Euler(
+                0f, inputData.Value.rotationAngleY, 0f);
+        }
+        
+        void CameraAdjustXRotation(
+            float rotationDelta)
+        {
+            //Рассчитываем угол вращения
+            inputData.Value.rotationAngleX += rotationDelta * inputData.Value.rotationSpeed * UnityEngine.Time.deltaTime;
+
+            //Выравниваем угол
+            inputData.Value.rotationAngleX = Mathf.Clamp(
+                inputData.Value.rotationAngleX, inputData.Value.minAngleX, inputData.Value.maxAngleX);
+
+            //Применяем вращение
+            inputData.Value.swiwel.localRotation = Quaternion.Euler(
+                inputData.Value.rotationAngleX, 0f, 0f);
         }
 
-        void InputCameraZoom()
+        void CameraInputZoom()
         {
             //Берём вращение колёсика мыши
             float zoomDelta = Input.GetAxis("Mouse ScrollWheel");
@@ -1760,14 +1613,8 @@ namespace SandOcean.UI
             inputData.Value.stick.localPosition = new(0f, 0f, zoomDistance);
 
             //Рассчитываем поворот приближения и применяем его
-            float zoomAngle = Mathf.Lerp(inputData.Value.swiwelMinZoom, inputData.Value.swiwelMaxZoom, inputData.Value.zoom);
-            inputData.Value.swiwel.localRotation = Quaternion.Euler(zoomAngle, 0f, 0f);
-        }
-
-        void CameraValidatePosition()
-        {
-            //Совершаем нулевое движение камеры
-            CameraAdjustPosition(0f, 0f);
+            /*float zoomAngle = Mathf.Lerp(inputData.Value.swiwelMinZoom, inputData.Value.swiwelMaxZoom, inputData.Value.zoom);
+            inputData.Value.swiwel.localRotation = Quaternion.Euler(zoomAngle, 0f, 0f);*/
         }
 
         void InputOther()
@@ -1776,30 +1623,26 @@ namespace SandOcean.UI
             if (Input.GetKeyUp(KeyCode.Space))
             {
                 //Если игра активна
-                if (runtimeData.Value.isGameActive
-                    == true)
+                if (runtimeData.Value.isGameActive == true)
                 {
                     //Запрашиваем включение паузы
-                    GameActionEvent(
-                        GameActionType.PauseOn);
+                    GameActionRequest(GameActionType.PauseOn);
                 }
                 //Иначе
                 else
                 {
                     //Запрашиваем выключение паузы
-                    GameActionEvent(
-                        GameActionType.PauseOff);
+                    GameActionRequest(GameActionType.PauseOff);
                 }
             }
 
             if (Input.GetKeyUp(KeyCode.Escape))
             {
                 //Если активно окно игры
-                if (eUI.Value.activeMainWindowType
-                    == MainWindowType.Game)
+                if (eUI.Value.activeMainWindowType == MainWindowType.Game)
                 {
-                    //Создаём событие, запрашивающее выход из игры
-                    QuitGameEvent();
+                    //Создаём запрос выхода из игры
+                    QuitGameRequest();
                 }
                 //Иначе, если активно окно дизайнера
                 else if (eUI.Value.activeMainWindowType
@@ -1810,14 +1653,14 @@ namespace SandOcean.UI
                         == true)
                     {
                         //Запрашиваем открытие окна игры
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.OpenGame);
                     }
                     //Иначе
                     else
                     {
                         //Запрашиваем открытие окна мастерской
-                        DesignerActionEvent(
+                        DesignerActionRequest(
                             DesignerActionType.OpenWorkshop);
                     }
                 }
@@ -1826,7 +1669,7 @@ namespace SandOcean.UI
                     == MainWindowType.Workshop)
                 {
                     //Запрашиваем открытие окна главного меню
-                    WorkshopActionEvent(
+                    WorkshopActionRequest(
                         WorkshopActionType.OpenMainMenu);
                 }
                 //Иначе, если активно окно меню новой игры
@@ -1834,7 +1677,7 @@ namespace SandOcean.UI
                     == MainWindowType.NewGameMenu)
                 {
                     //Запрашиваем открытие окна главного меню
-                    NewGameMenuActionEvent(
+                    NewGameMenuActionRequest(
                         NewGameMenuActionType.OpenMainMenu);
                 }
             }
@@ -1852,93 +1695,106 @@ namespace SandOcean.UI
 
         void MouseInput()
         {
-            //Берём луч из положения мыши
-            Ray inputRay = inputData.Value.camera.ScreenPointToRay(Input.mousePosition);
-
-            //Если луч касается объекта
-            if (Physics.Raycast(inputRay, out RaycastHit hit))
+            //Если курсор не находится над объектом интерфейса
+            if (UnityEngine.EventSystems.EventSystem.current.IsPointerOverGameObject() == false)
             {
-                //Пытаемся получить компонент GO MO
-                if (hit.transform.gameObject.TryGetComponent(
-                    out GOMapObject gOMapObject))
+                //Проверяем взаимодействие мыши со сферой
+                HexasphereCheckMouseInteraction();
+
+                //Берём луч из положения мыши
+                Ray inputRay = inputData.Value.camera.ScreenPointToRay(Input.mousePosition);
+
+                //Если луч касается объекта
+                if (Physics.Raycast(inputRay, out RaycastHit hit))
                 {
-                    //Берём компонент родительского MO
-                    gOMapObject.mapObjectPE.Unpack(world.Value, out int mapObjectEntity);
-                    ref CMapObject mapObject = ref mapObjectPool.Value.Get(mapObjectEntity);
-
-                    //Если тип MO - группа кораблей
-                    if (mapObject.objectType == MapObjectType.ShipGroup)
+                    //Пытаемся получить компонент GO MO
+                    if (hit.transform.gameObject.TryGetComponent(
+                        out GOMapObject gOMapObject))
                     {
-                        //Берём компонент группы кораблей
-                        ref CShipGroup shipGroup = ref shipGroupPool.Value.Get(mapObjectEntity);
+                        //Берём компонент родительского MO
+                        gOMapObject.mapObjectPE.Unpack(world.Value, out int mapObjectEntity);
+                        ref CMapObject mapObject = ref mapObjectPool.Value.Get(mapObjectEntity);
 
-                        //Если это активная группа кораблей
-                        if (inputData.Value.activeShipGroupPE.EqualsTo(mapObject.selfPE) == true)
-                        {
-                            //Делаем её неактивной
-                            inputData.Value.activeShipGroupPE = new();
-                        }
-                        //Иначе
-                        else
-                        {
-                            //Делаем её активной
-                            inputData.Value.activeShipGroupPE = mapObject.selfPE;
-                        }
-                    }
-                    //Иначе, если тип MO - регион
-                    /*else if (mapObject.objectType == MapObjectType.Island)
-                    {
-                        //Берём компонент региона
-                        ref CIsland island = ref islandPool.Value.Get(mapObjectEntity);
-
-                        //Если нажата ЛКМ
-                        if (Input.GetMouseButtonDown(0))
-                        {
-                            //Запрашиваем отображение подпанели объекта острова
-                            GameDisplayObjectPanelEvent(
-                                DisplayObjectPanelEventType.Island,
-                                island.selfPE);
-                        }
-
-                        //Если есть активная группа кораблей
-                        if (inputData.Value.activeShipGroupPE.Unpack(world.Value, out int activeShipGroupEntity))
+                        //Если тип MO - группа кораблей
+                        /*if (mapObject.objectType == MapObjectType.ShipGroup)
                         {
                             //Берём компонент группы кораблей
-                            ref CShipGroup activeShipGroup = ref shipGroupPool.Value.Get(activeShipGroupEntity);
+                            ref CShipGroup shipGroup = ref shipGroupPool.Value.Get(mapObjectEntity);
 
-                            //Если группа кораблей находтися в режиме ожидания
-                            if (activeShipGroup.movingMode == Ship.ShipGroupMovingMode.Idle)
+                            //Если это активная группа кораблей
+                            if (inputData.Value.activeShipGroupPE.EqualsTo(mapObject.selfPE) == true)
                             {
-                                //Назначаем сущности компонент движения
-                                ref CSGMoving activeSGMoving = ref sGMovingPool.Value.Add(activeShipGroupEntity);
-
-                                //Заполняем основные данные компонента движения
-                                activeSGMoving = new(0);
-
-                                //Переводим группу кораблей в режим движения
-                                activeShipGroup.movingMode = Ship.ShipGroupMovingMode.Moving;
-
-                                //Указываем целевой объект как первую точку пути
-                                activeSGMoving.pathPoints.AddLast(new DShipGroupPathPoint(
-                                    new(),
-                                    island.selfPE,
-                                    MovementTargetType.RAEO,
-                                    MovementType.Pathfinding,
-                                    DestinationPointRegion.None,
-                                    DestinationPointTask.Landing));
+                                //Делаем её неактивной
+                                inputData.Value.activeShipGroupPE = new();
                             }
-                        }
-                    }*/
+                            //Иначе
+                            else
+                            {
+                                //Делаем её активной
+                                inputData.Value.activeShipGroupPE = mapObject.selfPE;
+                            }
+                        }*/
+                        //Иначе, если тип MO - регион
+                        /*else if (mapObject.objectType == MapObjectType.Island)
+                        {
+                            //Берём компонент региона
+                            ref CIsland island = ref islandPool.Value.Get(mapObjectEntity);
 
-                    Debug.LogWarning(mapObject.objectType);
+                            //Если нажата ЛКМ
+                            if (Input.GetMouseButtonDown(0))
+                            {
+                                //Запрашиваем отображение подпанели объекта острова
+                                GameDisplayObjectPanelEvent(
+                                    DisplayObjectPanelEventType.Island,
+                                    island.selfPE);
+                            }
+
+                            //Если есть активная группа кораблей
+                            if (inputData.Value.activeShipGroupPE.Unpack(world.Value, out int activeShipGroupEntity))
+                            {
+                                //Берём компонент группы кораблей
+                                ref CShipGroup activeShipGroup = ref shipGroupPool.Value.Get(activeShipGroupEntity);
+
+                                //Если группа кораблей находтися в режиме ожидания
+                                if (activeShipGroup.movingMode == Ship.ShipGroupMovingMode.Idle)
+                                {
+                                    //Назначаем сущности компонент движения
+                                    ref CSGMoving activeSGMoving = ref sGMovingPool.Value.Add(activeShipGroupEntity);
+
+                                    //Заполняем основные данные компонента движения
+                                    activeSGMoving = new(0);
+
+                                    //Переводим группу кораблей в режим движения
+                                    activeShipGroup.movingMode = Ship.ShipGroupMovingMode.Moving;
+
+                                    //Указываем целевой объект как первую точку пути
+                                    activeSGMoving.pathPoints.AddLast(new DShipGroupPathPoint(
+                                        new(),
+                                        island.selfPE,
+                                        MovementTargetType.RAEO,
+                                        MovementType.Pathfinding,
+                                        DestinationPointRegion.None,
+                                        DestinationPointTask.Landing));
+                                }
+                            }
+                        }*/
+
+                        Debug.LogWarning(mapObject.objectType);
+                    }
                 }
+            }
+            //Иначе
+            else
+            {
+                //Курсор точно не находится над гексасферой
+                InputData.isMouseOver = false;
             }
         }
 
-        void HandleInput2()
+        void HandleInput()
         {
             //Берём регион под курсором
-            if (GetRegionUnderCursor().Unpack(world.Value, out int regionEntity))
+            /*if (GetRegionUnderCursor().Unpack(world.Value, out int regionEntity))
             {
                 //Берём компонент региона
                 ref CHexRegion currentRegion = ref regionPool.Value.Get(regionEntity);
@@ -1980,10 +1836,6 @@ namespace SandOcean.UI
                             fromRegion.DisableHighlight();
                         }
 
-                        //Обновляем стартовый регион
-                        inputData.Value.searchFromRegion = currentRegion.selfPE;
-                        currentRegion.EnableHighlight(Color.blue);
-
                         //Если конечный регион задан
                         if (inputData.Value.searchToRegion.Unpack(world.Value, out int toRegionEntity))
                         {
@@ -2016,35 +1868,35 @@ namespace SandOcean.UI
                 else
                 {
                     //Запрашиваем отображение подпанели объекта региона
-                    GameDisplayObjectPanelEvent(
-                        DisplayObjectPanelEventType.Region,
+                    GameDisplayObjectPanelRequest(
+                        DisplayObjectPanelRequestType.Region,
                         currentRegion.selfPE);
                 }
 
                 //Если какой-либо корабль активен
-                /*if (inputData.Value.activeShipPE.Unpack(world.Value, out int activeShipEntity))
-                {
-                    //Берём компонент корабля
-                    ref CShip activeShip
-                        = ref shipPool.Value.Get(activeShipEntity);
+                //if (inputData.Value.activeShipPE.Unpack(world.Value, out int activeShipEntity))
+                //{
+                //    //Берём компонент корабля
+                //    ref CShip activeShip
+                //        = ref shipPool.Value.Get(activeShipEntity);
 
-                    //Если корабль находится в режиме ожидания
-                    if (activeShip.shipMode
-                        == ShipMode.Idle)
-                    {
-                        //Переводим корабль в режим поиска пути
-                        activeShip.shipMode
-                            = ShipMode.Pathfinding;
+                //    //Если корабль находится в режиме ожидания
+                //    if (activeShip.shipMode
+                //        == ShipMode.Idle)
+                //    {
+                //        //Переводим корабль в режим поиска пути
+                //        activeShip.shipMode
+                //            = ShipMode.Pathfinding;
 
-                        //Указываем целевой объект
-                        activeShip.targetPE
-                            = currentCell.selfPE;
+                //        //Указываем целевой объект
+                //        activeShip.targetPE
+                //            = currentCell.selfPE;
 
-                        //Указываем тип целевого объекта
-                        activeShip.targetType
-                            = MovementTargetType.Cell;
-                    }
-                }*/
+                //        //Указываем тип целевого объекта
+                //        activeShip.targetType
+                //            = MovementTargetType.Cell;
+                //    }
+                //}
 
                 //Сохраняем регион как предыдущий для следующего кадра
                 inputData.Value.previousRegionPE = currentRegion.selfPE;
@@ -2053,169 +1905,491 @@ namespace SandOcean.UI
             {
                 //Очищаем предыдущий регион
                 inputData.Value.previousRegionPE = new();
+            }*/
+        }
+
+        void HexasphereCheckMouseInteraction()
+        {
+            if (HexasphereCheckMousePosition(out Vector3 position, out Ray ray, out EcsPackedEntity regionPE))
+            {
+                regionPE.Unpack(world.Value, out int regionEntity);
+                ref CHexRegion currentRegion = ref regionPool.Value.Get(regionEntity);
+
+                //Если нажата ЛКМ
+                if (Input.GetMouseButton(0))
+                {
+                    //Если нажата кнопка
+                    if (Input.GetKey(KeyCode.LeftShift)
+                        && inputData.Value.searchToRegion.EqualsTo(currentRegion.selfPE) == false)
+                    {
+                        //Если стартовый регион не совпадает с текущей
+                        if (inputData.Value.searchFromRegion.EqualsTo(currentRegion.selfPE) == false)
+                        {
+                            //Если стартовый регион задан
+                            if (inputData.Value.searchFromRegion.Unpack(world.Value, out int fromRegionEntity))
+                            {
+                                //Берём компонент стартового региона
+                                ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
+
+                                //Отключаем подсветку стартового региона
+                                RegionSetColor(ref fromRegion, MapGenerationData.DefaultShadedColor);
+                            }
+
+                            //Обновляем стартовый регион
+                            inputData.Value.searchFromRegion = currentRegion.selfPE;
+
+                            //Если конечный регион задан
+                            /*if (inputData.Value.searchToRegion.Unpack(world.Value, out int toRegionEntity))
+                            {
+                                //Берём компонент конечного региона
+                                ref CHexRegion toRegion = ref regionPool.Value.Get(toRegionEntity);
+
+                                //Ищем путь
+                                FindPath(ref currentRegion, ref toRegion);
+                            }*/
+                        }
+                    }
+                    //Иначе, если стартовый регион задан
+                    else if (inputData.Value.searchFromRegion.Unpack(world.Value, out int fromRegionEntity)
+                        //И стартовый регион не совпадает с конечным
+                        && inputData.Value.searchFromRegion.EqualsTo(currentRegion.selfPE) == false)
+                    {
+                        //Если конечный регион не совпадает с текущим
+                        if (inputData.Value.searchToRegion.EqualsTo(currentRegion.selfPE) == false)
+                        {
+                            //Сохраняем конечный регион
+                            inputData.Value.searchToRegion = currentRegion.selfPE;
+
+                            //Берём компонент стартового региона
+                            ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
+
+                            //RegionSetColor(ref fromRegion, Color.blue);
+
+                            List<int> steps = RegionsData.FindPath(
+                                world.Value,
+                                regionFilter.Value, regionPool.Value,
+                                ref fromRegion, ref currentRegion);
+
+                            if (steps != null)
+                            {
+                                for (int a = 0; a < steps.Count; a++)
+                                {
+                                    RegionsData.regionPEs[steps[a]].Unpack(world.Value, out int region2Entity);
+                                    ref CHexRegion region = ref regionPool.Value.Get(region2Entity);
+
+                                    RegionSetColor(ref region, Color.white);
+                                }
+
+                                List<int> endRegions = RegionsData.GetRegionIndicesWithinSteps(
+                                    world.Value,
+                                    regionFilter.Value, regionPool.Value,
+                                    ref currentRegion, 5, 5);
+
+                                for (int a = 0; a < endRegions.Count; a++)
+                                {
+                                    RegionsData.regionPEs[endRegions[a]].Unpack(world.Value, out int endRegionEntity);
+                                    ref CHexRegion endRegion = ref regionPool.Value.Get(endRegionEntity);
+
+                                    RegionSetColor(ref endRegion, Color.red);
+                                }
+
+                                //RegionSetColor(ref currentRegion, Color.red);
+                            }
+                        }
+                    }
+                    else
+                    {
+                        //Запрашиваем отображение подпанели объекта региона
+                        GameDisplayObjectPanelRequest(
+                            DisplayObjectPanelRequestType.Region,
+                            currentRegion.selfPE);
+                    }
+                }
             }
         }
 
-        void OnDraw()
+        bool HexasphereCheckMousePosition(
+            out Vector3 position, out Ray ray,
+            out EcsPackedEntity regionPE)
         {
-            List<EcsPackedEntity> path = GetPath();
+            //Проверяем, находится ли курсор над гексасферой
+            InputData.isMouseOver = HexasphereGetHitPoint(out position, out ray);
 
-            if (path == null || path.Count == 0)
+            regionPE = new();
+
+            //Если курсор находится над гексасферой
+            if (InputData.isMouseOver == true)
             {
-                return;
-            }
+                //Определяем индекс региона, над которым находится курсор
+                int regionIndex = RegionGetInRayDirection(
+                    ray, position,
+                    out Vector3 hitPosition);
 
-            //Берём компонент первого региона
-            path[0].Unpack(world.Value, out int firstRegionEntity);
-            ref CHexRegion firstRegion = ref regionPool.Value.Get(firstRegionEntity);
-
-            Vector3 a, b, c = firstRegion.Position;
-
-            for (int i = 1; i < path.Count; i++)
-            {
-                //Берём компонент предыдущего региона
-                path[i - 1].Unpack(world.Value, out int previousRegionEntity);
-                ref CHexRegion previousRegion = ref regionPool.Value.Get(previousRegionEntity);
-
-                //Берём компонент текущего региона
-                path[i].Unpack(world.Value, out int currentRegionEntity);
-                ref CHexRegion currentRegion = ref regionPool.Value.Get(currentRegionEntity);
-
-                a = c;
-                b = previousRegion.Position;
-                c = (b + currentRegion.Position) * 0.5f;
-
-                for (float t = 0f; t < 1f; t += 0.1f)
+                //Если индекс региона больше нуля
+                if (regionIndex >= 0)
                 {
-                    GameObject.CreatePrimitive(PrimitiveType.Sphere).transform.position
-                        = Bezier.GetPoint(a, b, c, t);
+                    //Берём регион
+                    RegionsData.regionPEs[regionIndex].Unpack(world.Value, out int regionEntity);
+                    ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                    //Обновляем индекс последнего региона, над которым находился курсор
+                    InputData.lastHoverRegionIndex = region.Index;
+
+                    //Если индекс региона не равен индексу последнего подсвеченного
+                    if (region.Index != InputData.lastHighlightedRegionIndex)
+                    {
+                        //Если индекс последнего подсвеченного региона больше нуля
+                        if (InputData.lastHighlightedRegionIndex > 0)
+                        {
+                            //Скрываем подсветку
+                            RegionHideHighlighted();
+                        }
+
+                        //Обновляем подсвеченный регион
+                        InputData.lastHighlightedRegionPE = region.selfPE;
+                        InputData.lastHighlightedRegionIndex = region.Index;
+
+                        //Подсвечиваем регион
+                        RegionSetMaterial(
+                            regionIndex,
+                            mapGenerationData.Value.regionHighlightMaterial,
+                            true);
+                    }
+
+                    regionPE = region.selfPE;
+
+                    return true;
+                }
+
+                //Если индекс региона больше нуля и текущий индекс - не индекс последнего подсвеченного
+                /*if (regionIndex >= 0 && regionIndex != InputData.lastHighlightedRegionIndex)
+                {
+                    //Берём текущий регион
+                    RegionsData.regionPEs[regionIndex].Unpack(world.Value, out int regionEntity);
+                    ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                    //Обновляем индекс последнего региона, над которым находился курсор
+                    InputData.lastHoverRegionIndex = region.Index;
+
+                    //Если последний подсвеченный регион не пуст
+                    if (InputData.lastHighlightedRegionPE.Unpack(world.Value, out int highlightedRegionEntity))
+                    {
+                        //Берём подсвеченный регион
+                        ref CHexRegion highlightedRegion = ref regionPool.Value.Get(highlightedRegionEntity);
+
+                        //Скрываем подсветку
+                        RegionHideHighlighted();
+                    }
+
+                    //Обновляем текущий подсвеченный регион
+                    InputData.lastHighlightedRegionPE = region.selfPE;
+                    InputData.lastHighlightedRegionIndex = region.Index;
+
+                    //Подсвечиваем регион
+                    RegionSetMaterial(
+                        regionIndex,
+                        mapGenerationData.Value.regionHighlightMaterial,
+                        true);
+                }*/
+                //Иначе, если индекс региона меньше нуля и индекс последнего подсвеченного региона больше нуля
+                else if (regionIndex < 0 && InputData.lastHighlightedRegionIndex >= 0)
+                {
+                    //Скрываем подсветку
+                    RegionHideHighlighted();
+                }
+            }
+            
+            return false;
+        }
+
+        bool HexasphereGetHitPoint(
+            out Vector3 position,
+            out Ray ray)
+        {
+            //Берём луч из положения мыши
+            ray = inputData.Value.camera.ScreenPointToRay(Input.mousePosition);
+
+            //Вызываем функцию
+            return HexasphereGetHitPoint(ray, out position);
+        }
+
+        bool HexasphereGetHitPoint(
+            Ray ray,
+            out Vector3 position)
+        {
+            //Если луч касается объекта
+            if (Physics.Raycast(ray, out RaycastHit hit))
+            {
+                //Если луч касается объекта гексасферы
+                if (hit.collider.gameObject == SceneData.HexasphereGO)
+                {
+                    //Определяем точку касания
+                    position = hit.point;
+
+                    //И возвращаем true
+                    return true;
                 }
             }
 
-            //Берём компонент последнего региона
-            path[path.Count - 1].Unpack(world.Value, out int lastRegionEntity);
-            ref CHexRegion lastRegion = ref regionPool.Value.Get(lastRegionEntity);
+            position = Vector3.zero;
+            return false;
+        }
 
-            a = c;
-            b = lastRegion.Position;
-            c = b;
+        int RegionGetInRayDirection(
+            Ray ray,
+            Vector3 worldPosition,
+            out Vector3 hitPosition)
+        {
+            hitPosition = worldPosition;
 
-            for (float t = 0f; t < 1f; t += 0.1f)
+            //Определяем итоговую точку касания
+            Vector3 minPoint = worldPosition;
+            Vector3 maxPoint = worldPosition + 0.5f * MapGenerationData.hexasphereScale * ray.direction;
+
+            float rangeMin = MapGenerationData.hexasphereScale * 0.5f;
+            rangeMin *= rangeMin;
+
+            float rangeMax = worldPosition.sqrMagnitude;
+
+            float distance;
+            Vector3 bestPoint = maxPoint;
+
+            //Уточняем точку
+            for (int a = 0; a < 10; a++)
             {
-                GameObject.CreatePrimitive(PrimitiveType.Sphere).transform.position
-                    = Bezier.GetPoint(a, b, c, t);
+                Vector3 midPoint = (minPoint + maxPoint) * 0.5f;
+
+                distance = midPoint.sqrMagnitude;
+
+                if (distance < rangeMin)
+                {
+                    maxPoint = midPoint;
+                    bestPoint = midPoint;
+                }
+                else if (distance > rangeMax)
+                {
+                    maxPoint = midPoint;
+                }
+                else
+                {
+                    minPoint = midPoint;
+                }
+            }
+
+            //Берём индекс региона 
+            int nearestRegionIndex = RegionGetAtLocalPosition(SceneData.HexasphereGO.transform.InverseTransformPoint(worldPosition));
+            //Если индекс меньше нуля, выходим из функции
+            if (nearestRegionIndex < 0)
+            {
+                return -1;
+            }
+
+            //Определяем индекс региона
+            Vector3 currentPoint = worldPosition;
+
+            //Берём ближайший регион
+            RegionsData.regionPEs[nearestRegionIndex].Unpack(world.Value, out int nearestRegionEntity);
+            ref CHexRegion nearestRegion = ref regionPool.Value.Get(nearestRegionEntity);
+
+            //Определяем верхнюю точку региона
+            Vector3 regionTop = SceneData.HexasphereGO.transform.TransformPoint(
+                nearestRegion.center * (1.0f + nearestRegion.ExtrudeAmount * MapGenerationData.extrudeMultiplier));
+
+            //Определяем высоту региона и высоту луча
+            float regionHeight = regionTop.sqrMagnitude;
+            float rayHeight = currentPoint.sqrMagnitude;
+
+            float minDistance = 1e6f;
+            distance = minDistance;
+
+            //Определяем индекс региона-кандидата
+            int candidateRegionIndex = -1;
+
+            const int NUM_STEPS = 10;
+            //Уточняем точку
+            for (int a = 1; a <= NUM_STEPS; a++)
+            {
+                distance = Mathf.Abs(rayHeight - regionHeight);
+
+                //Если расстояние меньше минимального
+                if (distance < minDistance)
+                {
+                    //Обновляем минимальное расстояние и кандидата
+                    minDistance = distance;
+                    candidateRegionIndex = nearestRegionIndex;
+                    hitPosition = currentPoint;
+                }
+
+                if (rayHeight < regionHeight)
+                {
+                    return candidateRegionIndex;
+                }
+
+                float t = a / (float)NUM_STEPS;
+
+                currentPoint = worldPosition * (1f - t) + bestPoint * t;
+
+                nearestRegionIndex = RegionGetAtLocalPosition(SceneData.HexasphereGO.transform.InverseTransformPoint(currentPoint));
+
+                if (nearestRegionIndex < 0)
+                {
+                    break;
+                }
+
+                //Обновляем ближайший регион
+                RegionsData.regionPEs[nearestRegionIndex].Unpack(world.Value, out nearestRegionEntity);
+                nearestRegion = ref regionPool.Value.Get(nearestRegionEntity);
+
+                regionTop = SceneData.HexasphereGO.transform.TransformPoint(
+                    nearestRegion.center * (1.0f + nearestRegion.ExtrudeAmount * MapGenerationData.extrudeMultiplier));
+
+                //Определяем высоту региона и высоту луча
+                regionHeight = regionTop.sqrMagnitude;
+                rayHeight = currentPoint.sqrMagnitude;
+            }
+
+            //Если расстояние меньше минимального
+            if (distance < minDistance)
+            {
+                //Обновляем минимальное расстояние и кандидата
+                minDistance = distance;
+                candidateRegionIndex = nearestRegionIndex;
+                hitPosition = currentPoint;
+            }
+
+            if (rayHeight < regionHeight)
+            {
+                return candidateRegionIndex;
+            }
+            else
+            {
+                return -1;
             }
         }
 
-        EcsPackedEntity GetRegionUnderCursor()
+        int RegionGetAtLocalPosition(
+            Vector3 localPosition)
         {
-            //Берём луч из положения мыши
-            Ray inputRay = inputData.Value.camera.ScreenPointToRay(Input.mousePosition);
-
-            //Возвращаем PE региона  на позиции пересечения
-            return GetRegionPE(inputRay);
-        }
-
-        EcsPackedEntity GetRegionPE(
-            Ray ray)
-        {
-            //Если луч пересекает коллайдер
-            if (Physics.Raycast(ray, out RaycastHit hit))
+            //Проверяем, не последний ли это регион
+            if (InputData.lastHitRegionIndex >= 0 && InputData.lastHitRegionIndex < RegionsData.regionPEs.Length)
             {
-                //Возвращаем PE региона по точке пересечения
-                return GetRegionPE(hit.point);
+                //Берём последний регион
+                RegionsData.regionPEs[InputData.lastHitRegionIndex].Unpack(world.Value, out int lastHitRegionEntity);
+                ref CHexRegion lastHitRegion = ref regionPool.Value.Get(lastHitRegionEntity);
+
+                //Определяем расстояние до центра региона
+                float distance = Vector3.SqrMagnitude(lastHitRegion.center - localPosition);
+
+                bool isValid = true;
+
+                //Для каждого соседнего региона
+                for (int a = 0; a < lastHitRegion.neighbourRegionPEs.Length; a++)
+                {
+                    //Берём соседний регион
+                    lastHitRegion.neighbourRegionPEs[a].Unpack(world.Value, out int neighbourRegionEntity);
+                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
+
+                    //Определяем расстояние до центре региона
+                    float otherDistance = Vector3.SqrMagnitude(neighbourRegion.center - localPosition);
+
+                    //Если оно меньше расстояния до последнего региона
+                    if (otherDistance < distance)
+                    {
+                        //Отмечаем это и выходим из цикла
+                        isValid = false;
+                        break;
+                    }
+                }
+
+                //Если это последний регион
+                if (isValid == true)
+                {
+                    return InputData.lastHitRegionIndex;
+                }
             }
             //Иначе
             else
             {
-                //Возвращаем пустую PE
-                return new();
-            }
-        }
-
-        EcsPackedEntity GetRegionPE(
-            Vector3 position)
-        {
-            //Определяем позицию клика
-            position = sceneData.Value.coreObject.transform.InverseTransformPoint(position);
-
-            //Вычисляем координаты региона
-            DHexCoordinates coordinates = DHexCoordinates.FromPosition(position);
-
-            return GetRegionPE(coordinates);
-        }
-
-        EcsPackedEntity GetRegionPE(
-            DHexCoordinates coordinates)
-        {
-            int z = coordinates.Z;
-
-            //Если координата выходит за границы карты
-            if (z < 0 || z >= mapGenerationData.Value.regionCountZ)
-            {
-                return new();
+                //Обнуляем индекс последнего региона
+                InputData.lastHitRegionIndex = 0;
             }
 
-            int x = coordinates.X + z / 2;
+            //Следуем кратчайшему пути к минимальному расстоянию
+            RegionsData.regionPEs[InputData.lastHitRegionIndex].Unpack(world.Value, out int nearestRegionEntity);
+            ref CHexRegion nearestRegion = ref regionPool.Value.Get(nearestRegionEntity);
 
-            //Если координата выходит за границы карты
-            if (x < 0 || x >= mapGenerationData.Value.regionCountX)
+            float minDist = 1e6f;
+
+            //Для каждого региона
+            for (int a = 0; a < RegionsData.regionPEs.Length; a++)
             {
-                return new();
-            }
+                //Берём ближайший регион 
+                RegionGetNearestToPosition(
+                    ref nearestRegion.neighbourRegionPEs,
+                    localPosition,
+                    out float regionDistance).Unpack(world.Value, out int newNearestRegionEntity);
 
-            return mapGenerationData.Value.regionPEs[x + z * mapGenerationData.Value.regionCountX];
-        }
-
-        void RegionsEdit(
-            ref CHexRegion centerRegion)
-        {
-            //Берём координаты центрального региона
-            int centerX = centerRegion.coordinates.X;
-            int centerZ = centerRegion.coordinates.Z;
-
-            //Случайно определяем размер кисти
-            int brushSize = 0;
-
-            //Для каждого региона в нижней половине кисти
-            for (int r = 0, z = centerZ - brushSize; z <= centerZ; z++, r++)
-            {
-                for (int x = centerX - r; x <= centerX + brushSize; x++)
+                //Если расстояние меньше минимального
+                if (regionDistance < minDist)
                 {
-                    //Если существует регион с такими координатами
-                    if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int regionEntity))
-                    {
-                        //Берём компонент региона
-                        ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+                    //Обновляем регион и минимальное расстояние 
+                    nearestRegion = ref regionPool.Value.Get(newNearestRegionEntity);
 
-                        //Редактируем регион
-                        RegionEdit(ref region);
-                    }
+                    minDist = regionDistance;
+                }
+                //Иначе выходим из цикла
+                else
+                {
+                    break;
                 }
             }
-            //Для каждого региона в верхней половине кисти
-            for (int r = 0, z = centerZ + brushSize; z > centerZ; z--, r++)
-            {
-                for (int x = centerX - brushSize; x <= centerX + r; x++)
-                {
-                    //Если существует регион с такими координатами
-                    if (GetRegionPE(new DHexCoordinates(x, z)).Unpack(world.Value, out int regionEntity))
-                    {
-                        //Берём компонент региона
-                        ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
 
-                        //Редактируем регион
-                        RegionEdit(ref region);
-                    }
+            //Индекс последнего региона - это индекс ближайшего
+            InputData.lastHitRegionIndex = nearestRegion.Index;
+
+            return InputData.lastHitRegionIndex;
+        }
+
+        EcsPackedEntity RegionGetNearestToPosition(
+            ref EcsPackedEntity[] regionPEs,
+            Vector3 localPosition,
+            out float minDistance)
+        {
+            minDistance = float.MaxValue;
+
+            EcsPackedEntity nearestRegionPE = new();
+
+            //Для каждого региона в массиве
+            for (int a = 0; a < regionPEs.Length; a++)
+            {
+                //Берём регион
+                regionPEs[a].Unpack(world.Value, out int regionEntity);
+                ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+                //Берём центр региона
+                Vector3 center = region.center;
+
+                //Рассчитываем расстояние
+                float distance 
+                    = (center.x - localPosition.x) * (center.x - localPosition.x) 
+                    + (center.y - localPosition.y) * (center.y - localPosition.y) 
+                    + (center.z - localPosition.z) * (center.z - localPosition.z);
+
+                //Если расстояние меньше минимального
+                if (distance < minDistance)
+                {
+                    //Обновляем регион и минимальное расстояние
+                    nearestRegionPE = region.selfPE;
+                    minDistance = distance;
                 }
             }
+
+            return nearestRegionPE;
         }
 
         void RegionEdit(
             ref CHexRegion region)
         {
-
-
             if (eUI.Value.gameWindow.activeTerrainTypeIndex >= 0)
             {
                 region.TerrainTypeIndex = eUI.Value.gameWindow.activeTerrainTypeIndex;
@@ -2228,616 +2402,324 @@ namespace SandOcean.UI
             {
                 region.WaterLevel = eUI.Value.gameWindow.activeWaterLevel;
             }
-            if (eUI.Value.gameWindow.applySpecialIndex == true)
-            {
-                region.SpecialIndex = eUI.Value.gameWindow.activeSpecialIndex;
-            }
-            if (eUI.Value.gameWindow.applyUrbanLevel == true)
-            {
-                region.UrbanLevel = eUI.Value.gameWindow.activeUrbanLevel;
-            }
-            if (eUI.Value.gameWindow.applyFarmLevel == true)
-            {
-                region.FarmLevel = eUI.Value.gameWindow.activeFarmLevel;
-            }
-            if (eUI.Value.gameWindow.applyPlantLevel == true)
-            {
-                region.PlantLevel = eUI.Value.gameWindow.activePlantLevel;
-            }
-            //Если активен режим удаления рек
-            if (eUI.Value.gameWindow.riverMode == OptionalToggle.No)
-            {
-                //Удаляем реку
-                RegionRemoveRiver(
-                    ref region);
-            }
-            //Если активен режим удаления дорог
-            if (eUI.Value.gameWindow.roadMode == OptionalToggle.No)
-            {
-                //Удаляем дороги
-                RegionRemoveRoads(
-                    ref region);
-            }
-            //Если режим стен не неактивен
-            if (eUI.Value.gameWindow.walledMode != OptionalToggle.Ignore)
-            {
-                //Устанавливаем стены согласно переключателю
-                region.Walled = eUI.Value.gameWindow.walledMode == OptionalToggle.Yes;
-            }
-            //Если перетаскивание активно
-            if (inputData.Value.isDrag == true)
-            {
-                //Если предыдущий регион существует
-                if (region.GetNeighbour(inputData.Value.dragDirection.Opposite()).Unpack(world.Value, out int previousRegionEntity))
-                {
-                    //Берём компонент предыдущего региона
-                    ref CHexRegion previousRegion
-                        = ref regionPool.Value.Get(previousRegionEntity);
-
-                    //Если активен режим создания рек
-                    if (eUI.Value.gameWindow.riverMode == OptionalToggle.Yes)
-                    {
-                        //Создаём реку
-                        RegionSetOutgoingRiver(
-                            ref previousRegion,
-                            inputData.Value.dragDirection);
-                    }
-                    //Иначе, если активен режим создания дорог
-                    else if ( eUI.Value.gameWindow.roadMode == OptionalToggle.Yes)
-                    {
-                        //Создаём дорогу
-                        RegionAddRoad(
-                            ref previousRegion,
-                            inputData.Value.dragDirection);
-                    }
-                }
-            }
-
-            //Запрашиваем триангуляцию чанка
-            ChunkRefreshSelfRequest(
-                ref region);
         }
 
-        void ValidateDrag(
-            ref CHexRegion region)
+
+        bool RegionSetMaterial(
+            int regionIndex,
+            Material material,
+            bool temporary = false)
         {
-            //Берём компонент предыдущего региона
-            if (inputData.Value.previousRegionPE.Unpack(world.Value, out int previousRegionEntity))
-            {
-                ref CHexRegion previousRegion
-                    = ref regionPool.Value.Get(previousRegionEntity);
+            //Берём регион
+            RegionsData.regionPEs[regionIndex].Unpack(world.Value, out int regionEntity);
+            ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
 
-                //Для каждого PE соседа
-                for (inputData.Value.dragDirection = HexDirection.NE; inputData.Value.dragDirection <= HexDirection.NW; inputData.Value.dragDirection++)
+            //Если назначается временный материал
+            if (temporary == true)
+            {
+                //Если этот временный материал уже назначен региону
+                if (region.tempMaterial == material)
                 {
-                    //Если сосед - это текущий регион
-                    if (previousRegion.GetNeighbour(inputData.Value.dragDirection).EqualsTo(region.selfPE) == true)
-                    {
-                        //Отмечаем, что перетаскивание активно
-                        inputData.Value.isDrag = true;
-
-                        //Выходим из функции
-                        return;
-                    }
-                }
-            }
-
-            //Отмечаем, что перетаскивание неактивно
-            inputData.Value.isDrag = false;
-        }
-
-        void RegionSetOutgoingRiver(
-            ref CHexRegion region,
-            HexDirection direction)
-        {
-            //Если река уже существует
-            if (region.HasOutgoingRiver == true
-                && region.OutgoingRiver == direction)
-            {
-                //Выходим из функции
-                return;
-            }
-
-            //Если сосед с этого направления существует
-            if (region.GetNeighbour(direction).Unpack(world.Value, out int neighbourRegionEntity))
-            {
-                //Берём компонент соседа
-                ref CHexRegion neighbourRegion
-                    = ref regionPool.Value.Get(neighbourRegionEntity);
-
-                //Если высота соседа больше
-                if (region.IsValidRiverDestination(ref neighbourRegion) == false)
-                {
-                    //Выходим из функции
-                    return;
+                    //То ничего не меняется
+                    return false;
                 }
 
-                //Удаляем исходяшую реку
-                RegionRemoveOutgoingRiver(
-                    ref region);
-                //Если направление занято входящей рекой
-                if (region.HasIncomingRiver == true
-                    && region.IncomingRiver == direction)
-                {
-                    //Удаляем входящую реку
-                    RegionRemoveIncomingRiver(
-                        ref region);
-                }
-
-                //Создаём исходящую реку
-                region.HasOutgoingRiver = true;
-                region.OutgoingRiver = direction;
-                region.SpecialIndex = 0;
-
-                //Создаём входящую реку
-                RegionRemoveIncomingRiver(
-                    ref neighbourRegion);
-                neighbourRegion.HasIncomingRiver = true;
-                neighbourRegion.IncomingRiver = direction.Opposite();
-                neighbourRegion.SpecialIndex = 0;
-
-                //Удаляем дорогу
-                RegionSetRoad(
-                    ref region,
-                    (int)direction,
-                    false);
-            }
-        }
-
-        void RegionRemoveOutgoingRiver(
-            ref CHexRegion region)
-        {
-            //Если регион имеет исходящую реку
-            if (region.HasOutgoingRiver == true)
-            {
-                //Удаляем исходящую реку
-                region.HasOutgoingRiver = false;
-
-                //Берём компонент соседа, куда идёт река
-                region.GetNeighbour(region.OutgoingRiver).Unpack(world.Value, out int neighbourRegionEntity);
-                ref CHexRegion neighbourRegion
-                    = ref regionPool.Value.Get(neighbourRegionEntity);
-
-                //Удаляем входящую реку
-                neighbourRegion.HasIncomingRiver = false;
-
-                //Запрашиваем триангуляцию чанка
-                ChunkRefreshSelfRequest(
-                    ref region);
-                //Если соседний регион относится к другому чанку
-                if (region.parentChunkPE.EqualsTo(in neighbourRegion.parentChunkPE) == false)
-                {
-                    //Запрашиваем триангуляцию чанка
-                    ChunkRefreshSelfRequest(
-                        ref neighbourRegion);
-                }
-            }
-        }
-
-        void RegionRemoveIncomingRiver(
-            ref CHexRegion region)
-        {
-            //Если регион имеет исходящую реку
-            if (region.HasIncomingRiver == true)
-            {
-                //Удаляем исходящую реку
-                region.HasIncomingRiver = false;
-
-                //Берём компонент соседа, куда идёт река
-                region.GetNeighbour(region.IncomingRiver).Unpack(world.Value, out int neighbourRegionEntity);
-                ref CHexRegion neighbourRegion
-                    = ref regionPool.Value.Get(neighbourRegionEntity);
-
-                //Удаляем входящую реку
-                neighbourRegion.HasOutgoingRiver = false;
-
-                //Запрашиваем триангуляцию чанка
-                ChunkRefreshSelfRequest(
-                    ref region);
-                //Если соседний регион относится к другому чанку
-                if (region.parentChunkPE.EqualsTo(in neighbourRegion.parentChunkPE) == false)
-                {
-                    //Запрашиваем триангуляцию чанка
-                    ChunkRefreshSelfRequest(
-                        ref neighbourRegion);
-                }
-            }
-        }
-
-        void RegionRemoveRiver(
-            ref CHexRegion region)
-        {
-            //Удаляем исходящую и входящую реки
-            RegionRemoveOutgoingRiver(
-                ref region);
-            RegionRemoveIncomingRiver(
-                ref region);
-        }
-
-        void RegionAddRoad(
-            ref CHexRegion region,
-            HexDirection direction)
-        {
-            //Если дорога в данном направлении отсутствует
-            if (region.roads[(int)direction] == false
-                && region.IsSpecial == false
-                //И реки через данное ребро не существует
-                && region.HasRiverThroughEdge(direction) == false)
-            {
-                //Создаём дорогу
-                RegionSetRoad(
-                    ref region,
-                    (int)direction,
-                    true);
-            }
-        }
-
-        void RegionRemoveRoads(
-            ref CHexRegion region)
-        {
-            //Для каждой возможой дороги в регионе
-            for (int a = 0; a < region.neighbourRegionPEs.Length; a++)
-            {
-                //Если в данном направлении есть дорога
-                if (region.roads[a] == true)
-                {
-                    //Удаляем дорогу
-                    RegionSetRoad(
-                        ref region,
-                        a,
-                        false);
-                }
-            }
-        }
-
-        void RegionSetRoad(
-            ref CHexRegion region,
-            int index,
-            bool state)
-        {
-            //Задаём дороге нужное состояние
-            region.roads[index] = state;
-
-            //Берём компонент соседа с данного направления
-            region.neighbourRegionPEs[index].Unpack(world.Value, out int neighbourRegionEntity);
-            ref CHexRegion neighbourRegion
-                = ref regionPool.Value.Get(neighbourRegionEntity);
-
-            //Задаём дороге нужное состояние
-            neighbourRegion.roads[(int)((HexDirection)index).Opposite()] = state;
-
-            //Запрашиваем триангуляцию чанка
-            ChunkRefreshSelfRequest(
-                ref region);
-            //Если соседний регион относится к другому чанку
-            if (region.parentChunkPE.EqualsTo(in neighbourRegion.parentChunkPE) == false)
-            {
-                //Запрашиваем триангуляцию чанка
-                ChunkRefreshSelfRequest(
-                    ref neighbourRegion);
-            }
-        }
-
-        void ChunkRefreshSelfRequest(
-            ref CHexRegion region)
-        {
-            //Берём компонент родительского чанка региона
-            region.parentChunkPE.Unpack(world.Value, out int parentChunkEntity);
-            ref CHexChunk parentChunk = ref chunkPool.Value.Get(parentChunkEntity);
-
-            //Если ещё не существует самозапроса обновления чанка
-            if (mapChunkRefreshSelfRequestPool.Value.Has(parentChunkEntity) == false)
-            {
-                //Назначаем сущности самозапрос обновления чанка
-                mapChunkRefreshSelfRequestPool.Value.Add(parentChunkEntity);
-            }
-
-            //Для каждого соседа региона
-            for (int a = 0; a < region.neighbourRegionPEs.Length; a++)
-            {
-                //Если сосед существует 
-                if (region.neighbourRegionPEs[a].Unpack(world.Value, out int neighbourRegionEntity))
-                {
-                    //Берём компонент соседа
-                    ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
-
-                    //Берём сущность родительского чанка региона
-                    neighbourRegion.parentChunkPE.Unpack(world.Value, out int neighbourParentChunkEntity);
-
-                    //Если ещё не существует самозапроса обновления чанка
-                    if (mapChunkRefreshSelfRequestPool.Value.Has(neighbourParentChunkEntity) == false)
-                    {
-                        //Назначаем сущности самозапрос обновления чанка
-                        mapChunkRefreshSelfRequestPool.Value.Add(neighbourParentChunkEntity);
-                    }
-                }
-            }
-        }
-
-        void QuitGameEvent()
-        {
-            //Создаём новую сущность и назначаем ей компонент события выхода из игры
-            int eventEntity = world.Value.NewEntity();
-            ref EQuitGame quitGameEvent
-                = ref quitGameEventPool.Value.Add(eventEntity);
-        }
-
-        void FindPath(
-            ref CHexRegion fromRegion, ref CHexRegion toRegion)
-        {
-            //Очищаем путь
-            ClearPath();
-
-            //Сохраняем стартовый и конечный регионы
-            inputData.Value.currentPathFrom = fromRegion.selfPE;
-            inputData.Value.currentPathTo = toRegion.selfPE;
-            
-            //Определяем, существует ли путь
-            inputData.Value.currentPathExists = Search(ref fromRegion, ref toRegion);
-
-            //Отображаем путь
-            ShowPath();
-        }
-
-        void ShowPath()
-        {
-            //Берём компоненты стартового и конечного регионов
-            inputData.Value.currentPathFrom.Unpack(world.Value, out int fromRegionEntity);
-            ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
-
-            inputData.Value.currentPathTo.Unpack(world.Value, out int toRegionEntity);
-            ref CHexRegion toRegion = ref regionPool.Value.Get(toRegionEntity);
-
-            //Если путь существует 
-            if (inputData.Value.currentPathExists == true)
-            {
-                //Берём конечный регион как текущий
-                ref CHexRegion currentRegion = ref regionPool.Value.Get(toRegionEntity);
-
-                //Пока текущий регион - не стартовый
-                while (currentRegion.selfPE.EqualsTo(inputData.Value.currentPathFrom) == false)
-                {
-                    //Отображаем расстояиние и подсветку региона
-                    currentRegion.SetLabel(currentRegion.Distance.ToString());
-                    currentRegion.EnableHighlight(Color.white);
-
-                    //Берём компонент предыдущего региона
-                    currentRegion.PathFromPE.Unpack(world.Value, out int currentRegionEntity);
-                    currentRegion = ref regionPool.Value.Get(currentRegionEntity);
-                }
-            }
-
-            //Отображаем подсветку стартового и конечного регионов
-            fromRegion.EnableHighlight(Color.blue);
-            toRegion.EnableHighlight(Color.red);
-        }
-
-        void ClearPath()
-        {
-            //Если конечный регион существует
-            if (inputData.Value.currentPathTo.Unpack(world.Value, out int toRegionEntity))
-            {
-                //Берём компонент конечного региона
-                ref CHexRegion toRegion = ref regionPool.Value.Get(toRegionEntity);
-
-                //Если путь существует 
-                if (inputData.Value.currentPathExists == true)
-                {
-                    //Берём конечный регион как текущий
-                    ref CHexRegion currentRegion = ref regionPool.Value.Get(toRegionEntity);
-
-                    //Пока текущий регион - не стартовый
-                    while (currentRegion.selfPE.EqualsTo(inputData.Value.currentPathFrom) == false)
-                    {
-                        //Очищаем расстояиние и подсветку региона
-                        currentRegion.SetLabel(null);
-                        currentRegion.DisableHighlight();
-
-                        //Берём компонент предыдущего региона
-                        currentRegion.PathFromPE.Unpack(world.Value, out int currentRegionEntity);
-                        currentRegion = ref regionPool.Value.Get(currentRegionEntity);
-                    }
-                }
-                //Иначе, если путь недопустим
-                else if (inputData.Value.currentPathFrom.Unpack(world.Value, out int fromRegionEntity))
-                {
-                    //Берём компонент стартового региона
-                    ref CHexRegion fromRegion = ref regionPool.Value.Get(fromRegionEntity);
-
-                    //Отключаем подсветку стартового и конечного регионов
-                    fromRegion.DisableHighlight();
-                    toRegion.DisableHighlight();
-                }
-            }
-
-            //Очищаем PE стартового и конечного регионов
-            inputData.Value.currentPathFrom = inputData.Value.currentPathTo = new();
-        }
-
-        bool Search(
-            ref CHexRegion fromRegion, ref CHexRegion toRegion)
-        {
-            if (inputData.Value.searchFrontier == null)
-            {
-                inputData.Value.searchFrontier = new();
-            }
-            else
-            {
-                inputData.Value.searchFrontier.Clear();
-            }
-
-            foreach (int cellEntity
-                in regionFilter.Value)
-            {
-                //Берём компонент ячейки
-                ref CHexRegion currentCell
-                    = ref regionPool.Value.Get(cellEntity);
-
-                //Очищаем ячейку
-                currentCell.SearchPhase = 0;
-                //currentCell.SetLabel(null);
-                //currentCell.DisableHighlight();
-            }
-
-            //Выводим стартовую ячейку за границу поиска
-            fromRegion.SearchPhase = 2;
-            fromRegion.Distance = 0;
-            fromRegion.EnableHighlight(
-                Color.blue);
-
-            //Берём сущность искомой начальной ячейки
-            fromRegion.selfPE.Unpack(world.Value, out int fromCellEntity);
-
-            //Заносим её первой в очередь
-            inputData.Value.searchFrontier.Enqueue(
-                fromRegion.selfPE,
-                0);
-
-            while (inputData.Value.searchFrontier.Count > 0)
-            {
-                //Берём компонент текущей ячейки
-                inputData.Value.searchFrontier.Dequeue().cellPE.Unpack(world.Value, out int currentCellEntity);
-                ref CHexRegion currentCell
-                    = ref regionPool.Value.Get(currentCellEntity);
-
-                //Увеличиваем фазу поиска ячейки
-                currentCell.SearchPhase += 1;
-
-                //Если текущая ячейка совпадает с искомой
-                if (currentCell.selfPE.EqualsTo(toRegion.selfPE) == true)
-                {
-                    //То путь найден
-                    return true;
-                }
-
-                //Для каждой соседней ячейки
-                for(HexDirection a = HexDirection.NE; a <= HexDirection.NW; a++)
-                {
-                    //Если ячейка существует
-                    if (currentCell.GetNeighbour(a).Unpack(world.Value, out int neighbourCellEntity))
-                    {
-                        //Берём компонент соседней ячейки
-                        ref CHexRegion neighbourCell
-                            = ref regionPool.Value.Get(neighbourCellEntity);
-
-                        //Если ячейка находится за границей поиска
-                        if (neighbourCell.SearchPhase > 2)
-                        {
-                            //Переходим к следующей
-                            continue;
-                        }
-
-                        //Определяем тип ребра
-                        HexEdgeType edgeType = MapGenerationData.GetEdgeType(currentCell.Elevation, neighbourCell.Elevation);
-
-                        //Если ячейка находится под водой
-                        if (neighbourCell.IsUnderwater == true
-                            //Или тип ребра - обрыв
-                            || edgeType == HexEdgeType.Cliff
-                            //Или дорогу преграждает стена
-                            || currentCell.Walled != neighbourCell.Walled)
-                        {
-                            //Переходим к следующей ячейке
-                            continue;
-                        }
-
-                        int distance = currentCell.Distance;
-
-                        if (currentCell.HasRoadThroughEdge(a))
-                        {
-                            distance += 1;
-                        }
-                        else
-                        {
-                            distance += edgeType == HexEdgeType.Flat ? 5 : 10;
-
-                            distance += neighbourCell.UrbanLevel + neighbourCell.FarmLevel + neighbourCell.PlantLevel;
-                        }
-
-                        //Если расстояние до соседа ещё не было указано
-                        if (neighbourCell.SearchPhase < 2)
-                        {
-                            //Выводим ячейку за границу поиска
-                            neighbourCell.SearchPhase = 2;
-
-                            //Указываем расстояние до соседа
-                            neighbourCell.Distance = distance;
-
-                            neighbourCell.PathFromPE = currentCell.selfPE;
-
-                            neighbourCell.SearchHeuristic = neighbourCell.coordinates.DistanceTo(
-                                toRegion.coordinates);
-
-                            //Заносим его сущность в очередь
-                            inputData.Value.searchFrontier.Enqueue(
-                                neighbourCell.selfPE,
-                                neighbourCell.SearchPriority);
-                        }
-                        //Иначе, если расстояние до соседа больше текущего
-                        else if(distance < neighbourCell.Distance)
-                        {
-                            //Сохраняем приоритет
-                            int oldPriority = neighbourCell.SearchPriority;
-
-                            //Обновляем расстояние до него
-                            neighbourCell.Distance = distance;
-
-                            neighbourCell.PathFromPE = currentCell.selfPE;
-
-                            inputData.Value.searchFrontier.Change(
-                                neighbourCell.selfPE, 
-                                oldPriority,
-                                neighbourCell.SearchPriority);
-                        }
-                    }
-                }
-            }
-
-            //Возвращаем, что путь не был найден
-            return false;
-        }
-
-        List<EcsPackedEntity> GetPath()
-        {
-            //Если текущий путь не существует
-            if (inputData.Value.currentPathExists == false)
-            {
-                //Возвращаем null
-                return null;
+                //Назначаем временный материал рендереру региона
+                region.renderer.sharedMaterial = material;
+                region.renderer.enabled = true;
             }
             //Иначе
             else
             {
-                //Создаём список из пула
-                List<EcsPackedEntity> path = ListPool<EcsPackedEntity>.Get();
-
-                //Берём компонент конечного региона
-                inputData.Value.currentPathTo.Unpack(world.Value, out int currentRegionEntity);
-                ref CHexRegion currentRegion = ref regionPool.Value.Get(currentRegionEntity);
-
-                //Заносим конечный регион в список
-                path.Add(currentRegion.selfPE);
-
-                //Пока предыдущий регион не равен стартовому
-                while (currentRegion.PathFromPE.EqualsTo(inputData.Value.currentPathFrom) == false)
+                //Если этот основной материал уже назначен региону
+                if (region.customMaterial == material)
                 {
-                    //Берём компонент предыдущего региона
-                    currentRegion.PathFromPE.Unpack(world.Value, out currentRegionEntity);
-                    currentRegion = ref regionPool.Value.Get(currentRegionEntity);
-
-                    //Заносим текущий регион в список
-                    path.Add(currentRegion.selfPE);
+                    //То ничего не меняется
+                    return false;
                 }
 
-                //Заносим стартовый регион в список
-                path.Add(inputData.Value.currentPathFrom);
+                //Берём цвет материала
+                Color32 materialColor = Color.white;
+                if (material.HasProperty(ShaderParameters.Color) == true)
+                {
+                    materialColor = material.color;
+                }
+                else if (material.HasProperty(ShaderParameters.BaseColor))
+                {
+                    materialColor = material.GetColor(ShaderParameters.BaseColor);
+                }
 
-                //Разворачиваем список в обратную сторону
-                path.Reverse();
+                //Отмечаем, что требуется обновление цветов
+                mapGenerationData.Value.isColorUpdated = true;
 
-                //Возвращаем список
-                return path;
+                //Берём текстуру материала
+                Texture materialTexture = null;
+                if (material.HasProperty(ShaderParameters.MainTex))
+                {
+                    materialTexture = material.mainTexture;
+                }
+                else if (material.HasProperty(ShaderParameters.BaseMap))
+                {
+                    materialTexture = material.GetTexture(ShaderParameters.BaseMap);
+                }
+
+                //Если текстура не пуста
+                if (materialTexture != null)
+                {
+                    //Отмечаем, что требуется обновление массива текстур
+                    mapGenerationData.Value.isTextureArrayUpdated = true;
+                }
+                //Иначе
+                else
+                {
+                    List<Color32> colorChunk = MapGenerationData.colorShaded[region.uvShadedChunkIndex];
+                    for (int k = 0; k < region.uvShadedChunkLength; k++)
+                    {
+                        colorChunk[region.uvShadedChunkStart + k] = materialColor;
+                    }
+                    MapGenerationData.colorShadedDirty[region.uvShadedChunkIndex] = true;
+                }
             }
+
+            //Если материал - не материал подсветки
+            if (material != mapGenerationData.Value.regionHighlightMaterial)
+            {
+                //Если это временный материал
+                if (temporary == true)
+                {
+                    region.tempMaterial = material;
+                }
+                //Иначе
+                else
+                {
+                    region.customMaterial = material;
+                }
+            }
+
+            //Если материал подсветки не пуст и регион - это последний подсвеченный регион
+            if (mapGenerationData.Value.regionHighlightMaterial != null && InputData.lastHighlightedRegionIndex == region.Index)
+            {
+                //Задаём рендереру материал подсветки
+                region.renderer.sharedMaterial = mapGenerationData.Value.regionHighlightMaterial;
+
+                //Берём исходный материал 
+                Material sourceMaterial = null;
+                if (region.tempMaterial != null)
+                {
+                    sourceMaterial = region.tempMaterial;
+                }
+                else if (region.customMaterial != null)
+                {
+                    sourceMaterial = region.customMaterial;
+                }
+
+                //Если исходный материал не пуст
+                if (sourceMaterial != null)
+                {
+                    //Берём цвет исходного материала
+                    Color32 color = Color.white;
+                    if (sourceMaterial.HasProperty(ShaderParameters.Color) == true)
+                    {
+                        color = sourceMaterial.color;
+                    }
+                    else if (sourceMaterial.HasProperty(ShaderParameters.BaseColor))
+                    {
+                        color = sourceMaterial.GetColor(ShaderParameters.BaseColor);
+                    }
+                    //Устанавливаем вторичный цвет материалу подсветки
+                    mapGenerationData.Value.regionHighlightMaterial.SetColor(ShaderParameters.Color2, color);
+
+                    //Берём текстуру исходного материала
+                    Texture tempMaterialTexture = null;
+                    if (sourceMaterial.HasProperty(ShaderParameters.MainTex))
+                    {
+                        tempMaterialTexture = sourceMaterial.mainTexture;
+                    }
+                    else if (sourceMaterial.HasProperty(ShaderParameters.BaseMap))
+                    {
+                        tempMaterialTexture = sourceMaterial.GetTexture(ShaderParameters.BaseMap);
+                    }
+
+                    //Если текстура не пуста
+                    if (tempMaterialTexture != null)
+                    {
+                        mapGenerationData.Value.regionHighlightMaterial.mainTexture = tempMaterialTexture;
+                    }
+                }
+            }
+
+            return true;
+        }
+
+        void RegionRestoreTemporaryMaterial(
+            int regionIndex)
+        {
+            //Берём регион
+            RegionsData.regionPEs[regionIndex].Unpack(world.Value, out int regionEntity);
+            ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
+
+            //Восстанавливаем материал рендерера
+            RegionRestoreTemporaryMaterial(ref region);
+        }
+
+        void RegionRestoreTemporaryMaterial(
+            ref CHexRegion region)
+        {
+            //Восстанавливаем материал рендерера
+            region.renderer.sharedMaterial = region.tempMaterial;
+        }
+
+        void RegionHideHighlighted()
+        {
+            //Если подсвеченный регион существует
+            if (InputData.lastHighlightedRegionPE.Unpack(world.Value, out int highlightedRegionEntity))
+            {
+                //Берём регион
+                ref CHexRegion highlightedRegion = ref regionPool.Value.Get(highlightedRegionEntity);
+
+                //Если материал рендерера региона - материал подсветки
+                if (highlightedRegion.renderer.sharedMaterial == mapGenerationData.Value.regionHighlightMaterial)
+                {
+                    //Если временный материал региона не пуст
+                    if (highlightedRegion.tempMaterial != null)
+                    {
+                        //Восстанавливаем временный материал
+                        RegionRestoreTemporaryMaterial(ref highlightedRegion);
+                    }
+
+                    //Отключаем рендерер
+                    highlightedRegion.renderer.enabled = false;
+                }
+            }
+
+            //Очищаем материал подсветки
+            ResetHighlightMaterial();
+
+            //Удаляем последний подсвеченный регион
+            InputData.lastHighlightedRegionPE = new();
+            InputData.lastHighlightedRegionIndex = -1;
+        }
+
+        void RegionRefreshHighlighted()
+        {
+            //Если индекс последнего подсвеченного региона валиден
+            if (InputData.lastHighlightedRegionIndex >= 0 && InputData.lastHighlightedRegionIndex < RegionsData.regionPEs.Length)
+            {
+                //Переустанавливаем материал подсветки
+                RegionSetMaterial(
+                    InputData.lastHighlightedRegionIndex,
+                    mapGenerationData.Value.regionHighlightMaterial,
+                    true);
+            }
+        }
+
+        void ResetHighlightMaterial()
+        {
+            //Берём цвет материала
+            Color color = mapGenerationData.Value.regionHighlightMaterial.color;
+
+            //Обновляем его прозрачность до стандартной
+            color.a = 0.2f;
+
+            //Приводим вторичный цвет материала и текстуру к стандарту
+            mapGenerationData.Value.regionHighlightMaterial.SetColor(ShaderParameters.Color2, color);
+            mapGenerationData.Value.regionHighlightMaterial.mainTexture = null;
+        }
+
+        void RegionSetExtrudeAmount(
+            ref CHexRegion region,
+            float extrudeAmount)
+        {
+            //Если высота региона уже равна значению, выходим из функции
+            if (region.ExtrudeAmount == extrudeAmount)
+            {
+                return;
+            }
+
+            //Ограничиваем высоту
+            extrudeAmount = Mathf.Clamp01(extrudeAmount);
+
+            //Обновляем высоту региона
+            region.ExtrudeAmount = extrudeAmount;
+
+            //Если регион подсвечен
+            if (InputData.lastHighlightedRegionPE.EqualsTo(region.selfPE))
+            {
+                //Обновляем подсветку региона
+                RegionRefreshHighlighted();
+            }
+
+            //Берём чанк региона
+            List<Vector4> uvShadedChunk = MapGenerationData.uvShaded[region.uvShadedChunkIndex];
+
+            //Для каждых UV-координат региона
+            for (int a = 0; a < region.uvShadedChunkLength; a++)
+            {
+                //Берём координаты
+                Vector4 uv4 = uvShadedChunk[region.uvShadedChunkStart + a];
+
+                //Обновляем W-компонет
+                uv4.w = region.ExtrudeAmount;
+
+                //Обновляем UV-координаты в чанке
+                uvShadedChunk[region.uvShadedChunkStart + a] = uv4;
+            }
+
+            //Отмечаем, что UV-координаты требуют обновления
+            MapGenerationData.uvShadedDirty[region.uvShadedChunkIndex] = true;
+            mapGenerationData.Value.isUVUpdatedFast = true;
+        }
+
+        void RegionSetColor(
+            ref CHexRegion region,
+            Color color)
+        {
+            //Берём кэшированный материал
+            Material material;
+
+            //Если материал такого цвета уже существует в кэше цветных материалов
+            if (MapGenerationData.colorCache.ContainsKey(color) == false)
+            {
+                //То создаём новый материал и кэшируем его
+                material = GameObject.Instantiate(mapGenerationData.Value.regionColoredMaterial);
+                MapGenerationData.colorCache.Add(color, material);
+
+                //Заполняем основные данные материала
+                material.hideFlags = HideFlags.DontSave;
+                material.color = color;
+                material.SetFloat(ShaderParameters.RegionAlpha, 1f);
+            }
+            //Иначе
+            else
+            {
+                //Берём материал из словаря
+                material = MapGenerationData.colorCache[color];
+            }
+
+            //Устанавливаем материал региона
+            RegionSetMaterial(
+                region.Index,
+                material);
+        }
+
+        void RegionAddFeature(
+            ref CHexRegion region,
+            GameObject featureGO)
+        {
+            //Берём центр ергиона
+            Vector3 regionCenter = region.GetCenter();
+
+            //Перемещаем GO в центр региона
+            featureGO.transform.position = regionCenter;
+            featureGO.transform.SetParent(SceneData.HexasphereGO.transform);
+            featureGO.transform.LookAt(SceneData.HexasphereGO.transform);
+        }
+
+        void QuitGameRequest()
+        {
+            //Создаём новую сущность и назначаем ей компонент запроса выхода из игры
+            int requestEntity = world.Value.NewEntity();
+            ref RQuitGame quitGameRequest = ref quitGameRequestPool.Value.Add(requestEntity);
         }
     }
 }

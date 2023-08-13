@@ -23,11 +23,11 @@ namespace SandOcean.Designer.Workshop
             this.technologyModifiers = technologyModifiers;
             this.technologyComponentCoreModifiers = technologyComponentCoreModifiers;
 
-            this.engines = new List<WDContentObjectRef>();
-            this.reactors = new List<WDContentObjectRef>();
-            this.fuelTanks = new List<WDContentObjectRef>();
-            this.extractionEquipmentSolids = new List<WDContentObjectRef>();
-            this.energyGuns = new List<WDContentObjectRef>();
+            this.engines = new List<WDContentObjectLink>();
+            this.reactors = new List<WDContentObjectLink>();
+            this.fuelTanks = new List<WDContentObjectLink>();
+            this.extractionEquipmentSolids = new List<WDContentObjectLink>();
+            this.energyGuns = new List<WDContentObjectLink>();
         }
 
         public string ObjectName 
@@ -90,10 +90,10 @@ namespace SandOcean.Designer.Workshop
         public WDTechnologyComponentCoreModifier[] technologyComponentCoreModifiers;
 
 
-        public List<WDContentObjectRef> engines;
-        public List<WDContentObjectRef> reactors;
-        public List<WDContentObjectRef> fuelTanks;
-        public List<WDContentObjectRef> extractionEquipmentSolids;
-        public List<WDContentObjectRef> energyGuns;
+        public List<WDContentObjectLink> engines;
+        public List<WDContentObjectLink> reactors;
+        public List<WDContentObjectLink> fuelTanks;
+        public List<WDContentObjectLink> extractionEquipmentSolids;
+        public List<WDContentObjectLink> energyGuns;
     }
 }

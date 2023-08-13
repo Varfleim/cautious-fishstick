@@ -1,12 +1,12 @@
-using System.Collections;
+
 using System.Collections.Generic;
+
 using UnityEngine;
-using UnityEngine.UI;
 
 public class TabGroup : MonoBehaviour
 {
-    public List<TabButton> tabButtons;
-    public TabButton selectedTab;
+    public List<TabGroupButton> tabButtons;
+    public TabGroupButton selectedTab;
 
     public List<GameObject> objectsToSwap;
 
@@ -14,17 +14,17 @@ public class TabGroup : MonoBehaviour
     public Sprite tabHover;
     public Sprite tabSelected;
 
-    public void Subscribe(TabButton button)
+    public void Subscribe(TabGroupButton button)
     {
         if(tabButtons == null)
         {
-            tabButtons = new List<TabButton>();
+            tabButtons = new List<TabGroupButton>();
         }
 
         tabButtons.Add(button);
     }
 
-    public void OnTabEnter(TabButton button)
+    public void OnTabEnter(TabGroupButton button)
     {
         ResetTabs();
 
@@ -35,14 +35,14 @@ public class TabGroup : MonoBehaviour
         }
     }
 
-    public void OnTabExit(TabButton button)
+    public void OnTabExit(TabGroupButton button)
     {
         ResetTabs();
 
         button.backgroundImage.sprite = tabIdle;
     }
 
-    public void OnTabSelected(TabButton button)
+    public void OnTabSelected(TabGroupButton button)
     {
         if(selectedTab != null)
         {
@@ -73,7 +73,7 @@ public class TabGroup : MonoBehaviour
 
     public void ResetTabs()
     {
-        foreach(TabButton tabButton in tabButtons)
+        foreach(TabGroupButton tabButton in tabButtons)
         {
             if(selectedTab != null
                 && selectedTab == tabButton)

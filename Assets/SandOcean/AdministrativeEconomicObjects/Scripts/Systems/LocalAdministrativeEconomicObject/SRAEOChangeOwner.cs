@@ -71,7 +71,7 @@ namespace SandOcean.AEO.RAEO
                     ref CHexRegion region = ref regionPool.Value.Get(rAEOEntity);
 
                     //Увеличиваем видимость региона
-                    region.IncreaseVisibility();
+                    //region.IncreaseVisibility();
                 }
 
                 //Если сущность RAEO не имеет компонента самозапроса обновления панели объекта

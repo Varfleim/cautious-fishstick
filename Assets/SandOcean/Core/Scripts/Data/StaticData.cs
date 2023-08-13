@@ -9,9 +9,6 @@ namespace SandOcean
     [CreateAssetMenu]
     public class StaticData : ScriptableObject
     {
-        public GOChunk chunkPrefab;
-        public GORegion regionPrefab;
-
         public GOShipGroup shipGroupPrefab;
     }
 }

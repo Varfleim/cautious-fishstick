@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.18154654, g: 0.22718707, b: 0.30740517, a: 1}
+  m_IndirectSpecularColor: {r: 0.12731715, g: 0.13414735, b: 0.121078536, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -2127,7 +2127,7 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 62344560}
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2135,7 +2135,7 @@ Transform:
   - {fileID: 2027422061}
   m_Father: {fileID: 708832438}
   m_RootOrder: 0
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &64626625
 GameObject:
   m_ObjectHideFlags: 0
@@ -4826,8 +4826,9 @@ GameObject:
   m_Component:
   - component: {fileID: 183601425}
   - component: {fileID: 183601426}
+  - component: {fileID: 183601427}
   m_Layer: 0
-  m_Name: Map
+  m_Name: Hexasphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -4842,8 +4843,8 @@ RectTransform:
   m_GameObject: {fileID: 183601424}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
+  m_LocalScale: {x: 100, y: 100, z: 100}
+  m_ConstrainProportionsScale: 1
   m_Children: []
   m_Father: {fileID: 870401323}
   m_RootOrder: 0
@@ -4865,7 +4866,19 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9c1e3a05d3e124c48a8f97e0995b123a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  isChanged: 0
+--- !u!135 &183601427
+SphereCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 183601424}
+  m_Material: {fileID: 0}
+  m_IsTrigger: 0
+  m_Enabled: 1
+  serializedVersion: 2
+  m_Radius: 0.5
+  m_Center: {x: 0, y: 0, z: 0}
 --- !u!1 &200093582
 GameObject:
   m_ObjectHideFlags: 0
@@ -6737,7 +6750,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &254442942
 RectTransform:
   m_ObjectHideFlags: 0
@@ -11443,7 +11456,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 4
+  m_RootOrder: 3
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &444708795
 GameObject:
@@ -18504,14 +18517,14 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 717218640}
-  m_LocalRotation: {x: 0.38268343, y: 0, z: 0, w: 0.92387956}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
-  m_Father: {fileID: 0}
-  m_RootOrder: 3
-  m_LocalEulerAnglesHint: {x: 45, y: 0, z: 0}
+  m_Father: {fileID: 963194228}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &717218643
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -22498,6 +22511,7 @@ GameObject:
   - component: {fileID: 870401316}
   - component: {fileID: 870401315}
   - component: {fileID: 870401319}
+  - component: {fileID: 870401329}
   - component: {fileID: 870401325}
   - component: {fileID: 870401328}
   m_Layer: 0
@@ -22582,6 +22596,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   coreObject: {fileID: 183601425}
+  hexasphereGO: {fileID: 183601424}
+  hexasphereCollider: {fileID: 183601427}
   seed: 180618
 --- !u!114 &870401317
 MonoBehaviour:
@@ -22601,6 +22617,7 @@ MonoBehaviour:
   sceneData: {fileID: 870401316}
   contentData: {fileID: 870401315}
   mapGenerationData: {fileID: 870401319}
+  regionsData: {fileID: 870401329}
   designerData: {fileID: 870401325}
   inputData: {fileID: 870401328}
   eUI: {fileID: 318477615}
@@ -22617,28 +22634,33 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   sectorSizeModifier: 1
-  chunkCountX: 0
-  chunkCountZ: 0
-  regionCountX: 0
-  regionCountZ: 0
-  regionCount: 0
-  noiseTexture: {fileID: 2800000, guid: 38701cdeb1fb9427cbb585f917aa59cb, type: 3}
-  columns: []
-  terrainMaterial: {fileID: 2100000, guid: da66e8f0c1d16476bae8e2d228492d7f, type: 2}
-  regionShaderData: {fileID: 183601426}
+  subdivisions: 0
+  currentTextureSize: 0
+  gradientIntensity: 0.25
+  tileTintColor: {r: 1, g: 1, b: 1, a: 1}
+  ambientColor: {r: 0, g: 0, b: 0, a: 1}
+  minimumLight: 0
+  uvChunkCount: 0
+  finalTexArray: {fileID: 0}
+  isInitializationUpdate: 0
+  isMaterialUpdated: 0
+  isRegionUpdated: 0
+  isColorUpdated: 0
+  isTextureArrayUpdated: 0
+  isUVUpdatedFast: 0
+  whiteTex: {fileID: 0}
+  regionMaterial: {fileID: 2100000, guid: f1f255b5a35f6f1449d94be449639b8d, type: 2}
+  regionColoredMaterial: {fileID: 2100000, guid: 62368c8f25057c94f877bcc1550c8ebc, type: 2}
+  regionHighlightMaterial: {fileID: 2100000, guid: c953ab6be49648d4ca529646c36bd726, type: 2}
   jitterProbability: 0.25
-  chunkSizeMin: 60
-  chunkSizeMax: 200
-  landPercentage: 50
+  chunkSizeMin: 30
+  chunkSizeMax: 100
+  landPercentage: 100
   waterLevel: 1
   highRiseProbability: 0
   sinkProbability: 0.1
-  elevationMinimum: -4
+  elevationMinimum: 0
   elevationMaximum: 10
-  mapBorderX: 0
-  mapBorderZ: 0
-  areaBorder: 0
-  areaCount: 1
   erosionPercentage: 100
   startingMoisture: 0.1
   evaporationFactor: 0.5
@@ -22646,8 +22668,8 @@ MonoBehaviour:
   runoffFactor: 0.25
   seepageFactor: 0.125
   windDirection: 4
-  windStrength: 4
-  lowTemperature: 0.1
+  windStrength: 2
+  lowTemperature: 0.2
   highTemperature: 1
   temperatureJitter: 0.1
 --- !u!114 &870401320
@@ -22807,20 +22829,29 @@ MonoBehaviour:
   camera: {fileID: 963194227}
   movementSpeedMinZoom: 400
   movementSpeedMaxZoom: 100
-  rotationSpeed: 5
-  rotationAngle: 0
+  rotationSpeed: 25
+  rotationAngleY: 0
+  rotationAngleX: 0
   minAngleX: -89.5
   maxAngleX: 89.5
   zoom: 0
-  stickMinZoom: -1000
-  stickMaxZoom: -50
+  stickMinZoom: -200
+  stickMaxZoom: -60
   swiwelMinZoom: 90
   swiwelMaxZoom: 30
   currentCenterColumnIndex: -1
-  isDrag: 0
-  dragDirection: 0
-  searchFrontierPhase: 0
-  currentPathExists: 0
+--- !u!114 &870401329
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 870401313}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f16188cfaf7ee4c41b154f9671039ef8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &886256040
 GameObject:
   m_ObjectHideFlags: 0
@@ -24987,7 +25018,8 @@ Transform:
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children: []
+  m_Children:
+  - {fileID: 717218642}
   m_Father: {fileID: 2027422061}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -50552,7 +50584,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 2027422060}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: -1000}
+  m_LocalPosition: {x: 0, y: 0, z: -200}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
