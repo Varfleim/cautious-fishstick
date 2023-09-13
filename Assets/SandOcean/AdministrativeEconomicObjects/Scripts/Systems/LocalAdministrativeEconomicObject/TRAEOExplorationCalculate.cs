@@ -4,16 +4,13 @@ using System.Collections.Generic;
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Threads;
 
-using SandOcean.Diplomacy;
-using SandOcean.Ship;
-using SandOcean.Ship.Moving;
+using SandOcean.Organization;
 
 namespace SandOcean.AEO.RAEO
 {
     public struct TRAEOExplorationCalculate : IEcsThread<
         CRegionAEO,
         CExplorationORAEO,
-        CShipGroup,
         COrganization>
     {
         public EcsWorld world;
@@ -23,11 +20,8 @@ namespace SandOcean.AEO.RAEO
         CRegionAEO[] regionAEOPool;
         int[] regionAEOIndices;
 
-        CExplorationORAEO[] explorationOLAEOPool;
-        int[] explorationOLAEOIndices;
-
-        CShipGroup[] shipGroupPool;
-        int[] shipGroupIndices;
+        CExplorationORAEO[] explorationORAEOPool;
+        int[] explorationORAEOIndices;
 
         COrganization[] organizationPool;
         int[] organizationIndices;
@@ -36,39 +30,35 @@ namespace SandOcean.AEO.RAEO
             int[] entities,
             CRegionAEO[] pool1, int[] indices1,
             CExplorationORAEO[] pool2, int[] indices2,
-            CShipGroup[] pool3, int[] indices3,
-            COrganization[] pool4, int[] indices4)
+            COrganization[] pool3, int[] indices3)
         {
             regionAEOEntities = entities;
 
             regionAEOPool = pool1;
             regionAEOIndices = indices1;
 
-            explorationOLAEOPool = pool2;
-            explorationOLAEOIndices = indices2;
+            explorationORAEOPool = pool2;
+            explorationORAEOIndices = indices2;
 
-            shipGroupPool = pool3;
-            shipGroupIndices = indices3;
-
-            organizationPool = pool4;
-            organizationIndices = indices4;
+            organizationPool = pool3;
+            organizationIndices = indices3;
         }
 
-        public void Execute(int fromIndex, int beforeIndex)
+        public void Execute(int threadId, int fromIndex, int beforeIndex)
         {
             //Для каждого RAEO в потоке
             for (int a = fromIndex; a < beforeIndex; a++)
             {
-                //Берём компонент RAEO
-                int lAEOEntity = regionAEOEntities[a];
-                ref CRegionAEO rAEO = ref regionAEOPool[regionAEOIndices[lAEOEntity]];
+                //Берём RAEO
+                int rAEOEntity = regionAEOEntities[a];
+                ref CRegionAEO rAEO = ref regionAEOPool[regionAEOIndices[rAEOEntity]];
 
                 //Берём первую группу кораблей в списке
-                LinkedListNode<EcsPackedEntity> currentShipGroupNode = rAEO.landedShipGroups.First;
-                //Для каждой группы кораблей в OLAEO
+                /*LinkedListNode<EcsPackedEntity> currentShipGroupNode = rAEO.landedShipGroups.First;
+                //Для каждой группы кораблей в ORAEO
                 while (currentShipGroupNode != null)
                 {
-                    //Берём компонент группы кораблей
+                    //Берём группу кораблей
                     currentShipGroupNode.Value.Unpack(world, out int shipGroupEntity);
                     ref CShipGroup shipGroup = ref shipGroupPool[shipGroupIndices[shipGroupEntity]];
 
@@ -76,26 +66,26 @@ namespace SandOcean.AEO.RAEO
                     //Если группа кораблей находится в режиме бездействия
                     if (shipGroup.movingMode == ShipGroupMovingMode.Idle)
                     {
-                        //Берём компонент организации-владельца группы кораблей
+                        //Берём организацию-владельца группы кораблей
                         shipGroup.ownerOrganizationPE.Unpack(world, out int ownerOrganizationEntity);
                         ref COrganization ownerOrganization = ref organizationPool[organizationIndices[ownerOrganizationEntity]];
 
-                        //Берём компонент EOLAEO организации
-                        rAEO.organizationRAEOs[ownerOrganization.selfIndex].organizationRAEOPE.Unpack(world, out int eOLAEOEntity);
-                        ref CExplorationORAEO exOLAEO = ref explorationOLAEOPool[explorationOLAEOIndices[eOLAEOEntity]];
+                        //Берём ExORAEO организации
+                        rAEO.organizationRAEOs[ownerOrganization.selfIndex].organizationRAEOPE.Unpack(world, out int exORAEOEntity);
+                        ref CExplorationORAEO exORAEO = ref explorationORAEOPool[explorationORAEOIndices[exORAEOEntity]];
 
                         //Если уровень исследования меньше десяти
-                        if (exOLAEO.explorationLevel < 10)
+                        if (exORAEO.explorationLevel < 10)
                         {
                             //Увеличиваем уровень исследования
-                            exOLAEO.explorationLevel++;
+                            exORAEO.explorationLevel++;
                         }
                     }
                     //ТЕСТ
 
                     //Берём следующую группу кораблей в качестве текущей
                     currentShipGroupNode = currentShipGroupNode.Next;
-                }
+                }*/
             }
         }
     }

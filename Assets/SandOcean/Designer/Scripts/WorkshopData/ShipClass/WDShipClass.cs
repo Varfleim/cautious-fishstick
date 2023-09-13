@@ -51,8 +51,7 @@ namespace SandOcean.Designer.Workshop
             }
             set
             {
-                shipClassName
-                    = value;
+                shipClassName = value;
             }
         }
         string shipClassName;
@@ -65,8 +64,7 @@ namespace SandOcean.Designer.Workshop
             }
             set
             {
-                gameObjectIndex
-                    = value;
+                gameObjectIndex = value;
             }
         }
         int gameObjectIndex;
@@ -79,8 +77,7 @@ namespace SandOcean.Designer.Workshop
             }
             set
             {
-                isValidObject
-                    = value;
+                isValidObject = value;
             }
         }
         bool isValidObject;

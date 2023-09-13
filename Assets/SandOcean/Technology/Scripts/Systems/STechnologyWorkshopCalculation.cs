@@ -5,7 +5,7 @@ using System.Linq;
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 using SandOcean.Designer.Workshop;
 
 namespace SandOcean.Technology

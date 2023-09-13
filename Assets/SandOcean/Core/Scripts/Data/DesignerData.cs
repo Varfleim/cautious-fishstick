@@ -10,6 +10,7 @@ namespace SandOcean.Designer
     {
         SectorGenerationTemplate,
         Technologies,
+        ShipType,
         ShipClass,
         ComponentEngine,
         ComponentReactor,

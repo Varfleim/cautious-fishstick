@@ -25,9 +25,39 @@ namespace SandOcean.UI
         Yes
     }
 
+    public enum RefresUIType : byte
+    {
+        Refresh,
+        Delete
+    }
+
     public class InputData : MonoBehaviour
     {
         public MapMode mapMode = MapMode.Default;
+
+        public static bool leftMouseButtonClick;
+        public static bool leftMouseButtonPressed;
+        public static bool leftMouseButtonRelease;
+
+        public static bool rightMouseButtonClick;
+        public static bool rightMouseButtonPressed;
+        public static bool rightMouseButtonRelease;
+
+        public static bool leftShiftKeyPressed;
+        public static bool LMBAndLeftShift
+        {
+            get
+            {
+                return (leftMouseButtonClick || leftMouseButtonPressed) && leftShiftKeyPressed;
+            }
+        }
+        public static bool RMBAndLeftShift
+        {
+            get
+            {
+                return (rightMouseButtonClick || rightMouseButtonPressed) && leftShiftKeyPressed;
+            }
+        }
 
         public EcsPackedEntity cameraPE;
 
@@ -51,24 +81,21 @@ namespace SandOcean.UI
         public float swiwelMinZoom;
         public float swiwelMaxZoom;
 
-        public int currentCenterColumnIndex = -1;
-
 
         public EcsPackedEntity playerPE;
         public EcsPackedEntity playerOrganizationPE;
-
-        public EcsPackedEntity activeShipGroupPE;
 
 
         public static bool isMouseOver;
         public static int lastHitRegionIndex;
         public static EcsPackedEntity lastHighlightedRegionPE;
         public static int lastHighlightedRegionIndex;
-        public static int lastHoverRegionIndex;
 
+        public static EcsPackedEntity searchFromRegion;
+        public static EcsPackedEntity searchToRegion;
 
+        public static EcsPackedEntity activeFleetPE;
 
-        public EcsPackedEntity searchFromRegion;
-        public EcsPackedEntity searchToRegion;
+        public static List<EcsPackedEntity> activeTaskForcePEs = new();
     }
 }

@@ -16,9 +16,6 @@ namespace SandOcean.AEO.RAEO
             ownerOrganizationIndex = -1;
 
             organizationRAEOs = new DOrganizationRAEO[0];
-
-            landingShipGroups = new();
-            landedShipGroups = new();
         }
 
         public readonly EcsPackedEntity selfPE;
@@ -27,8 +24,5 @@ namespace SandOcean.AEO.RAEO
         public int ownerOrganizationIndex;
 
         public DOrganizationRAEO[] organizationRAEOs;
-
-        public List<EcsPackedEntity> landingShipGroups;
-        public LinkedList<EcsPackedEntity> landedShipGroups;
     }
 }

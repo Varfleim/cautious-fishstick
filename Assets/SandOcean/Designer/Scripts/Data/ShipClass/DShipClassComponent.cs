@@ -8,12 +8,12 @@ namespace SandOcean.Designer.Game
     {
         public DShipClassComponent(
             int contentSetIndex,
-            int componentIndex, 
+            int objectIndex, 
             int numberOfComponents)
         {
             this.contentSetIndex = contentSetIndex;
 
-            this.componentIndex = componentIndex;
+            this.objectIndex = objectIndex;
 
             this.numberOfComponents = numberOfComponents;
         }
@@ -36,15 +36,15 @@ namespace SandOcean.Designer.Game
         {
             get
             {
-                return componentIndex;
+                return objectIndex;
             }
             set
             {
-                componentIndex
+                objectIndex
                     = value;
             }
         }
-        int componentIndex;
+        int objectIndex;
 
         public int numberOfComponents;
     }

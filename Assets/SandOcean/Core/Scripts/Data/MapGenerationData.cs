@@ -159,7 +159,10 @@ namespace SandOcean.Map
         public Texture2D whiteTex;
         public Material regionMaterial;
         public Material regionColoredMaterial;
-        public Material regionHighlightMaterial;
+
+        public Material fleetRegionHighlightMaterial;
+        public Material hoverRegionHighlightMaterial;
+        public Material currentRegionHighlightMaterial;
 
         public static List<T> CheckList<T>(
             ref List<T> l)

@@ -8,6 +8,7 @@ namespace SandOcean.Designer.Save
     {
         public SDContentSet(
             SDTechnology[] technologies,
+            SDShipType[] shipTypes,
             SDShipClass[] shipClasses,
             SDEngine[] engines,
             SDReactor[] reactors,
@@ -18,6 +19,7 @@ namespace SandOcean.Designer.Save
             this.technologies = technologies;
 
 
+            this.shipTypes = shipTypes;
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -30,6 +32,7 @@ namespace SandOcean.Designer.Save
         public SDTechnology[] technologies;
 
 
+        public SDShipType[] shipTypes;
         public SDShipClass[] shipClasses;
 
         public SDEngine[] engines;

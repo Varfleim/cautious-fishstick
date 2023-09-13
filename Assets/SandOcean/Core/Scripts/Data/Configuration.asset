@@ -12,15 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6dd0c3fc7b3f9a142845244b04635c3a, type: 3}
   m_Name: Configuration
   m_EditorClassIdentifier: 
-  sectorPrefab: {fileID: 4862115278447531262, guid: 7d41051a633692748864f6769f4af523, type: 3}
-  islandPrefab: {fileID: 7232112409593945084, guid: 4a00bd0afb773eb448f36b7e4db652c1, type: 3}
-  planetSystemPrefab: {fileID: 3902872479242118505, guid: 6cab030756bbefc4ca56a02b08d3793b, type: 3}
-  barycenterPrefab: {fileID: 4586535982733849144, guid: 940c959b9dc461246a449452a8d9c36f, type: 3}
-  starPrefab: {fileID: 9045171432131186838, guid: 0cd27443ff34d9547baa57be87062745, type: 3}
-  planetPrefab: {fileID: 6769067838599753654, guid: 522830e6263b7764a82e0b78d3dab458, type: 3}
+  regionPrefab: {fileID: 3872802071885926373, guid: 0813a3b67d1ac3847ad111b7c55a1204, type: 3}
   shipGroupPrefab: {fileID: 2827114823375486827, guid: 26fe3b6dd79595f499e8613a9227a9cf, type: 3}
-  shipPrefab: {fileID: -2192739308536504273, guid: 23c36fd32dfcbdf4f83de06fc6e9a668, type: 3}
-  chunkPrefab: {fileID: 3920687437032889942, guid: ec2ff2b8ea79e504995251def92efda3, type: 3}
-  regionPrefab: {fileID: 6389178256415024325, guid: 3086144d579bc2a45a63c8cdfa0059b1, type: 3}
-  cellLabelPrefab: {fileID: 7337050814854812295, guid: 7483cd3c944f7fd4a9ed04af6bed3e9f, type: 3}
-  lnPrefab: {fileID: 1584890826289644591, guid: ef765f25175264b4bae93470660d62fb, type: 3}

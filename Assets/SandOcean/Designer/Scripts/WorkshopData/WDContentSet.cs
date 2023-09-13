@@ -10,6 +10,7 @@ namespace SandOcean.Designer.Workshop
         public WDContentSet(
             string contentSetName,
             WDTechnology[] technologies,
+            WDShipType[] shipTypes,
             WDShipClass[] shipClasses,
             WDEngine[] engines,
             WDReactor[] reactors,
@@ -19,13 +20,14 @@ namespace SandOcean.Designer.Workshop
         {
             this.contentSetName = contentSetName;
 
-            this.isActive = true;
+            isActive = true;
 
-            this.gameContentSetIndex = -1;
+            gameContentSetIndex = -1;
 
             this.technologies = technologies;
 
 
+            this.shipTypes = shipTypes;
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -39,19 +41,21 @@ namespace SandOcean.Designer.Workshop
         {
             this.contentSetName = contentSetName;
 
-            this.isActive = true;
+            isActive = true;
 
-            this.gameContentSetIndex = -1;
+            gameContentSetIndex = -1;
 
-            this.technologies = new WDTechnology[0];
+            technologies = new WDTechnology[0];
 
-            this.shipClasses = new WDShipClass[0];
 
-            this.engines = new WDEngine[0];
-            this.reactors = new WDReactor[0];
-            this.fuelTanks = new WDHoldFuelTank[0];
-            this.solidExtractionEquipments = new WDExtractionEquipment[0];
-            this.energyGuns = new WDGunEnergy[0];
+            shipTypes = new WDShipType[0];
+            shipClasses = new WDShipClass[0];
+
+            engines = new WDEngine[0];
+            reactors = new WDReactor[0];
+            fuelTanks = new WDHoldFuelTank[0];
+            solidExtractionEquipments = new WDExtractionEquipment[0];
+            energyGuns = new WDGunEnergy[0];
         }
 
         public string ContentSetName
@@ -62,8 +66,7 @@ namespace SandOcean.Designer.Workshop
             }
             set
             {
-                contentSetName
-                    = value;
+                contentSetName = value;
             }
         }
         string contentSetName;
@@ -76,6 +79,8 @@ namespace SandOcean.Designer.Workshop
 
         public WDTechnology[] technologies;
 
+
+        public WDShipType[] shipTypes;
         public WDShipClass[] shipClasses;
 
         public WDEngine[] engines;

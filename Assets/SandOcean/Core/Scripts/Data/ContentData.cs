@@ -4,7 +4,7 @@ using System.Collections.Generic;
 
 using UnityEngine;
 
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 using SandOcean.Technology;
 using SandOcean.Designer.Workshop;
 
@@ -39,6 +39,13 @@ namespace SandOcean
         ExtractionEquipmentSolidSpeedPerSize,
         GunEnergyRecharge,
         None
+    }
+
+    public enum TaskForceBattleGroup : byte
+    {
+        ShortRange,
+        MediumRange,
+        LongRange
     }
 
     public class ContentData : MonoBehaviour
@@ -373,6 +380,15 @@ namespace SandOcean
         }
 
         public void CalculateDamage();
+    }
+
+    public interface IShipType
+    {
+        public TaskForceBattleGroup BattleGroup
+        {
+            get;
+            set;
+        }
     }
 
     public interface IShipClass

@@ -15,7 +15,18 @@ namespace SandOcean.Map
         //Данные регионов
         public static EcsPackedEntity[] regionPEs;
 
+        public const float regionRadius = 25;
+        public const float regionDistance = regionRadius * 2;
+
         //Данные поиска пути
+        public static bool[] needRefreshPathMatrix = new bool[Environment.ProcessorCount];
+        public static DPathFindingNodeFast[][] pathfindingArray = new DPathFindingNodeFast[Environment.ProcessorCount][];
+        public static PathFindingQueueInt[] pathFindingQueue = new PathFindingQueueInt[Environment.ProcessorCount];
+        public static List<DPathFindingClosedNode>[] closedNodes = new List<DPathFindingClosedNode>[Environment.ProcessorCount];
+        public static byte[] openRegionValues = new byte[Environment.ProcessorCount];
+        public static byte[] closeRegionValues = new byte[Environment.ProcessorCount];
+        public static int pathfindingSearchLimit = 30000;
+
         public static bool needRefreshRouteMatrix;
         public static DPathFindingNodeFast[] pfCalc;
         public static PathFindingQueueInt open;
@@ -240,7 +251,7 @@ namespace SandOcean.Map
                 //Находим путь
                 List<DPathFindingClosedNode> path = FindPathFast(
                     world,
-                    regionFilter, regionPool,
+                    regionPool,
                     ref fromRegion, ref toRegion);
 
                 //Если путь не пуст
@@ -298,12 +309,12 @@ namespace SandOcean.Map
             if (pfCalc == null)
             {
                 //Создаём массив
-                pfCalc = new DPathFindingNodeFast[RegionsData.regionPEs.Length];
+                pfCalc = new DPathFindingNodeFast[regionPEs.Length];
 
                 //Создаём очередь 
                 open = new(
                     new PathFindingNodesComparer(pfCalc),
-                    RegionsData.regionPEs.Length);
+                    regionPEs.Length);
             }
             //Иначе
             else
@@ -320,7 +331,7 @@ namespace SandOcean.Map
 
         static List<DPathFindingClosedNode> FindPathFast(
             EcsWorld world,
-            EcsFilter regionFilter, EcsPool<CHexRegion> regionPool,
+            EcsPool<CHexRegion> regionPool,
             ref CHexRegion fromRegion, ref CHexRegion toRegion)
         {
             //Создаём переменную для отслеживания наличия пути

@@ -8,19 +8,23 @@ namespace SandOcean.Designer.Workshop
         public TempLoadingWorkshopData(
             int a)
         {
-            this.technologies = new List<WDTechnology>();
+            technologies = new();
 
-            this.shipClasses = new List<WDShipClass>();
 
-            this.engines = new List<WDEngine>();
-            this.reactors = new List<WDReactor>();
-            this.fuelTanks = new List<WDHoldFuelTank>();
-            this.solidExtractionEquipments = new List<WDExtractionEquipment>();
-            this.energyGuns = new List<WDGunEnergy>();
+            shipTypes = new();
+            shipClasses = new();
+
+            engines = new();
+            reactors = new();
+            fuelTanks = new();
+            solidExtractionEquipments = new();
+            energyGuns = new();
         }
 
         public List<WDTechnology> technologies;
 
+
+        public List<WDShipType> shipTypes;
         public List<WDShipClass> shipClasses;
 
         public List<WDEngine> engines;

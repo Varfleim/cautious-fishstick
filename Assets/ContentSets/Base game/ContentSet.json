@@ -134,6 +134,16 @@
                 ]
             }
         ],
+        "shipTypes": [
+            {
+                "shipTypeName": "Destroyer",
+                "battleGroupName": "ShortRange"
+            },
+            {
+                "shipTypeName": "Frigate",
+                "battleGroupName": "ShortRange"
+            }
+        ],
         "shipClasses": [
             {
                 "className": "A1",

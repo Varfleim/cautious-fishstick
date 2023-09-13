@@ -12,6 +12,7 @@ using SandOcean.Designer;
 using SandOcean.Designer.Workshop;
 using SandOcean.Designer.Game;
 using SandOcean.Designer.Save;
+using SandOcean.Warfare.Ship;
 
 namespace SandOcean
 {
@@ -286,8 +287,7 @@ namespace SandOcean
             ref TempLoadingWorkshopData tempLoadingWorkshopData)
         {
             //Если массив технологий не пуст
-            if (loadingContentSet.technologies
-                != null)
+            if (loadingContentSet.technologies != null)
             {
                 //Загружаем технологии во временный список
                 WorkshopLoadTechnologies(
@@ -295,13 +295,22 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.technologies
-                = tempLoadingWorkshopData.technologies.ToArray();
+            contentSet.technologies = tempLoadingWorkshopData.technologies.ToArray();
 
+
+            //Если массив типов кораблей не пуст
+            if (loadingContentSet.shipTypes != null)
+            {
+                //Загружаем типы во временный список
+                WorkshopLoadShipTypes(
+                    in loadingContentSet.shipTypes,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipTypes = tempLoadingWorkshopData.shipTypes.ToArray();
 
             //Если массив двигателей не пуст
-            if (loadingContentSet.engines
-                != null)
+            if (loadingContentSet.engines != null)
             {
                 //Загружаем двигатели во временный список
                 WorkshopLoadEngines(
@@ -309,12 +318,10 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.engines
-                = tempLoadingWorkshopData.engines.ToArray();
+            contentSet.engines = tempLoadingWorkshopData.engines.ToArray();
 
             //Если массив реакторов не пуст
-            if (loadingContentSet.reactors
-                != null)
+            if (loadingContentSet.reactors != null)
             {
                 //Загружаем реакторы во временный список
                 WorkshopLoadReactors(
@@ -322,12 +329,10 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.reactors
-                = tempLoadingWorkshopData.reactors.ToArray();
+            contentSet.reactors = tempLoadingWorkshopData.reactors.ToArray();
 
             //Если массив топливных баков не пуст
-            if (loadingContentSet.fuelTanks
-                != null)
+            if (loadingContentSet.fuelTanks != null)
             {
                 //Загружаем топливные баки во временный список
                 WorkshopLoadFuelTanks(
@@ -335,12 +340,10 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.fuelTanks
-                = tempLoadingWorkshopData.fuelTanks.ToArray();
+            contentSet.fuelTanks = tempLoadingWorkshopData.fuelTanks.ToArray();
 
             //Если массив оборудования для твёрдой добычи не пуст
-            if (loadingContentSet.extractionEquipmentSolids
-                != null)
+            if (loadingContentSet.extractionEquipmentSolids != null)
             {
                 //Загружаем оборудование для твёрдой добычи во временный список
                 WorkshopLoadExtractionEquipments(
@@ -349,12 +352,10 @@ namespace SandOcean
                     tempLoadingWorkshopData.solidExtractionEquipments);
             }
             //Заполняем массив набора контента
-            contentSet.solidExtractionEquipments
-                = tempLoadingWorkshopData.solidExtractionEquipments.ToArray();
+            contentSet.solidExtractionEquipments = tempLoadingWorkshopData.solidExtractionEquipments.ToArray();
 
             //Если массив энергетических орудий не пуст
-            if (loadingContentSet.energyGuns
-                != null)
+            if (loadingContentSet.energyGuns != null)
             {
                 //Загружаем энергетические орудия во временный список
                 WorkshopLoadEnergyGuns(
@@ -362,13 +363,11 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.energyGuns
-                = tempLoadingWorkshopData.energyGuns.ToArray();
+            contentSet.energyGuns = tempLoadingWorkshopData.energyGuns.ToArray();
 
 
             //Если массив классов кораблей не пуст
-            if (loadingContentSet.shipClasses
-                != null)
+            if (loadingContentSet.shipClasses != null)
             {
                 //Загружаем классы кораблей во временный список
                 WorkshopLoadShipClasses(
@@ -376,11 +375,12 @@ namespace SandOcean
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
-            contentSet.shipClasses
-                = tempLoadingWorkshopData.shipClasses.ToArray();
+            contentSet.shipClasses = tempLoadingWorkshopData.shipClasses.ToArray();
 
             //Очищаем временные списки
             tempLoadingWorkshopData.technologies.Clear();
+
+            tempLoadingWorkshopData.shipTypes.Clear();
 
             tempLoadingWorkshopData.engines.Clear();
             tempLoadingWorkshopData.reactors.Clear();
@@ -569,6 +569,30 @@ namespace SandOcean
                 //Заносим её во временный список
                 tempLoadingWorkshopData.technologies.Add(
                     technology);
+            }
+        }
+
+        //Типы кораблей
+        void WorkshopLoadShipTypes(
+            in SDShipType[] loadingShipTypes,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Для каждого загружаемого типа корабля
+            for (int a = 0; a < loadingShipTypes.Length; a++)
+            {
+                //Берём ссылку на загружаемый тип
+                ref readonly SDShipType loadingShipType = ref loadingShipTypes[a];
+
+                //Определяем боевую группу, к которой относится тип
+                TaskForceBattleGroup taskForceBattleGroup = ShipTypeDefineTaskForceBattleGroup(loadingShipType.battleGroupName);
+
+                //Записываем загруженные данные типа
+                WDShipType shipType = new(
+                    loadingShipType.shipTypeName,
+                    taskForceBattleGroup);
+
+                //Заносим его во временный список
+                tempLoadingWorkshopData.shipTypes.Add(shipType);
             }
         }
 
@@ -1574,8 +1598,7 @@ namespace SandOcean
             ref TempLoadingData tempLoadingData)
         {
             //Если массив технологий не пуст
-            if (loadingContentSet.technologies
-                != null)
+            if (loadingContentSet.technologies != null)
             {
                 //Загружаем технологии во временный список
                 GameLoadTechnologies(
@@ -1583,13 +1606,22 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.technologies
-                = tempLoadingData.technologies.ToArray();
+            contentSet.technologies = tempLoadingData.technologies.ToArray();
 
+
+            //Если массив типов кораблей не пуст
+            if (loadingContentSet.shipTypes != null)
+            {
+                //Загружаем типы во временный список
+                GameLoadShipTypes(
+                    ref loadingContentSet.shipTypes,
+                    ref tempLoadingData);
+            }
+            //Заполняем массив типов
+            contentSet.shipTypes = tempLoadingData.shipTypes.ToArray();
 
             //Если массив двигателей не пуст
-            if (loadingContentSet.engines
-                != null)
+            if (loadingContentSet.engines != null)
             {
                 //Загружаем двигатели во временный список
                 GameLoadEngines(
@@ -1597,12 +1629,10 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.engines
-                = tempLoadingData.engines.ToArray();
+            contentSet.engines = tempLoadingData.engines.ToArray();
 
             //Если массив реакторов не пуст
-            if (loadingContentSet.reactors
-                != null)
+            if (loadingContentSet.reactors != null)
             {
                 //Загружаем реакторы во временный список
                 GameLoadReactors(
@@ -1610,12 +1640,10 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.reactors
-                = tempLoadingData.reactors.ToArray();
+            contentSet.reactors = tempLoadingData.reactors.ToArray();
 
             //Если массив топливных баков не пуст
-            if (loadingContentSet.fuelTanks
-                != null)
+            if (loadingContentSet.fuelTanks != null)
             {
                 //Загруаем топливные баки во временный список
                 GameLoadFuelTanks(
@@ -1623,12 +1651,10 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.fuelTanks
-                = tempLoadingData.fuelTanks.ToArray();
+            contentSet.fuelTanks = tempLoadingData.fuelTanks.ToArray();
 
             //Если массив оборудования для твёрдой добычи не пуст
-            if (loadingContentSet.solidExtractionEquipments
-                != null)
+            if (loadingContentSet.solidExtractionEquipments != null)
             {
                 //Загруаем оборудование для твёрдой добычи во временный список
                 GameLoadExtractionEquipments(
@@ -1637,12 +1663,10 @@ namespace SandOcean
                     tempLoadingData.solidExtractionEquipments);
             }
             //Заполняем массив набора контента
-            contentSet.solidExtractionEquipments
-                = tempLoadingData.solidExtractionEquipments.ToArray();
+            contentSet.solidExtractionEquipments = tempLoadingData.solidExtractionEquipments.ToArray();
 
             //Если массив энергетических орудий не пуст
-            if (loadingContentSet.energyGuns
-                != null)
+            if (loadingContentSet.energyGuns != null)
             {
                 //Загруаем энергетические орудия во временный список
                 GameLoadEnergyGuns(
@@ -1650,13 +1674,11 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.energyGuns
-                = tempLoadingData.energyGuns.ToArray();
+            contentSet.energyGuns = tempLoadingData.energyGuns.ToArray();
 
 
             //Если массив классов кораблей не пуст
-            if (loadingContentSet.shipClasses
-                != null)
+            if (loadingContentSet.shipClasses != null)
             {
                 //Загружаем классы кораблей во временный список
                 GameLoadShipClasses(
@@ -1664,16 +1686,19 @@ namespace SandOcean
                     ref tempLoadingData);
             }
             //Заполняем массив набора контента
-            contentSet.shipClasses
-                = tempLoadingData.shipClasses.ToArray();
+            contentSet.shipClasses = tempLoadingData.shipClasses.ToArray();
 
             //Очищаем временные списки
             tempLoadingData.technologies.Clear();
+
+
+            tempLoadingData.shipTypes.Clear();
 
             tempLoadingData.engines.Clear();
             tempLoadingData.reactors.Clear();
             tempLoadingData.fuelTanks.Clear();
             tempLoadingData.solidExtractionEquipments.Clear();
+            tempLoadingData.energyGuns.Clear();
 
             tempLoadingData.shipClasses.Clear();
         }
@@ -1809,6 +1834,34 @@ namespace SandOcean
                     //Отмечаем в данных технологии её индекс в игре
                     loadingTechnology.GameObjectIndex
                         = tempLoadingData.technologies.Count - 1;
+                }
+            }
+        }
+
+        //Типы кораблей
+        void GameLoadShipTypes(
+            ref WDShipType[] loadingShipTypes,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Для каждого загружаемого типа корабля
+            for (int a = 0; a < loadingShipTypes.Length; a++)
+            {
+                //Если тип является верным
+                if (loadingShipTypes[a].IsValidObject == true)
+                {
+                    //Берём ссылку на загружаемый тип
+                    ref WDShipType loadingShipType = ref loadingShipTypes[a];
+
+                    //Записываем данные типа
+                    DShipType shipType = new(
+                        loadingShipType.ObjectName,
+                        loadingShipType.BattleGroup);
+
+                    //Заносим его во временный список
+                    tempLoadingData.shipTypes.Add(shipType);
+
+                    //Отмечаем в данных типа его индекс в игре
+                    loadingShipType.GameObjectIndex = tempLoadingData.shipTypes.Count - 1;
                 }
             }
         }
@@ -2579,6 +2632,26 @@ namespace SandOcean
 
             //Возвращаем пустой тип основного модификатора компонента
             return TechnologyComponentCoreModifierType.None;
+        }
+
+        TaskForceBattleGroup ShipTypeDefineTaskForceBattleGroup(
+            string battleGroupName)
+        {
+            //Если название боевой группы соответствует названию группы большой дальности
+            if (battleGroupName == "LongRange")
+            {
+                return TaskForceBattleGroup.LongRange;
+            }
+            //Иначе, если название боевой группы соответствует названию группы средней дальности
+            else if (battleGroupName == "MediumRange")
+            {
+                return TaskForceBattleGroup.MediumRange;
+            }
+            //Иначе возвращаем стандартную группу - малой дальности
+            else //"ShortRange"
+            {
+                return TaskForceBattleGroup.ShortRange;
+            }
         }
     }
 }

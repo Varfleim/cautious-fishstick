@@ -79,7 +79,9 @@ namespace SandOcean.Map
                 vertices[a] = vertexPoints[a].ProjectedVector3;
             }
 
-            renderer = null;
+            fleetRenderer = null;
+            hoverRenderer = null;
+            currentRenderer = null;
 
             customMaterial = null;
             tempMaterial = null;
@@ -100,6 +102,7 @@ namespace SandOcean.Map
             shipGroups = new LinkedList<EcsPackedEntity>();
             ownershipChangeShipGroups = new List<EcsPackedEntity>();
 
+            taskForcePEs = new List<EcsPackedEntity>();
         }
 
         static readonly DHexasphereTriangle[] tempTriangles = new DHexasphereTriangle[20];
@@ -124,14 +127,6 @@ namespace SandOcean.Map
                 if (elevation != value)
                 {
                     elevation = value;
-
-                    /*ShaderData.ViewElevationChanged(ref this);
-
-                    position.y
-                        = value * MapGenerationData.elevationStep;
-                    position.y
-                        += (MapGenerationData.SampleNoise(position).y * 2f - 1f)
-                        * MapGenerationData.elevationPerturbStrength;*/
                 }
             }
         }
@@ -157,8 +152,6 @@ namespace SandOcean.Map
                     return;
                 }
                 waterLevel = value;
-
-                //ShaderData.ViewElevationChanged(ref this);
             }
         }
         int waterLevel;
@@ -181,8 +174,6 @@ namespace SandOcean.Map
                 if (terrainTypeIndex != value)
                 {
                     terrainTypeIndex = value;
-
-                    //ShaderData.RefreshTerrain(ref this);
                 }
             }
         }
@@ -195,11 +186,16 @@ namespace SandOcean.Map
         public DHexaspherePoint[] vertexPoints;
         public Vector3[] vertices;
 
-        public Renderer renderer;
+        public Renderer fleetRenderer;
+        public Renderer hoverRenderer;
+        public Renderer currentRenderer;
 
         public Material customMaterial;
         public Material tempMaterial;
 
+        /// <summary>
+        /// Нельзя изменять в потоке
+        /// </summary>
         public float ExtrudeAmount 
         {
             get
@@ -210,22 +206,14 @@ namespace SandOcean.Map
             {
                 extrudeAmount = value;
 
-                //Обновляем рендерер региона
-                MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
-                Mesh mesh = meshFilter.sharedMesh;
+                //Обновляем рендерер подсветки флота региона
+                RefreshRenderer(fleetRenderer);
 
-                //Рассчитываем новое положение вершин рендерера
-                Vector3[] extrudedVertices = new Vector3[vertices.Length];
-                for (int a = 0; a < vertices.Length; a++)
-                {
-                    extrudedVertices[a] = vertices[a] * (1f + this.extrudeAmount * MapGenerationData.extrudeMultiplier);
-                }
-                mesh.vertices = extrudedVertices;
-                mesh.normals = vertices;
-                mesh.RecalculateNormals();
+                //Обновляем рендерер подсветки наведения региона
+                RefreshRenderer(hoverRenderer);
 
-                meshFilter.sharedMesh = null;
-                meshFilter.sharedMesh = mesh;
+                //Обновляем рендерер подсветки выбранного региона
+                RefreshRenderer(currentRenderer);
             }
         }
         float extrudeAmount;
@@ -240,6 +228,8 @@ namespace SandOcean.Map
 
         public LinkedList<EcsPackedEntity> shipGroups;
         public List<EcsPackedEntity> ownershipChangeShipGroups;
+
+        public List<EcsPackedEntity> taskForcePEs;
 
         public Vector3 GetCenter(
             bool worldSpace = true)
@@ -269,6 +259,31 @@ namespace SandOcean.Map
 
             //Иначе возвращаем стандартный цвет региона
             return MapGenerationData.DefaultShadedColor;
+        }
+
+        void RefreshRenderer(
+            Renderer renderer)
+        {
+            //Берём мешфильтр и меш
+            MeshFilter meshFilter = renderer.GetComponent<MeshFilter>();
+            Mesh mesh = meshFilter.sharedMesh;
+
+            //Рассчитываем новое положение вершин рендерера
+            Vector3[] extrudedVertices = new Vector3[vertices.Length];
+            for (int a = 0; a < vertices.Length; a++)
+            {
+                extrudedVertices[a] = vertices[a] * (1f + this.extrudeAmount * MapGenerationData.extrudeMultiplier);
+            }
+            //Назначаем вершины мешу
+            mesh.vertices = extrudedVertices;
+
+            //Рассчитываем нормали меша
+            mesh.normals = vertices;
+            mesh.RecalculateNormals();
+
+            //Обновляем меш мешфильтра
+            meshFilter.sharedMesh = null;
+            meshFilter.sharedMesh = mesh;
         }
     }
 }

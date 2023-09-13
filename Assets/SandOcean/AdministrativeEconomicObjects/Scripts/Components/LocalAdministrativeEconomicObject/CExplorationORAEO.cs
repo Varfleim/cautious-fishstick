@@ -8,14 +8,14 @@ namespace SandOcean.AEO.RAEO
         public CExplorationORAEO(
             EcsPackedEntity selfPE,
             EcsPackedEntity organizationPE,
-            EcsPackedEntity parentLAEOPE,
+            EcsPackedEntity parentRAEOPE,
             byte explorationLevel)
         {
             this.selfPE = selfPE;
 
             this.organizationPE = organizationPE;
 
-            this.parentRAEOPE = parentLAEOPE;
+            this.parentRAEOPE = parentRAEOPE;
 
             this.explorationLevel = explorationLevel;
         }

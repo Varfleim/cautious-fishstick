@@ -4,15 +4,11 @@ using System.Collections.Generic;
 using Leopotam.EcsLite;
 using Leopotam.EcsLite.Threads;
 
-using SandOcean.Ship;
-using SandOcean.Ship.Moving;
-
 namespace SandOcean.AEO.RAEO
 {
     public struct TEcORAEOExplorationCalculate : IEcsThread<
         CEconomicORAEO,
-        CExplorationORAEO,
-        CShipGroup>
+        CExplorationORAEO>
     {
         public EcsWorld world;
 
@@ -24,14 +20,10 @@ namespace SandOcean.AEO.RAEO
         CExplorationORAEO[] explorationORAEOPool;
         int[] explorationORAEOIndices;
 
-        CShipGroup[] shipGroupPool;
-        int[] shipGroupIndices;
-
         public void Init(
             int[] entities,
             CEconomicORAEO[] pool1, int[] indices1,
-            CExplorationORAEO[] pool2, int[] indices2,
-            CShipGroup[] pool3, int[] indices3)
+            CExplorationORAEO[] pool2, int[] indices2)
         {
             oRAEOEntities = entities;
 
@@ -40,12 +32,9 @@ namespace SandOcean.AEO.RAEO
 
             explorationORAEOPool = pool2;
             explorationORAEOIndices = indices2;
-
-            shipGroupPool = pool3;
-            shipGroupIndices = indices3;
         }
 
-        public void Execute(int fromIndex, int beforeIndex)
+        public void Execute(int threadId, int fromIndex, int beforeIndex)
         {
             //Для каждого ORAEO в потоке
             for (int a = fromIndex; a < beforeIndex; a++)
@@ -58,7 +47,7 @@ namespace SandOcean.AEO.RAEO
                 //Очищаем 
 
                 //Берём первую группу кораблей в списке
-                LinkedListNode<EcsPackedEntity> currentShipGroupNode = ecORAEO.landedShipGroups.First;
+                /*LinkedListNode<EcsPackedEntity> currentShipGroupNode = ecORAEO.landedShipGroups.First;
                 //Для каждой группы кораблей в ORAEO
                 while (currentShipGroupNode != null)
                 {
@@ -81,7 +70,7 @@ namespace SandOcean.AEO.RAEO
 
                     //Берём следующую группу кораблей в качестве текущей
                     currentShipGroupNode = currentShipGroupNode.Next;
-                }
+                }*/
             }
         }
     }

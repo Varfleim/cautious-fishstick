@@ -5,7 +5,7 @@ using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 
 using SandOcean.Map.Events;
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 using SandOcean.AEO.RAEO;
 
 namespace SandOcean.Map

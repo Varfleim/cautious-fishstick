@@ -7,16 +7,20 @@ using Leopotam.EcsLite.ExtendedSystems;
 using Leopotam.EcsLite.Unity.Ugui;
 
 using SandOcean.UI;
+using SandOcean.UI.Events;
 using SandOcean.UI.Camera;
 using SandOcean.Time;
 using SandOcean.Player;
 using SandOcean.Map;
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 using SandOcean.AEO.RAEO;
 using SandOcean.Technology;
 using SandOcean.Designer;
-using SandOcean.Ship;
-using SandOcean.Ship.Moving;
+using SandOcean.Warfare.Fleet;
+using SandOcean.Warfare.Fleet.Moving;
+using SandOcean.Warfare.TaskForce;
+using SandOcean.Warfare.TaskForce.Template;
+using SandOcean.Warfare.TaskForce.Missions;
 
 namespace SandOcean
 {
@@ -35,6 +39,7 @@ namespace SandOcean
         public ContentData contentData;
         public MapGenerationData mapGenerationData;
         public RegionsData regionsData;
+        public OrganizationsData organizationsData;
         public DesignerData designerData;
         public InputData inputData;
 
@@ -68,31 +73,34 @@ namespace SandOcean
                 new SNewGameInitializationMain(),
 
                 //Генератор ландшафта и климата
-                new SHexasphere(),
+                new SMapTerrainClimateControl(),
 
-                //Создание игроков
+                //Управление игроками
                 new SPlayerControl(),
 
                 //Рассчёт технологий начала новой игры
                 new STechnologyNewGameCalculation(),
                 //Генератор организаций
 
-                //Создание организаций
+                //Управление организациями
                 new SOrganizationControl(),
                 //Распределитель инициализаторов
                 new SMapInitializerControl())
                 //Группа выключается в SEventControl в том же кадре
 
-                //Создание игроков
+                //Обработка ввода
+                .Add(new SUIInput())
+
+                //Управление игроками
                 .Add(new SPlayerControl())
-                //Создание организаций
+                //Управление организациями
                 .Add(new SOrganizationControl())
 
                 //Рассчёт технологий внутриигровой
                 .Add(new STechnologyGameCalculation())
 
-                //Обработка ввода
-                .Add(new SUIInput())
+                //Управление флотами, оперативными группами и шаблонами
+                .Add(new SFleetControl())
 
                 //Управление событиями, приходящими со всех систем
                 .Add(new SEventControl())
@@ -119,6 +127,7 @@ namespace SandOcean
                 contentData,
                 mapGenerationData,
                 regionsData,
+                organizationsData,
                 designerData,
                 inputData,
                 runtimeData)
@@ -126,32 +135,63 @@ namespace SandOcean
 
             //Системы, работающие каждый тик
             perTickSystems
-                //Создание сущностей кораблей
-                //.Add(new SShipGroupCreating())
-
-                //Движение групп кораблей
-                //Построение маршрута
-                //.Add(new SMTShipGroupPathfinding())
-                //Рассчёт движения кораблей
-                //.Add(new SMTShipGroupMoving())
-                //Вынос кораблей, меняющих регион, в отдельный список
-                //.Add(new SMTRegionShipGroupOwnershipChange())
-                //Перенос кораблей из региона в регион
-                //.Add(new SRegionShipGroupOwnershipChange())
-                
-                //Обработка посадки групп кораблей на уровне региона
-                //.Add(new SMTRegionShipGroupLanding())
-                //Обработка посадки групп кораблей на уровне RAEO
-                //.Add(new SMTRAEOShipGroupLanding())
-                //Обработка посадки групп кораблей на уровне ORAEO
-                //.Add(new SMTORAEOShipGroupLanding())
-
-                //Удаление компонентов после окончания движения
-                //.Add(new SShipGroupMovingStop())
-                //Движение групп кораблей
-
                 //Смена владельца RAEO
                 .Add(new SRAEOChangeOwner())
+
+                //Управление флотами, оперативными группами и шаблонами
+                .Add(new SFleetControl())
+
+                //Миссии флота 1
+                //Управление миссиями флотов
+                .Add(new SMTFleetMissionControl())
+
+                //Пополнение
+                //Проверка необходимости пополнения по оперативным группам
+                .Add(new SMTTaskForceReinforcementCheck())
+                //Определение целей пополнения и запрос создания групп пополнения
+                .Add(new SMTReserveFleetReinforcementRequest())
+                //Создание групп пополнения и тут же назначение им миссий пополнения и 
+                .Add(new STaskForceReinforcementCreating())
+                //Пополнение
+
+                //Поиск, перемещение свободных групп в наиболее давно посещённые регионы флота
+                .Add(new SMTFleetPMissionSearchTargetAssign())
+                //Ударная группа, отправка свободных групп на перехват обнаруженных противников
+                .Add(new SMTFleetTMissionStrikeGroupTargetAssign())
+                //Миссии флота 1
+
+                //Поиск пути 
+                .Add(new STaskForcePathfindingRequestAssign())
+                .Add(new SMTTaskForcePathfinding())
+                .Add(new STaskForcePathfindingRequestDelete())
+                //Поиск пути 
+                //Перемещение
+                .Add(new SMTTaskForceMovement())
+                .Add(new STaskForceMovementStop())
+                //Перемещение
+
+                //Миссии флота 2
+                //Проверка цели группы
+                .Add(new STaskForceTargetCheck())
+
+                //Пополнение групп
+                .Add(new STaskForceReinforcement())
+
+                //Поиск, выполнение поиска оперативными группами
+
+                //Ударная группа,
+
+                //Поиск, обновление времени ожидания и времени последнего посещения регионов
+                .Add(new SMTFleetPMissionSearchRegionUpdate())
+                //Ударная группа
+                //.Add(new SMTFleetTMissionStrikeGroupSecond())
+
+                //Удаление компонента ожидания
+                .Add(new STaskForceWaitingDelete())
+                
+                //Проверка пустых оперативных групп
+                .Add(new STaskForceEmptyCheck())
+                //Миссии флота 2
 
                 //Исследование RAEO силами EcORAEO
                 .Add(new SMTEcORAEOExplorationCalculate())
@@ -167,6 +207,7 @@ namespace SandOcean
                 contentData,
                 mapGenerationData,
                 regionsData,
+                organizationsData,
                 designerData,
                 inputData,
                 runtimeData)

@@ -3,6 +3,7 @@ using System;
 
 using SandOcean.Technology;
 using SandOcean.Designer.Game;
+using SandOcean.Warfare.Ship;
 
 namespace SandOcean
 {
@@ -12,6 +13,7 @@ namespace SandOcean
         public DContentSet(
             string contentSetName,
             DTechnology[] technologies,
+            DShipType[] shipTypes,
             DShipClass[] shipClasses,
             DEngine[] engines,
             DReactor[] reactors,
@@ -23,8 +25,9 @@ namespace SandOcean
 
 
             this.technologies = technologies;
-            
 
+
+            this.shipTypes = shipTypes;
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -40,16 +43,17 @@ namespace SandOcean
             this.contentSetName = contentSetName;
 
 
-            this.technologies = new DTechnology[0];
+            technologies = new DTechnology[0];
 
 
-            this.shipClasses = new DShipClass[0];
+            shipTypes = new DShipType[0];
+            shipClasses = new DShipClass[0];
 
-            this.engines = new DEngine[0];
-            this.reactors = new DReactor[0];
-            this.fuelTanks = new DHoldFuelTank[0];
-            this.solidExtractionEquipments = new DExtractionEquipment[0];
-            this.energyGuns = new DGunEnergy[0];
+            engines = new DEngine[0];
+            reactors = new DReactor[0];
+            fuelTanks = new DHoldFuelTank[0];
+            solidExtractionEquipments = new DExtractionEquipment[0];
+            energyGuns = new DGunEnergy[0];
         }
 
         public string ContentSetName
@@ -69,7 +73,7 @@ namespace SandOcean
 
         public DTechnology[] technologies;
 
-
+        public DShipType[] shipTypes;
         public DShipClass[] shipClasses;
 
         public DEngine[] engines;

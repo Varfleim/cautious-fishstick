@@ -3,7 +3,7 @@ using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 
 using SandOcean.UI;
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 
 namespace SandOcean.Player
 {

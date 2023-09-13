@@ -11,14 +11,8 @@ namespace SandOcean.AEO.RAEO
             EcsPackedEntity selfPE)
         {
             this.selfPE = selfPE;
-
-            landingShipGroups = new();
-            landedShipGroups = new();
         }
 
         public readonly EcsPackedEntity selfPE;
-
-        public List<EcsPackedEntity> landingShipGroups;
-        public LinkedList<EcsPackedEntity> landedShipGroups;
     }
 }

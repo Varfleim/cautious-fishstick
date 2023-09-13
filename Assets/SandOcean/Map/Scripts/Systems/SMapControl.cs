@@ -8,7 +8,7 @@ using Leopotam.EcsLite.Di;
 
 using SandOcean.UI;
 using SandOcean.Map.Events;
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
 using SandOcean.AEO.RAEO;
 
 namespace SandOcean.Map
@@ -62,6 +62,14 @@ namespace SandOcean.Map
                 //Удаляем сущность запроса
                 world.Value.DelEntity(changeMapModeREntity);
             }
+
+            //Обновляем яркость материалов подсветки
+            mapGenerationData.Value.fleetRegionHighlightMaterial.SetFloat(
+                ShaderParameters.ColorShift, Mathf.PingPong(UnityEngine.Time.time * 0.25f, 1f));
+            mapGenerationData.Value.hoverRegionHighlightMaterial.SetFloat(
+                ShaderParameters.ColorShift, Mathf.PingPong(UnityEngine.Time.time * 0.25f, 1f));
+            mapGenerationData.Value.currentRegionHighlightMaterial.SetFloat(
+                ShaderParameters.ColorShift, Mathf.PingPong(UnityEngine.Time.time * 0.25f, 1f));
 
             //Если требуется обновление материалов
             if (mapGenerationData.Value.isMaterialUpdated == true)
@@ -775,7 +783,7 @@ namespace SandOcean.Map
             Vector2 texturePixel;
 
             //Определяем ширину скоса и квадрат ширины
-            const float bevelWidth = 0.1f;
+            const float bevelWidth = 0.05f;
             float bevelWidthSqr = bevelWidth * bevelWidth;
 
             //Для каждого пикселя по высоте

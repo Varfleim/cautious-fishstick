@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 
 using SandOcean.Technology;
+using SandOcean.Warfare.Ship;
 
 namespace SandOcean.Designer.Game
 {
@@ -8,19 +9,22 @@ namespace SandOcean.Designer.Game
     {
         public TempLoadingData(int a)
         {
-            technologies = new List<DTechnology>();
+            technologies = new();
 
-            shipClasses = new List<DShipClass>();
+            shipTypes = new();
+            shipClasses = new();
 
-            engines = new List<DEngine>();
-            reactors = new List<DReactor>();
-            fuelTanks = new List<DHoldFuelTank>();
-            solidExtractionEquipments = new List<DExtractionEquipment>();
-            energyGuns = new List<DGunEnergy>();
+            engines = new();
+            reactors = new();
+            fuelTanks = new();
+            solidExtractionEquipments = new();
+            energyGuns = new();
         }
 
         public List<DTechnology> technologies;
 
+
+        public List<DShipType> shipTypes;
         public List<DShipClass> shipClasses;
 
         public List<DEngine> engines;

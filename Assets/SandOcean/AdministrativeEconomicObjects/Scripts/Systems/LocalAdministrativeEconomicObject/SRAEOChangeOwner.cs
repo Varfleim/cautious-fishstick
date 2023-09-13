@@ -5,7 +5,8 @@ using Leopotam.EcsLite.Di;
 using SandOcean.UI;
 using SandOcean.UI.Events;
 using SandOcean.Map;
-using SandOcean.Diplomacy;
+using SandOcean.Organization;
+using SandOcean.UI.GameWindow.Object.Region.Events;
 
 namespace SandOcean.AEO.RAEO
 {
@@ -36,7 +37,9 @@ namespace SandOcean.AEO.RAEO
 
         readonly EcsPoolInject<SRRefreshRAEOObjectPanel> refreshRAEOObjectPanelSRPool = default;
 
-        readonly EcsPoolInject<EEcORAEONewCreated> ecORAEONewCreatedEventPool = default;
+        //Общие события
+        readonly EcsPoolInject<EObjectNewCreated> objectNewCreatedEventPool = default;
+
 
         //Данные
         //readonly EcsCustomInject<Ether.MapData> mapData = default;
@@ -69,9 +72,6 @@ namespace SandOcean.AEO.RAEO
 
                     //Берём компонент региона
                     ref CHexRegion region = ref regionPool.Value.Get(rAEOEntity);
-
-                    //Увеличиваем видимость региона
-                    //region.IncreaseVisibility();
                 }
 
                 //Если сущность RAEO не имеет компонента самозапроса обновления панели объекта
@@ -84,39 +84,6 @@ namespace SandOcean.AEO.RAEO
                 //Удаляем с сущности ORAEO компонент самозапроса 
                 oRAEOActionSelfRequestPool.Value.Del(oRAEOEntity);
             }
-
-            //Для каждого события смены владельца
-            /*foreach (int eventEntity in oRAEOActionSelfRequestFilter.Value)
-            {
-                //Берём компонент события смены владельца
-                ref SRORAEOAction rAEOChangeOwnerEvent = ref oRAEOActionSelfRequestPool.Value.Get(eventEntity);
-
-                //Берём компонент RAEO
-                rAEOChangeOwnerEvent.rAEOPE.Unpack(world.Value, out int rAEOEntity);
-                ref CLocarAEO rAEO = ref locarAEOPool.Value.Get(rAEOEntity);
-
-                //Берём компонент организации
-                rAEOChangeOwnerEvent.organizationPE.Unpack(world.Value, out int organizationEntity);
-                ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
-
-                //Если событие запрашивает колонизацию RAEO
-                if (rAEOChangeOwnerEvent.actionType == ORAEOActionType.Colonization)
-                {
-                    //Колонизируем RAEO
-                    RAEOColonize(
-                        ref rAEO,
-                        ref organization);
-                }
-
-                //Если сущность RAEO не имеет компонента самозапроса обновления панели объекта
-                if (refreshRAEOObjectPanelSRPool.Value.Has(rAEOEntity) == false)
-                {
-                    //Назначаем сущности компонент самозапроса обновления панели объекта
-                    refreshRAEOObjectPanelSRPool.Value.Add(rAEOEntity);
-                }
-
-                world.Value.DelEntity(eventEntity);
-            }*/
         }
 
         void RAEOColonize(
@@ -142,23 +109,18 @@ namespace SandOcean.AEO.RAEO
             organization.ownedORAEOPEs.Add(ecORAEO.selfPE);
 
             //Создаём событие, сообщающее о создании нового EcORAEO
-            EcORAEONewCreatedEvent(
-                ref organization,
-                ref ecORAEO);
+            ObjectNewCreatedEvent(ecORAEO.selfPE, ObjectNewCreatedType.EcORAEO);
         }
 
-        void EcORAEONewCreatedEvent(
-            ref COrganization organization,
-            ref CEconomicORAEO ecORAEO)
+        void ObjectNewCreatedEvent(
+            EcsPackedEntity objectPE, ObjectNewCreatedType objectNewCreatedType)
         {
-            //Создаём новую сущность и назначаем ей компонент события создания нового EcORAEO
+            //Создаём новую сущность и назначаем ей компонент события создания нового объекта
             int eventEntity = world.Value.NewEntity();
-            ref EEcORAEONewCreated ecORAEONewCreatedEvent = ref ecORAEONewCreatedEventPool.Value.Add(eventEntity);
+            ref EObjectNewCreated eventComp = ref objectNewCreatedEventPool.Value.Add(eventEntity);
 
             //Заполняем данные события
-            ecORAEONewCreatedEvent = new(
-                organization.selfPE,
-                ecORAEO.selfPE);
+            eventComp = new(objectPE, objectNewCreatedType);
         }
     }
 }

@@ -21,7 +21,7 @@ namespace SandOcean.Time
                 return TICK_TIMER_MAX;
             }
         }
-        private const double TICK_TIMER_MAX = 0.1d;
+        private const double TICK_TIMER_MAX = 1.0d;
 
         private static GameObject timeTickSystemObject;
         private static int tick;

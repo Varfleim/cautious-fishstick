@@ -62,23 +62,18 @@ namespace SandOcean
             string path)
         {
             //Собираем путь к файлу набора контента
-            path
-                = Path.Combine(
-                    path,
-                    "ContentSet.json");
+            path = Path.Combine(path, "ContentSet.json");
 
             //Берём ссылку на сохраняемый набор контента
-            ref readonly WDContentSet contentSet
-                = ref contentData.Value
-                .wDContentSets[contentSetIndex];
+            ref readonly WDContentSet contentSet = ref contentData.Value.wDContentSets[contentSetIndex];
 
             //Создаём класс сохраняемого набора контента
             SDContentSetClass contentSetClass
                 = new()
                 {
-                    contentSet
-                    = new(
+                    contentSet = new(
                         new SDTechnology[contentSet.technologies.Length],
+                        new SDShipType[contentSet.shipTypes.Length],
                         new SDShipClass[contentSet.shipClasses.Length],
                         new SDEngine[contentSet.engines.Length],
                         new SDReactor[contentSet.reactors.Length],
@@ -92,6 +87,11 @@ namespace SandOcean
                 in contentSet.technologies,
                 ref contentSetClass.contentSet.technologies);
 
+
+            //Сохраняем типы кораблей
+            WorkshopSaveShipTypes(
+                in contentSet.shipTypes,
+                ref contentSetClass.contentSet.shipTypes);
 
             //Сохраняем классы кораблей
             WorkshopSaveShipClasses(
@@ -194,6 +194,47 @@ namespace SandOcean
                 //Заносим её в сохраняемый массив по соответствующему индексу
                 technologies[a]
                     = technology;
+            }
+        }
+
+
+        //Типы кораблей
+        void WorkshopSaveShipTypes(
+            in WDShipType[] savingShipTypes,
+            ref SDShipType[] shipTypes)
+        {
+            //Для каждого сохраняемого типа корабля
+            for (int a = 0; a < savingShipTypes.Length; a++)
+            {
+                //Берём ссылку на сохраняемый тип 
+                ref readonly WDShipType savingShipType = ref savingShipTypes[a];
+
+                //Определяем боевую группу типа
+                string battleGroupName;
+
+                //Если тип относится к боевой группе большой дальности
+                if(savingShipType.BattleGroup == TaskForceBattleGroup.LongRange)
+                {
+                    battleGroupName = "LongRange";
+                }
+                //Иначе, если тип относится к боевой группе средней дальности
+                else if(savingShipType.BattleGroup == TaskForceBattleGroup.MediumRange)
+                {
+                    battleGroupName = "MediumRange";
+                }
+                //Иначе тип относится к боевой группе малой дальности
+                else
+                {
+                    battleGroupName = "ShortRange";
+                }
+
+                //Записываем данные типа
+                SDShipType shipType = new(
+                    savingShipType.ObjectName,
+                    battleGroupName);
+
+                //Заносим его в сохраняемый массив по соответствующему индексу
+                shipTypes[a] = shipType;
             }
         }
 

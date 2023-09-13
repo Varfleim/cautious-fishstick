@@ -3,15 +3,11 @@ using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 using Leopotam.EcsLite.Threads;
 
-using SandOcean.Ship;
-using SandOcean.Ship.Moving;
-
 namespace SandOcean.AEO.RAEO
 {
     public class SMTEcORAEOExplorationCalculate : EcsThreadSystem<TEcORAEOExplorationCalculate,
         CEconomicORAEO,
-        CExplorationORAEO,
-        CShipGroup>
+        CExplorationORAEO>
     {
         readonly EcsWorldInject world = default;
 
