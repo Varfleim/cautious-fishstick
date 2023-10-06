@@ -41,6 +41,11 @@ namespace SandOcean
         None
     }
 
+    public enum BuildingCategory : byte
+    {
+        Test
+    }
+
     public enum TaskForceBattleGroup : byte
     {
         ShortRange,
@@ -74,6 +79,118 @@ namespace SandOcean
 
         public string[] technologyModifiersNames;
     }
+
+    public abstract class DContentObject
+    {
+        public DContentObject(
+            string objectName)
+        {
+            this.objectName = objectName;
+        }
+
+        public string ObjectName
+        {
+            get
+            {
+                return objectName;
+            }
+            set
+            {
+                objectName = value;
+            }
+        }
+        protected string objectName;
+    }
+
+    public abstract class WDContentObject : DContentObject
+    {
+        public WDContentObject(
+            string objectName) : base(objectName)
+        {
+            gameObjectIndex = -1;
+            isValidObject = false;
+        }
+
+        public int GameObjectIndex
+        {
+            get
+            {
+                return gameObjectIndex;
+            }
+            set
+            {
+                gameObjectIndex = value;
+            }
+        }
+        protected int gameObjectIndex;
+        
+        public bool IsValidObject
+        {
+            get
+            {
+                return IsValidObject;
+            }
+            set
+            {
+                isValidObject = value;
+            }
+        }
+        protected bool isValidObject;
+    }
+
+    public interface IShipClassPart
+    {
+        public ContentObjectLink Part
+        {
+            get;
+            set;
+        }
+
+        public ContentObjectLink CoreTechnology
+        {
+            get;
+            set;
+        }
+
+        public ContentObjectLink[] Improvements
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IShipPart
+    {
+        ContentObjectLink[] CoreTechnologies
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IShipPartCoreTechnology
+    {
+        ContentObjectLink[] DirectionsOfImprovement
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IShipPartDirectionOfImprovement
+    {
+        ContentObjectLink[] Improvements
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IShipPartImprovement
+    {
+
+    }
+
 
     public interface IContentSetDescription
     {
@@ -146,6 +263,18 @@ namespace SandOcean
 
     public interface IWorkshopContentObjectLink
     {
+        public string ContentSetName
+        {
+            get;
+            set;
+        }
+
+        public string ObjectName
+        {
+            get;
+            set;
+        }
+
         public bool IsValidLink
         {
             get;
@@ -238,6 +367,15 @@ namespace SandOcean
     public interface IGameComponent
     {
         public List<DContentObjectLink> ShipClasses
+        {
+            get;
+            set;
+        }
+    }
+
+    public interface IBuildingType
+    {
+        public BuildingCategory BuildingCategory
         {
             get;
             set;

@@ -11,6 +11,7 @@ using SandOcean.Organization;
 using SandOcean.Warfare.Fleet;
 using SandOcean.UI.GameWindow.Object;
 using SandOcean.Warfare.TaskForce;
+using SandOcean.UI.GameWindow;
 
 namespace SandOcean
 {
@@ -75,6 +76,8 @@ namespace SandOcean
                     GameCreatePanelRequest(
                         CreatingPanelType.ORAEOBriefInfoPanel,
                         eventComp.objectPE);
+
+                    UnityEngine.Debug.LogWarning("Organization created!");
                 }
                 //Иначе, если событие сообщает о создании нового EcORAEO
                 else if (eventComp.objectNewCreatedType == ObjectNewCreatedType.EcORAEO)
@@ -93,6 +96,14 @@ namespace SandOcean
                             }
                         }*/
                     }
+
+                    UnityEngine.Debug.LogWarning("EcORAEO created!");
+                }
+                //Иначе, если событие сообщает о создании нового сооружения
+                else if (eventComp.objectNewCreatedType == ObjectNewCreatedType.Building)
+                {
+
+                    UnityEngine.Debug.LogWarning("Building created!");
                 }
                 //Иначе, если событие сообщает о создании нового флота
                 else if (eventComp.objectNewCreatedType == ObjectNewCreatedType.Fleet)
@@ -113,6 +124,8 @@ namespace SandOcean
                                 fleet.selfPE);
                         }
                     }
+
+                    UnityEngine.Debug.LogWarning("Fleet created!");
                 }
                 //Иначе, если событие сообщает о создании новой оперативной группы
                 else if (eventComp.objectNewCreatedType == ObjectNewCreatedType.TaskForce)
@@ -137,6 +150,8 @@ namespace SandOcean
                                 taskForce.selfPE);
                         }
                     }
+
+                    UnityEngine.Debug.LogWarning("Task Force created!");
                 }
             }
         }

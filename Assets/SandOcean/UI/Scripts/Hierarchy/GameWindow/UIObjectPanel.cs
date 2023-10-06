@@ -6,7 +6,7 @@ using TMPro;
 using Leopotam.EcsLite;
 using SandOcean.UI.GameWindow.Object;
 
-namespace SandOcean.UI
+namespace SandOcean.UI.GameWindow
 {
     public enum ObjectSubpanelType : byte
     {
@@ -14,12 +14,10 @@ namespace SandOcean.UI
         FleetManager,
         Organization,
         Region,
-        ORAEO
+        ORAEO,
+        Building
     }
-}
 
-namespace SandOcean.UI.GameWindow
-{
     public class UIObjectPanel : MonoBehaviour
     {
         public TextMeshProUGUI objectName;
@@ -35,5 +33,7 @@ namespace SandOcean.UI.GameWindow
         public UIRegionSubpanel regionSubpanel;
 
         public UIORAEOSubpanel oRAEOSubpanel;
+
+        public UIBuildingSubpanel buildingSubpanel;
     }
 }

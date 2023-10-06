@@ -63,7 +63,7 @@ public class FlexibleGridLayout : LayoutGroup
 
         //Странно работает с чётным числом столбцов
         float cellWidth = (parentWidth / (float)columns) 
-            - ((spacing.x / (float)columns) * 2) 
+            - ((spacing.x / (float)columns)) 
             - (padding.left / (float)columns)
             - (padding.right / (float)columns);
         float cellHeight = (parentHeight / (float)rows) 

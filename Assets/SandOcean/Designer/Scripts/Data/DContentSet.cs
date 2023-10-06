@@ -2,6 +2,7 @@
 using System;
 
 using SandOcean.Technology;
+using SandOcean.Economy.Building;
 using SandOcean.Designer.Game;
 using SandOcean.Warfare.Ship;
 
@@ -13,7 +14,12 @@ namespace SandOcean
         public DContentSet(
             string contentSetName,
             DTechnology[] technologies,
+            DBuildingType[] buildingTypes,
             DShipType[] shipTypes,
+            DShipPart[] shipParts,
+            DShipPartCoreTechnology[] shipPartCoreTechnologies,
+            DShipPartDirectionOfImprovement[] shipPartDirectionsOfImprovement,
+            DShipPartImprovement[] shipPartImprovements,
             DShipClass[] shipClasses,
             DEngine[] engines,
             DReactor[] reactors,
@@ -26,8 +32,15 @@ namespace SandOcean
 
             this.technologies = technologies;
 
+            this.buildingTypes = buildingTypes;
 
             this.shipTypes = shipTypes;
+
+            this.shipParts = shipParts;
+            this.shipPartCoreTechnologies = shipPartCoreTechnologies;
+            this.shipPartDirectionsOfImprovement = shipPartDirectionsOfImprovement;
+            this.shipPartImprovements = shipPartImprovements;
+
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -45,8 +58,15 @@ namespace SandOcean
 
             technologies = new DTechnology[0];
 
+            buildingTypes = new DBuildingType[0];
 
             shipTypes = new DShipType[0];
+
+            shipParts = new DShipPart[0];
+            shipPartCoreTechnologies = new DShipPartCoreTechnology[0];
+            shipPartDirectionsOfImprovement = new DShipPartDirectionOfImprovement[0];
+            shipPartImprovements = new DShipPartImprovement[0];
+
             shipClasses = new DShipClass[0];
 
             engines = new DEngine[0];
@@ -73,7 +93,15 @@ namespace SandOcean
 
         public DTechnology[] technologies;
 
+        public DBuildingType[] buildingTypes;
+
         public DShipType[] shipTypes;
+
+        public DShipPart[] shipParts;
+        public DShipPartCoreTechnology[] shipPartCoreTechnologies;
+        public DShipPartDirectionOfImprovement[] shipPartDirectionsOfImprovement;
+        public DShipPartImprovement[] shipPartImprovements;
+
         public DShipClass[] shipClasses;
 
         public DEngine[] engines;

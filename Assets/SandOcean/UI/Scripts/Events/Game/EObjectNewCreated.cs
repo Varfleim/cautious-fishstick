@@ -6,8 +6,12 @@ namespace SandOcean.UI.Events
     public enum ObjectNewCreatedType : byte
     {
         None,
+
         Organization,
+
         EcORAEO,
+        Building,
+
         Fleet,
         TaskForce
     }

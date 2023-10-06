@@ -4,7 +4,7 @@ using System;
 namespace SandOcean.Designer.Workshop
 {
     [Serializable]
-    public struct WDComponentCoreTechnology : IWorkshopContentObjectLink, IComponentCoreTechnology
+    public struct WDComponentCoreTechnology : IComponentCoreTechnology
     {
         public WDComponentCoreTechnology(
             string modifierName,

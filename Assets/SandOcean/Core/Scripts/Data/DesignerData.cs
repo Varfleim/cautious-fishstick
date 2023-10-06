@@ -10,6 +10,7 @@ namespace SandOcean.Designer
     {
         SectorGenerationTemplate,
         Technologies,
+        BuildingType,
         ShipType,
         ShipClass,
         ComponentEngine,
@@ -19,6 +20,10 @@ namespace SandOcean.Designer
         ComponentGunProjectile,
         ComponentGunHybrid,
         ComponentGunEnergy,
+        ShipPart,
+        ShipPartCoreTechnology,
+        ShipPartDirectionOfImprovement,
+        ShipPartImprovement,
         None
     }
 

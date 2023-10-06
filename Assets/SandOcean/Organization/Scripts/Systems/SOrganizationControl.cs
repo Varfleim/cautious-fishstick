@@ -301,7 +301,7 @@ namespace SandOcean.Organization
                     rAEO.organizationRAEOs[oldArraySize++] = tempDORAEO[a];
                 }
 
-                UnityEngine.Debug.LogWarning(rAEO.organizationRAEOs.Length);
+                //UnityEngine.Debug.LogWarning(rAEO.organizationRAEOs.Length);
             }
 
             //Для каждого самозапроса создания ORAEO

@@ -74,6 +74,12 @@ namespace SandOcean.UI
                 //Проверяем, требуется ли обновление в подпанели ORAEO
                 RefreshCheckGameObjectORAEO();
             }
+            //Иначе, если активна подпанель сооружения
+            else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Building)
+            {
+                //Проверяем, требуется ли обновление в подпанели сооружения
+                RefreshCheckGameObjectBuilding();
+            }
         }
 
         void RefreshCheckGameObjectFleetManager()
@@ -175,6 +181,32 @@ namespace SandOcean.UI
                 //Запрашиваем обновление обзорной вкладки
                 GameObjectPanelControlRequest(
                     ObjectPanelActionRequestType.ORAEOOverview,
+                    objectPanel.activeObjectPE);
+            }
+            //Иначе, если активна вкладка сооружений
+            else if (oRAEOSubpanel.tabGroup.selectedTab == oRAEOSubpanel.buildingsTab.selfTabButton)
+            {
+                //Запрашиваем обновление вкладки сооружений
+                GameObjectPanelControlRequest(
+                    ObjectPanelActionRequestType.ORAEOBuildings,
+                    objectPanel.activeObjectPE);
+            }
+        }
+
+        void RefreshCheckGameObjectBuilding()
+        {
+            //Берём панель объекта
+            UIObjectPanel objectPanel = eUI.Value.gameWindow.objectPanel;
+
+            //Берём подпанель сооружения
+            UIBuildingSubpanel buildingSubpanel = objectPanel.buildingSubpanel;
+
+            //Если активна обзорная вкладка
+            if (buildingSubpanel.tabGroup.selectedTab == buildingSubpanel.overviewTab.selfTabButton)
+            {
+                //Запрашиваем обновление обзорной вкладки
+                GameObjectPanelControlRequest(
+                    ObjectPanelActionRequestType.BuildingOverview,
                     objectPanel.activeObjectPE);
             }
         }

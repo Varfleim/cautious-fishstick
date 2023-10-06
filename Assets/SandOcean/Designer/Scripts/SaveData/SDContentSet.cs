@@ -1,6 +1,8 @@
 
 using System;
 
+using SandOcean.Warfare.Ship;
+
 namespace SandOcean.Designer.Save
 {
     [Serializable]
@@ -8,7 +10,12 @@ namespace SandOcean.Designer.Save
     {
         public SDContentSet(
             SDTechnology[] technologies,
+            SDBuildingType[] buildingTypes,
             SDShipType[] shipTypes,
+            SDShipPart[] shipParts, 
+            SDShipPartCoreTechnology[] shipPartCoreTechnologies, 
+            SDShipPartTypeDirectionOfImprovement[] shipPartDirectionsOfImprovement,
+            SDShipPartImprovement[] shipPartImprovements,
             SDShipClass[] shipClasses,
             SDEngine[] engines,
             SDReactor[] reactors,
@@ -18,8 +25,15 @@ namespace SandOcean.Designer.Save
         {
             this.technologies = technologies;
 
+            this.buildingTypes = buildingTypes;
 
             this.shipTypes = shipTypes;
+
+            this.shipParts = shipParts;
+            this.shipPartCoreTechnologies = shipPartCoreTechnologies;
+            this.shipPartDirectionsOfImprovement = shipPartDirectionsOfImprovement;
+            this.shipPartImprovements = shipPartImprovements;
+
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -31,8 +45,15 @@ namespace SandOcean.Designer.Save
 
         public SDTechnology[] technologies;
 
+        public SDBuildingType[] buildingTypes;
 
         public SDShipType[] shipTypes;
+
+        public SDShipPart[] shipParts;
+        public SDShipPartCoreTechnology[] shipPartCoreTechnologies;
+        public SDShipPartTypeDirectionOfImprovement[] shipPartDirectionsOfImprovement;
+        public SDShipPartImprovement[] shipPartImprovements;
+
         public SDShipClass[] shipClasses;
 
         public SDEngine[] engines;

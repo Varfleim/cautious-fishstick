@@ -2,6 +2,8 @@
 using System;
 using System.Collections.Generic;
 
+using SandOcean.Warfare.Ship;
+
 namespace SandOcean.Designer.Workshop
 {
     [Serializable]
@@ -10,7 +12,12 @@ namespace SandOcean.Designer.Workshop
         public WDContentSet(
             string contentSetName,
             WDTechnology[] technologies,
+            WDBuildingType[] buildingTypes,
             WDShipType[] shipTypes,
+            WDShipPart[] shipParts,
+            WDShipPartCoreTechnology[] shipPartCoreTechnologies,
+            WDShipPartDirectionOfImprovement[] shipPartDirectionsOfImprovement,
+            WDShipPartImprovement[] shipPartImprovements,
             WDShipClass[] shipClasses,
             WDEngine[] engines,
             WDReactor[] reactors,
@@ -26,8 +33,15 @@ namespace SandOcean.Designer.Workshop
 
             this.technologies = technologies;
 
+            this.buildingTypes = buildingTypes;
 
             this.shipTypes = shipTypes;
+
+            this.shipParts = shipParts;
+            this.shipPartCoreTechnologies = shipPartCoreTechnologies;
+            this.shipPartDirectionsOfImprovement = shipPartDirectionsOfImprovement;
+            this.shipPartImprovements = shipPartImprovements;
+
             this.shipClasses = shipClasses;
 
             this.engines = engines;
@@ -47,8 +61,15 @@ namespace SandOcean.Designer.Workshop
 
             technologies = new WDTechnology[0];
 
+            buildingTypes = new WDBuildingType[0];
 
             shipTypes = new WDShipType[0];
+
+            shipParts = new WDShipPart[0];
+            shipPartCoreTechnologies = new WDShipPartCoreTechnology[0];
+            shipPartDirectionsOfImprovement = new WDShipPartDirectionOfImprovement[0];
+            shipPartImprovements = new WDShipPartImprovement[0];
+
             shipClasses = new WDShipClass[0];
 
             engines = new WDEngine[0];
@@ -79,8 +100,15 @@ namespace SandOcean.Designer.Workshop
 
         public WDTechnology[] technologies;
 
+        public WDBuildingType[] buildingTypes;
 
         public WDShipType[] shipTypes;
+
+        public WDShipPart[] shipParts;
+        public WDShipPartCoreTechnology[] shipPartCoreTechnologies;
+        public WDShipPartDirectionOfImprovement[] shipPartDirectionsOfImprovement;
+        public WDShipPartImprovement[] shipPartImprovements;
+
         public WDShipClass[] shipClasses;
 
         public WDEngine[] engines;

@@ -1,13 +1,9 @@
 
-using System.Collections;
 using System.Collections.Generic;
 
 using UnityEngine;
 
 using Leopotam.EcsLite;
-
-using SandOcean.UI.Camera;
-using SandOcean.Map;
 
 namespace SandOcean.UI
 {
@@ -23,12 +19,6 @@ namespace SandOcean.UI
         Ignore,
         No,
         Yes
-    }
-
-    public enum RefresUIType : byte
-    {
-        Refresh,
-        Delete
     }
 
     public class InputData : MonoBehaviour

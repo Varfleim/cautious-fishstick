@@ -8,6 +8,7 @@ using Leopotam.EcsLite;
 using Leopotam.EcsLite.Di;
 
 using SandOcean.Technology;
+using SandOcean.Economy.Building;
 using SandOcean.Designer;
 using SandOcean.Designer.Workshop;
 using SandOcean.Designer.Game;
@@ -297,17 +298,65 @@ namespace SandOcean
             //Заполняем массив набора контента
             contentSet.technologies = tempLoadingWorkshopData.technologies.ToArray();
 
+            //Если массив типов сооружений не пуст, загружаем его
+            if (loadingContentSet.buildingTypes != null)
+            {
+                WorkshopLoadBuildingTypes(
+                    in loadingContentSet.buildingTypes,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.buildingTypes = tempLoadingWorkshopData.buildingTypes.ToArray();
 
-            //Если массив типов кораблей не пуст
+            //Если массив типов кораблей не пуст, загружаем его
             if (loadingContentSet.shipTypes != null)
             {
-                //Загружаем типы во временный список
                 WorkshopLoadShipTypes(
                     in loadingContentSet.shipTypes,
                     ref tempLoadingWorkshopData);
             }
             //Заполняем массив набора контента
             contentSet.shipTypes = tempLoadingWorkshopData.shipTypes.ToArray();
+
+            //Если массив частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipParts != null)
+            {
+                WorkshopLoadShipParts(
+                    in loadingContentSet.shipParts,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipParts = tempLoadingWorkshopData.shipParts.ToArray();
+
+            //Если массив ключевых технологий частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartCoreTechnologies != null)
+            {
+                WorkshopLoadShipPartCoreTechnologies(
+                    in loadingContentSet.shipPartCoreTechnologies,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipPartCoreTechnologies = tempLoadingWorkshopData.shipPartCoreTechnologies.ToArray();
+
+            //Если массив направлений улучшения частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartDirectionsOfImprovement != null)
+            {
+                WorkshopLoadShipPartDirectionsOfImprovement(
+                    in loadingContentSet.shipPartDirectionsOfImprovement,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipPartDirectionsOfImprovement = tempLoadingWorkshopData.shipPartDirectionsOfImprovement.ToArray();
+
+            //Если массив улучшений частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartImprovements != null)
+            {
+                WorkshopLoadShipPartImprovements(
+                    in loadingContentSet.shipPartImprovements,
+                    ref tempLoadingWorkshopData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipPartImprovements = tempLoadingWorkshopData.shipPartImprovements.ToArray();
 
             //Если массив двигателей не пуст
             if (loadingContentSet.engines != null)
@@ -365,7 +414,6 @@ namespace SandOcean
             //Заполняем массив набора контента
             contentSet.energyGuns = tempLoadingWorkshopData.energyGuns.ToArray();
 
-
             //Если массив классов кораблей не пуст
             if (loadingContentSet.shipClasses != null)
             {
@@ -380,7 +428,14 @@ namespace SandOcean
             //Очищаем временные списки
             tempLoadingWorkshopData.technologies.Clear();
 
+            tempLoadingWorkshopData.buildingTypes.Clear();
+
             tempLoadingWorkshopData.shipTypes.Clear();
+
+            tempLoadingWorkshopData.shipParts.Clear();
+            tempLoadingWorkshopData.shipPartCoreTechnologies.Clear();
+            tempLoadingWorkshopData.shipPartDirectionsOfImprovement.Clear();
+            tempLoadingWorkshopData.shipPartImprovements.Clear();
 
             tempLoadingWorkshopData.engines.Clear();
             tempLoadingWorkshopData.reactors.Clear();
@@ -398,9 +453,16 @@ namespace SandOcean
             for (int a = startIndex; a < contentData.Value.wDContentSets.Length; a++)
             {
                 //Берём ссылку на набор контента
-                ref WDContentSet contentSet
-                    = ref contentData.Value
-                    .wDContentSets[a];
+                ref WDContentSet contentSet = ref contentData.Value.wDContentSets[a];
+
+                //Рассчитываем ссылки направлений улучшения частей корабля
+                WorkshopLinkCalculatingDirectionsOfImprovement(contentSet.shipPartDirectionsOfImprovement);
+
+                //Рассчитываем ссылки ключевых технологий частей корабля
+                WorkshopLinkCalculatingCoreTechnologies(contentSet.shipPartCoreTechnologies);
+
+                //Рассчитываем ссылки частей корабля
+                WorkshopLinkCalculatingShipParts(contentSet.shipParts);
 
                 //Рассчитываем ссылки двигателей
                 WorkshopRefCalculatingEngines(
@@ -435,9 +497,7 @@ namespace SandOcean
             for (int a = startIndex; a < contentData.Value.wDContentSets.Length; a++)
             {
                 //Берём ссылку на набор контента
-                ref WDContentSet contentSet
-                    = ref contentData.Value
-                    .wDContentSets[a];
+                ref WDContentSet contentSet = ref contentData.Value.wDContentSets[a];
 
                 //Рассчитываем ссылки классов кораблей
                 WorkshopRefCalculatingShipClasses(
@@ -572,7 +632,32 @@ namespace SandOcean
             }
         }
 
-        //Типы кораблей
+        #region Buildings
+        void WorkshopLoadBuildingTypes(
+            in SDBuildingType[] loadingBuildingTypes,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Для каждого загружаемого типа сооружения
+            for (int a = 0; a < loadingBuildingTypes.Length; a++)
+            {
+                //Берём загружаемый тип
+                ref readonly SDBuildingType loadingBuildingType = ref loadingBuildingTypes[a];
+
+                //Определяем категорию, к которой относится тип
+                BuildingCategory buildingCategory = BuildingDefineBuildingCategory(loadingBuildingType.buildingCategory);
+
+                //Записываем загруженные данные типа
+                WDBuildingType buildingType = new(
+                    loadingBuildingType.typeName,
+                    buildingCategory);
+
+                //Заносим его во временный список
+                tempLoadingWorkshopData.buildingTypes.Add(buildingType);
+            }
+        }
+        #endregion
+
+        #region Ships
         void WorkshopLoadShipTypes(
             in SDShipType[] loadingShipTypes,
             ref TempLoadingWorkshopData tempLoadingWorkshopData)
@@ -580,7 +665,7 @@ namespace SandOcean
             //Для каждого загружаемого типа корабля
             for (int a = 0; a < loadingShipTypes.Length; a++)
             {
-                //Берём ссылку на загружаемый тип
+                //Берём загружаемый тип
                 ref readonly SDShipType loadingShipType = ref loadingShipTypes[a];
 
                 //Определяем боевую группу, к которой относится тип
@@ -588,11 +673,271 @@ namespace SandOcean
 
                 //Записываем загруженные данные типа
                 WDShipType shipType = new(
-                    loadingShipType.shipTypeName,
+                    loadingShipType.typeName,
                     taskForceBattleGroup);
 
                 //Заносим его во временный список
                 tempLoadingWorkshopData.shipTypes.Add(shipType);
+            }
+        }
+
+        #region ShipParts
+        void WorkshopLoadShipParts(
+            in SDShipPart[] loadingShipParts,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Создаём список для временных данных
+            List<WorkshopContentObjectLink> coreTechnologies = new();
+
+            //Для каждой загружаемой части корабля
+            for (int a = 0; a < loadingShipParts.Length; a++)
+            {
+                //Берём загружаемую часть
+                ref readonly SDShipPart loadingShipPart = ref loadingShipParts[a];
+
+                //Очищаем временный список ключевых технологий
+                coreTechnologies.Clear();
+
+                //Загружаем ключевые технологии
+                WorkshopLoadContentObjectLink(
+                    in loadingShipPart.coreTechnologies,
+                    coreTechnologies);
+
+                //Записываем загруженные данные части
+                WDShipPart shipPart = new(
+                    loadingShipPart.partName,
+                    coreTechnologies.ToArray());
+
+                //Заносим её во временный список
+                tempLoadingWorkshopData.shipParts.Add(shipPart);
+            }
+        }
+
+        void WorkshopLoadShipPartCoreTechnologies(
+            in SDShipPartCoreTechnology[] loadingCoreTechnologies,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Создаём список для временных данных
+            List<WorkshopContentObjectLink> directionsOfImprovement = new();
+
+            //Для каждой загружаемой ключевой технологии части корабля
+            for (int a = 0; a < loadingCoreTechnologies.Length; a++)
+            {
+                //Берём загружаемую технологию
+                ref readonly SDShipPartCoreTechnology loadingCoreTechnology = ref loadingCoreTechnologies[a];
+
+                //Очищаем временный список 
+                directionsOfImprovement.Clear();
+
+                //Загружаем направления улучшения
+                WorkshopLoadContentObjectLink(
+                    in loadingCoreTechnology.directionsOfImprovement,
+                    directionsOfImprovement);
+
+                //Записываем загруженные данные технологии
+                WDShipPartCoreTechnology coreTechnology = new(
+                    loadingCoreTechnology.coreTechnologyName,
+                    directionsOfImprovement.ToArray());
+
+                //Заносим её во временный список
+                tempLoadingWorkshopData.shipPartCoreTechnologies.Add(coreTechnology);
+            }
+        }
+
+        void WorkshopLoadShipPartDirectionsOfImprovement(
+            in SDShipPartTypeDirectionOfImprovement[] loadingDirectionsOfImprovement,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Создаём список для временных данных
+            List<WorkshopContentObjectLink> improvements = new();
+
+            //Для каждого загружаемого направления улучшения
+            for (int a = 0; a < loadingDirectionsOfImprovement.Length; a++)
+            {
+                //Берём загружаемое направление
+                ref readonly SDShipPartTypeDirectionOfImprovement loadingDirectionOfImprovement = ref loadingDirectionsOfImprovement[a];
+
+                //Очищаем временный список
+                improvements.Clear();
+
+                //Загружаем улучшения
+                WorkshopLoadContentObjectLink(
+                    in loadingDirectionOfImprovement.improvements,
+                    improvements);
+
+                //Записываем загруженные данные направления
+                WDShipPartDirectionOfImprovement directionOfImprovement = new(
+                    loadingDirectionOfImprovement.directionOfImprovementName,
+                    improvements.ToArray());
+
+                //Заносим его во временный список
+                tempLoadingWorkshopData.shipPartDirectionsOfImprovement.Add(directionOfImprovement);
+            }
+        }
+
+        void WorkshopLoadShipPartImprovements(
+            in SDShipPartImprovement[] loadingImprovements,
+            ref TempLoadingWorkshopData tempLoadingWorkshopData)
+        {
+            //Для каждого загружаемого улучшения
+            for (int a = 0; a < loadingImprovements.Length; a++)
+            {
+                //Берём загружаемое улучшение
+                ref readonly SDShipPartImprovement loadingImprovement = ref loadingImprovements[a];
+
+                //Записываем загруженные данные улучшения
+                WDShipPartImprovement improvement = new(
+                    loadingImprovement.improvementName);
+
+                //Заносим его во временный список
+                tempLoadingWorkshopData.shipPartImprovements.Add(improvement);
+            }
+        }
+
+        void WorkshopLinkCalculatingShipParts(
+            WDShipPart[] shipParts)
+        {
+            //Для каждой части корабля
+            for (int a = 0; a < shipParts.Length; a++)
+            {
+                //Берём на часть корабля
+                WDShipPart shipPart = shipParts[a];
+
+                //Для каждой ключевой технологии
+                for (int b = 0; b < shipPart.CoreTechnologies.Length; b++)
+                {
+                    //Берём ключевую технологию
+                    if (shipPart.CoreTechnologies[b] is WorkshopContentObjectLink coreTechnologyLink)
+                    {
+                        //Если набор контента существует
+                        if (WorkshopFindContentSet(coreTechnologyLink, out int findedContentSetIndex))
+                        {
+                            //Если ключевая технология существует
+                            if (WorkshopFindContentObject(coreTechnologyLink, contentData.Value.wDContentSets[findedContentSetIndex].shipPartCoreTechnologies, 
+                                out int findedCoreTechnologyIndex))
+                            {
+                                //Указываем, что ссылка верна
+                                coreTechnologyLink.IsValidLink = true;
+                                coreTechnologyLink.ContentSetIndex = findedContentSetIndex;
+                                coreTechnologyLink.ObjectIndex = findedCoreTechnologyIndex;
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                coreTechnologyLink.IsValidLink = false;
+                                coreTechnologyLink.ContentSetIndex = findedContentSetIndex;
+                                coreTechnologyLink.ObjectIndex = -1;
+                            }
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Указываем, что ссылка ошибочна
+                            coreTechnologyLink.IsValidLink = false;
+                            coreTechnologyLink.ContentSetIndex = -1;
+                            coreTechnologyLink.ObjectIndex = -1;
+                        }
+                    }
+                }
+            }
+        }
+
+        void WorkshopLinkCalculatingCoreTechnologies(
+            WDShipPartCoreTechnology[] coreTechnologies)
+        {
+            //Для каждой ключевой технологии части корабля
+            for (int a = 0; a < coreTechnologies.Length; a++)
+            {
+                //Берём ключевую технологию
+                WDShipPartCoreTechnology coreTechnology = coreTechnologies[a];
+
+                //Для каждого направления улучшения
+                for (int b = 0; b < coreTechnology.DirectionsOfImprovement.Length; b++)
+                {
+                    //Берём направление улучшения
+                    if (coreTechnology.DirectionsOfImprovement[b] is WorkshopContentObjectLink directionOfImprovementLink)
+                    {
+                        //Если набор контента существует
+                        if (WorkshopFindContentSet(directionOfImprovementLink, out int findedContentSetIndex))
+                        {
+                            //Если направление улучшения существует
+                            if (WorkshopFindContentObject(directionOfImprovementLink, contentData.Value.wDContentSets[findedContentSetIndex].shipPartDirectionsOfImprovement,
+                                out int findedDirectionOfImprovementIndex))
+                            {
+                                //Указываем, что ссылка верна
+                                directionOfImprovementLink.IsValidLink = true;
+                                directionOfImprovementLink.ContentSetIndex = findedContentSetIndex;
+                                directionOfImprovementLink.ObjectIndex = findedDirectionOfImprovementIndex;
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                directionOfImprovementLink.IsValidLink = false;
+                                directionOfImprovementLink.ContentSetIndex = findedContentSetIndex;
+                                directionOfImprovementLink.ObjectIndex = -1;
+                            }
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Указываем, что ссылка ошибочна
+                            directionOfImprovementLink.IsValidLink = false;
+                            directionOfImprovementLink.ContentSetIndex = -1;
+                            directionOfImprovementLink.ObjectIndex = -1;
+                        }
+                    }
+                }
+            }
+        }
+
+        void WorkshopLinkCalculatingDirectionsOfImprovement(
+            WDShipPartDirectionOfImprovement[] directionsOfImprovement)
+        {
+            //Для каждого направления улучшения части корабля
+            for (int a = 0; a < directionsOfImprovement.Length; a++)
+            {
+                //Берём направление улучшения
+                WDShipPartDirectionOfImprovement directionOfImprovement = directionsOfImprovement[a];
+
+                //Для каждого улучшения
+                for (int b = 0; b < directionOfImprovement.Improvements.Length; b++)
+                {
+                    //Берём улучшение
+                    if (directionOfImprovement.Improvements[b] is WorkshopContentObjectLink improvementLink)
+                    {
+                        //Если набор контента существует
+                        if (WorkshopFindContentSet(improvementLink, out int findedContentSetIndex))
+                        {
+                            //Если улучшение существует
+                            if (WorkshopFindContentObject(improvementLink, contentData.Value.wDContentSets[findedContentSetIndex].shipPartImprovements,
+                                out int findedImprovementIndex))
+                            {
+                                //Указываем, что ссылка верна
+                                improvementLink.IsValidLink = true;
+                                improvementLink.ContentSetIndex = findedContentSetIndex;
+                                improvementLink.ObjectIndex = findedImprovementIndex;
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                improvementLink.IsValidLink = false;
+                                improvementLink.ContentSetIndex = findedContentSetIndex;
+                                improvementLink.ObjectIndex = -1;
+                            }
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Указываем, что ссылка ошибочна
+                            improvementLink.IsValidLink = false;
+                            improvementLink.ContentSetIndex = -1;
+                            improvementLink.ObjectIndex = -1;
+                        }
+                    }
+                }
             }
         }
 
@@ -785,6 +1130,8 @@ namespace SandOcean
                     energyGun);
             }
         }
+        #endregion
+        #endregion
 
         void WorkshopLoadComponentCoreTechnologies(
             in SDComponentCoreTechnology[] loadingCoreTechnologies,
@@ -834,6 +1181,23 @@ namespace SandOcean
                         break;
                     }
                 }
+            }
+        }
+
+        void WorkshopLoadContentObjectLink(
+            in SDContentObjectLink[] loadingContentObjectLinks,
+            List<WorkshopContentObjectLink> contentObjectLinks)
+        {
+            //Для каждой ссылки на объект
+            for (int a = 0; a < loadingContentObjectLinks.Length; a++)
+            {
+                //Записываем загруженные данные ссылки
+                WorkshopContentObjectLink contentObjectLink = new(
+                    loadingContentObjectLinks[a].contentSetName,
+                    loadingContentObjectLinks[a].objectName);
+
+                //Заносим её в список
+                contentObjectLinks.Add(contentObjectLink);
             }
         }
 
@@ -1177,6 +1541,8 @@ namespace SandOcean
                 = new();
             List<WDShipClassComponent> shipClassEnergyGuns
                 = new();
+            List<WDShipClassPart> shipParts = new();
+            List<WorkshopContentObjectLink> shipPartImprovements = new();
 
             //Для каждого загружаемого класса
             for (int a = 0; a < loadingShipClasses.Length; a++)
@@ -1245,6 +1611,48 @@ namespace SandOcean
                         shipClassEnergyGuns);
                 }
 
+                //Если массив частей корабля не пуст
+                if (loadingShipClass.shipParts != null)
+                {
+                    //Очищаем временный список частей корабля
+                    shipParts.Clear();
+
+                    //Для каждой загружаемой части корабля
+                    for (int b = 0; b < loadingShipClass.shipParts.Length; b++)
+                    {
+                        //Берём загружаемую часть корабля
+                        ref readonly SDShipClassPart loadingShipPart = ref loadingShipClass.shipParts[b];
+
+                        //Очищаем временный список улучшений
+                        shipPartImprovements.Clear();
+
+                        //Если массив улучшений не пуст
+                        if (loadingShipPart.improvements != null)
+                        {
+                            //Для каждого загружаемого улучшения
+                            for (int c = 0; c < loadingShipPart.improvements.Length; c++)
+                            {
+                                //Записываем загружаемые данные улучшения
+                                WorkshopContentObjectLink shipPartImprovement = new(
+                                    loadingShipPart.improvements[c].contentSetName,
+                                    loadingShipPart.improvements[c].objectName);
+
+                                //Заносим его в список
+                                shipPartImprovements.Add(shipPartImprovement);
+                            }
+                        }
+
+                        //Записываем загружаемые данные части корабля
+                        WDShipClassPart shipPart = new(
+                            new WorkshopContentObjectLink(loadingShipPart.part.contentSetName, loadingShipPart.part.objectName),
+                            new WorkshopContentObjectLink(loadingShipPart.coreTechnology.contentSetName, loadingShipPart.coreTechnology.objectName),
+                            shipPartImprovements.ToArray());
+
+                        //Заносим её в список
+                        shipParts.Add(shipPart);
+                    }
+                }
+
                 //Записываем загруженные данные класса корабля
                 WDShipClass shipClass
                     = new(
@@ -1253,7 +1661,8 @@ namespace SandOcean
                         shipClassReactors.ToArray(),
                         shipClassFuelTanks.ToArray(),
                         shipClassExtractionEquipmentSolids.ToArray(),
-                        shipClassEnergyGuns.ToArray());
+                        shipClassEnergyGuns.ToArray(),
+                        shipParts.ToArray());
 
                 //Заносим загруженные данные во временный список
                 tempLoadingWorkshopData.shipClasses.Add(
@@ -1326,6 +1735,137 @@ namespace SandOcean
                     contentSetIndex,
                     a,
                     ShipComponentType.GunEnergy);
+
+                //Для каждой части корабля
+                for (int b = 0; b < shipClass.shipParts.Length; b++)
+                {
+                    //Указываем, что часть корабля верна
+                    shipClass.shipParts[b].IsValidLink = true;
+
+                    //Берём часть корабля
+                    if (shipClass.shipParts[b].Part is WorkshopContentObjectLink shipPartLink)
+                    {
+                        //Если набор контента существует
+                        if (WorkshopFindContentSet(shipPartLink, out int findedContentSetIndex))
+                        {
+                            //Если часть корабля существует
+                            if (WorkshopFindContentObject(shipPartLink, contentData.Value.wDContentSets[findedContentSetIndex].shipParts,
+                                out int findedShipPartIndex))
+                            {
+                                //Указываем, что ссылка верна
+                                shipPartLink.IsValidLink = true;
+                                shipPartLink.ContentSetIndex = findedContentSetIndex;
+                                shipPartLink.ObjectIndex = findedContentSetIndex;
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                shipPartLink.IsValidLink = false;
+                                shipPartLink.ContentSetIndex = findedShipPartIndex;
+                                shipPartLink.ObjectIndex = -1;
+
+                                //Указываем, что часть корабля неверна
+                                shipClass.shipParts[b].IsValidLink = false;
+                            }
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Указываем, что ссылка ошибочна
+                            shipPartLink.IsValidLink = false;
+                            shipPartLink.ContentSetIndex = -1;
+                            shipPartLink.ObjectIndex = -1;
+
+                            //Указываем, что часть корабля неверна
+                            shipClass.shipParts[b].IsValidLink = false;
+                        }
+                    }
+
+                    //Берём ключевую технологию
+                    if (shipClass.shipParts[b].CoreTechnology is WorkshopContentObjectLink coreTechnologyLink)
+                    {
+                        //Если набор контента существует
+                        if (WorkshopFindContentSet(coreTechnologyLink, out int findedContentSetIndex))
+                        {
+                            //Если ключевая технология существует
+                            if (WorkshopFindContentObject(coreTechnologyLink, contentData.Value.wDContentSets[findedContentSetIndex].shipPartCoreTechnologies,
+                                out int findedCoreTechnologyIndex))
+                            {
+                                //Указываем, что ссылка верна
+                                coreTechnologyLink.IsValidLink = true;
+                                coreTechnologyLink.ContentSetIndex = findedContentSetIndex;
+                                coreTechnologyLink.ObjectIndex = findedContentSetIndex;
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                coreTechnologyLink.IsValidLink = false;
+                                coreTechnologyLink.ContentSetIndex = findedCoreTechnologyIndex;
+                                coreTechnologyLink.ObjectIndex = -1;
+
+                                //Указываем, что часть корабля неверна
+                                shipClass.shipParts[b].IsValidLink = false;
+                            }
+                        }
+                        //Иначе
+                        else
+                        {
+                            //Указываем, что ссылка ошибочна
+                            coreTechnologyLink.IsValidLink = false;
+                            coreTechnologyLink.ContentSetIndex = -1;
+                            coreTechnologyLink.ObjectIndex = -1;
+
+                            //Указываем, что часть корабля неверна
+                            shipClass.shipParts[b].IsValidLink = false;
+                        }
+                    }
+
+                    //Для каждого улучшения
+                    for (int c = 0; c < shipClass.shipParts[b].Improvements.Length; c++)
+                    {
+                        //Берём улучшение
+                        if (shipClass.shipParts[b].Improvements[c] is WorkshopContentObjectLink improvementLink)
+                        {
+                            //Если набор контента существует
+                            if (WorkshopFindContentSet(improvementLink, out int findedContentSetIndex))
+                            {
+                                //Если улучшение существует
+                                if (WorkshopFindContentObject(improvementLink, contentData.Value.wDContentSets[findedContentSetIndex].shipPartImprovements,
+                                    out int findedCoreTechnologyIndex))
+                                {
+                                    //Указываем, что ссылка верна
+                                    improvementLink.IsValidLink = true;
+                                    improvementLink.ContentSetIndex = findedContentSetIndex;
+                                    improvementLink.ObjectIndex = findedContentSetIndex;
+                                }
+                                //Иначе
+                                else
+                                {
+                                    //Указываем, что ссылка ошибочна, но сохраняем индекс набора контента
+                                    improvementLink.IsValidLink = false;
+                                    improvementLink.ContentSetIndex = findedCoreTechnologyIndex;
+                                    improvementLink.ObjectIndex = -1;
+
+                                    //Указываем, что часть корабля неверна
+                                    shipClass.shipParts[b].IsValidLink = false;
+                                }
+                            }
+                            //Иначе
+                            else
+                            {
+                                //Указываем, что ссылка ошибочна
+                                improvementLink.IsValidLink = false;
+                                improvementLink.ContentSetIndex = -1;
+                                improvementLink.ObjectIndex = -1;
+
+                                //Указываем, что часть корабля неверна
+                                shipClass.shipParts[b].IsValidLink = false;
+                            }
+                        }
+                    }
+                }
 
                 //Рассчитываем характеристики класса корабля
                 shipClass.CalculateCharacteristics(
@@ -1591,6 +2131,61 @@ namespace SandOcean
             }
         }
 
+        bool WorkshopFindContentSet(
+            WorkshopContentObjectLink workshopLink,
+            out int contentSetIndex)
+        {
+            //Для каждого набора контента
+            for (int a = 0; a < contentData.Value.wDContentSets.Length; a++)
+            {
+                //Если название набора контента соответствует искомому
+                if (contentData.Value.wDContentSets[a].ContentSetName == workshopLink.ContentSetName)
+                {
+                    //Задаём индекс набора контента
+                    contentSetIndex = a;
+
+                    //Возвращаем, что набор контента найден
+                    return true;
+                }
+            }
+
+            //Задаём индекс набора контента
+            contentSetIndex = -1;
+
+            //Возвращаем, что набор контента не найден
+            return false;
+        }
+
+        bool WorkshopFindContentObject<TWorkshopContentObject>(
+            WorkshopContentObjectLink workshopLink,
+            TWorkshopContentObject[] contentObjects,
+            out int objectIndex)
+        {
+            //Для каждого объекта в списке
+            for (int a = 0; a < contentObjects.Length; a++)
+            {
+                //Пытаемся привести объект к WorkshopContentObject
+                if (contentObjects[a] is WDContentObject contentObject)
+                {
+                    //Если название объекта соответствует искомому
+                    if (contentObject.ObjectName == workshopLink.ObjectName)
+                    {
+                        //Задаём индекс объекта
+                        objectIndex = a;
+
+                        //Возвращаем, что объект найден
+                        return true;
+                    }
+                }
+            }
+
+            //Задаём индекс объекта
+            objectIndex = -1;
+
+            //Возвращаем, что объект не найден
+            return true;
+        }
+
         //Данные для игры
         void GameLoadContentSet(
             ref WDContentSet loadingContentSet,
@@ -1608,17 +2203,65 @@ namespace SandOcean
             //Заполняем массив набора контента
             contentSet.technologies = tempLoadingData.technologies.ToArray();
 
+            //Если массив типов сооружений не пуст, загружаем его
+            if (loadingContentSet.buildingTypes != null)
+            {
+                GameLoadBuildingTypes(
+                    ref loadingContentSet.buildingTypes,
+                    ref tempLoadingData);
+            }
+            //Заполняем массив типов
+            contentSet.buildingTypes = tempLoadingData.buildingTypes.ToArray();
 
-            //Если массив типов кораблей не пуст
+            //Если массив типов кораблей не пуст, загружаем его
             if (loadingContentSet.shipTypes != null)
             {
-                //Загружаем типы во временный список
                 GameLoadShipTypes(
                     ref loadingContentSet.shipTypes,
                     ref tempLoadingData);
             }
-            //Заполняем массив типов
+            //Заполняем массив набора контента
             contentSet.shipTypes = tempLoadingData.shipTypes.ToArray();
+
+            //Если массив частей корабля не пуст, загружаем его
+            if(loadingContentSet.shipParts != null)
+            {
+                GameLoadShipParts(
+                    loadingContentSet.shipParts,
+                    ref tempLoadingData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipParts = tempLoadingData.shipParts.ToArray();
+
+            //Если массив ключевых технологий частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartCoreTechnologies != null)
+            {
+                GameLoadShipPartCoreTechnologies(
+                    loadingContentSet.shipPartCoreTechnologies,
+                    ref tempLoadingData);
+            }
+            //Заполняем масссив набора контента
+            contentSet.shipPartCoreTechnologies = tempLoadingData.shipPartCoreTechnologies.ToArray();
+
+            //Если массив направлений улучшения частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartDirectionsOfImprovement != null)
+            {
+                GameLoadShipPartDirectionsOfImprovement(
+                    loadingContentSet.shipPartDirectionsOfImprovement,
+                    ref tempLoadingData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipPartDirectionsOfImprovement = tempLoadingData.shipPartDirectionsOfImprovement.ToArray();
+
+            //Если массив улучшений частей корабля не пуст, загружаем его
+            if (loadingContentSet.shipPartImprovements != null)
+            {
+                GameLoadShipPartImprovements(
+                    loadingContentSet.shipPartImprovements,
+                    ref tempLoadingData);
+            }
+            //Заполняем массив набора контента
+            contentSet.shipPartImprovements = tempLoadingData.shipPartImprovements.ToArray();
 
             //Если массив двигателей не пуст
             if (loadingContentSet.engines != null)
@@ -1691,8 +2334,14 @@ namespace SandOcean
             //Очищаем временные списки
             tempLoadingData.technologies.Clear();
 
+            tempLoadingData.buildingTypes.Clear();
 
             tempLoadingData.shipTypes.Clear();
+
+            tempLoadingData.shipParts.Clear();
+            tempLoadingData.shipPartCoreTechnologies.Clear();
+            tempLoadingData.shipPartDirectionsOfImprovement.Clear();
+            tempLoadingData.shipPartImprovements.Clear();
 
             tempLoadingData.engines.Clear();
             tempLoadingData.reactors.Clear();
@@ -1712,6 +2361,15 @@ namespace SandOcean
                 ref DContentSet contentSet
                     = ref contentData.Value
                     .contentSets[a];
+
+                //Рассчитываем ссылки направлений улучшения частей корабля
+                GameLinkCalculatingDirectionsOfImprovement(ref contentSet.shipPartDirectionsOfImprovement);
+
+                //Рассчитываем ссылки ключевых технологий частей корабля
+                GameLinkCalculatingCoreTechnologies(ref contentSet.shipPartCoreTechnologies);
+
+                //Рассчитываем ссылки частей корабля
+                GameLinkCalculatingShipParts(ref contentSet.shipParts);
 
                 //Рассчитываем ссылки двигателей
                 GameRefCalculatingEngines(
@@ -1838,7 +2496,35 @@ namespace SandOcean
             }
         }
 
-        //Типы кораблей
+        //Типы сооружений
+        void GameLoadBuildingTypes(
+            ref WDBuildingType[] loadingBuildingTypes,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Для каждого загружаемого типа сооружения
+            for (int a = 0; a < loadingBuildingTypes.Length; a++)
+            {
+                //Если тип является верным
+                if (loadingBuildingTypes[a].IsValidObject == true)
+                {
+                    //Берём ссылку на загружаемый тип
+                    ref WDBuildingType loadingBuildingType = ref loadingBuildingTypes[a];
+
+                    //Записываем данные типа
+                    DBuildingType buildingType = new(
+                        loadingBuildingType.ObjectName,
+                        loadingBuildingType.BuildingCategory);
+
+                    //Заносим его во временный список
+                    tempLoadingData.buildingTypes.Add(buildingType);
+
+                    //Отмечаем в данных типа его индекс в игре
+                    loadingBuildingType.GameObjectIndex = tempLoadingData.shipTypes.Count - 1;
+                }
+            }
+        }
+
+        #region Ships
         void GameLoadShipTypes(
             ref WDShipType[] loadingShipTypes,
             ref TempLoadingData tempLoadingData)
@@ -1862,6 +2548,234 @@ namespace SandOcean
 
                     //Отмечаем в данных типа его индекс в игре
                     loadingShipType.GameObjectIndex = tempLoadingData.shipTypes.Count - 1;
+                }
+            }
+        }
+
+        #region ShipParts
+        void GameLoadShipParts(
+            WDShipPart[] loadingShipParts,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Создаём список для временных данных
+            List<ContentObjectLink> coreTechnologies = new(); 
+
+            //Для каждой загружаемой части корабля
+            for (int a = 0; a < loadingShipParts.Length; a++)
+            {
+                //Если часть корабля является верной
+                if (loadingShipParts[a].IsValidObject == true)
+                {
+                    //Берём загружаемую часть
+                    WDShipPart loadingPart = loadingShipParts[a];
+
+                    //Очищаем временный список ссылок на ключевые технологии
+                    coreTechnologies.Clear();
+
+                    //Загружаем ключевые технологии
+                    GameLoadContentObjectLink(
+                        loadingPart.CoreTechnologies,
+                        coreTechnologies);
+
+                    //Записываем данные части
+                    DShipPart shipPart = new(
+                        loadingPart.ObjectName,
+                        coreTechnologies.ToArray());
+
+                    //Заносим её во временный список
+                    tempLoadingData.shipParts.Add(shipPart);
+
+                    //Отмечаем в данных части её индекс в игре
+                    loadingPart.GameObjectIndex = tempLoadingData.shipParts.Count - 1;
+                }
+            }
+        }
+
+        void GameLoadShipPartCoreTechnologies(
+            WDShipPartCoreTechnology[] loadingCoreTechnologies,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Создаём список для временных данных
+            List<ContentObjectLink> directionsOfImprovement = new();
+
+            //Для каждой загружаемой ключевой технологии части корабля
+            for (int a = 0; a < loadingCoreTechnologies.Length; a++)
+            {
+                //Если ключевая технология является верной
+                if (loadingCoreTechnologies[a].IsValidObject == true)
+                {
+                    //Берём загружаемую ключевую технологию
+                    WDShipPartCoreTechnology loadingCoreTechnology = loadingCoreTechnologies[a];
+
+                    //Очищаем временный список ссылок на направления улучшения
+                    directionsOfImprovement.Clear();
+
+                    //Загружаем направления улучшения
+                    GameLoadContentObjectLink(
+                        loadingCoreTechnology.DirectionsOfImprovement,
+                        directionsOfImprovement);
+
+                    //Записываем данные технологии
+                    DShipPartCoreTechnology coreTechnology = new(
+                        loadingCoreTechnology.ObjectName,
+                        directionsOfImprovement.ToArray());
+
+                    //Заносим её во временный список
+                    tempLoadingData.shipPartCoreTechnologies.Add(coreTechnology);
+
+                    //Отмечаем в данных технологии её индекс в игре
+                    loadingCoreTechnology.GameObjectIndex = tempLoadingData.shipPartCoreTechnologies.Count - 1;
+                }
+            }
+        }
+
+        void GameLoadShipPartDirectionsOfImprovement(
+            WDShipPartDirectionOfImprovement[] loadingDirectionsOfImprovement,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Для каждого загружаемого направления улучшения части корабля
+            List<ContentObjectLink> improvements = new();
+
+            //Для каждого загружаемого направления улучшения части корабля
+            for (int a = 0; a < loadingDirectionsOfImprovement.Length; a++)
+            {
+                //Если направление улучшения является верным
+                if (loadingDirectionsOfImprovement[a].IsValidObject == true)
+                {
+                    //Берём загружаемое направление улучшения
+                    WDShipPartDirectionOfImprovement loadingDirectionOfImprovement = loadingDirectionsOfImprovement[a];
+
+                    //Очищаем временный список ссылок на улучшения
+                    improvements.Clear();
+
+                    //Загружаем улучшения
+                    GameLoadContentObjectLink(
+                        loadingDirectionOfImprovement.Improvements,
+                        improvements);
+
+                    //Записываем данные направления
+                    DShipPartDirectionOfImprovement directionOfImprovement = new(
+                        loadingDirectionOfImprovement.ObjectName,
+                        improvements.ToArray());
+
+                    //Заносим его во временный список
+                    tempLoadingData.shipPartDirectionsOfImprovement.Add(directionOfImprovement);
+
+                    //Отмечаем в данных направления его индекс в игре
+                    loadingDirectionOfImprovement.GameObjectIndex = tempLoadingData.shipPartDirectionsOfImprovement.Count - 1;
+                }
+            }
+        }
+
+        void GameLoadShipPartImprovements(
+            WDShipPartImprovement[] loadingImprovements,
+            ref TempLoadingData tempLoadingData)
+        {
+            //Для каждого загружаемого улучшения части корабля
+            for (int a = 0; a < loadingImprovements.Length; a++)
+            {
+                //Если улучшение является верным
+                if (loadingImprovements[a].IsValidObject == true)
+                {
+                    //Берём загружаемое улучшение
+                    WDShipPartImprovement loadingImprovement = loadingImprovements[a];
+
+                    //Записываем данные улучшения
+                    DShipPartImprovement improvement = new(
+                        loadingImprovement.ObjectName);
+
+                    //Заносим его во временный список
+                    tempLoadingData.shipPartImprovements.Add(improvement);
+
+                    //Отмечаем в данных улучшения его индекс в игре
+                    loadingImprovement.GameObjectIndex = tempLoadingData.shipPartImprovements.Count - 1;
+                }
+            }
+        }
+
+        void GameLinkCalculatingShipParts(
+            ref DShipPart[] shipParts)
+        {
+            //Для каждой части корабля
+            for (int a = 0; a < shipParts.Length; a++)
+            {
+                //Берём часть корабля
+                ref DShipPart shipPart = ref shipParts[a];
+
+                //Для каждой ключевой технологии
+                for (int b = 0; b < shipPart.CoreTechnologies.Length; b++)
+                {
+                    //Берём ключевую технологию
+                    ContentObjectLink coreTechnologyLink = shipPart.CoreTechnologies[b];
+
+                    //Определяем индексы набора контента и ключевой технологии
+                    int gameContentSetIndex = contentData.Value.wDContentSets[coreTechnologyLink.ContentSetIndex].gameContentSetIndex;
+                    int gameCoreTechnologyIndex = contentData.Value.wDContentSets[coreTechnologyLink.ContentSetIndex]
+                        .shipPartCoreTechnologies[coreTechnologyLink.ObjectIndex].GameObjectIndex;
+
+                    //Здесь мы должны давать самой технологии ссылку на части корабля, использующие её
+
+                    //Обновляем ссылку
+                    coreTechnologyLink.ContentSetIndex = gameContentSetIndex;
+                    coreTechnologyLink.ObjectIndex = gameCoreTechnologyIndex;
+                }
+            }
+        }
+
+        void GameLinkCalculatingCoreTechnologies(
+            ref DShipPartCoreTechnology[] coreTechnologies)
+        {
+            //Для каждой ключевой технологии части корабля
+            for (int a = 0; a < coreTechnologies.Length; a++)
+            {
+                //Берём ключевую технологию
+                ref DShipPartCoreTechnology coreTechnology = ref coreTechnologies[a];
+
+                //Для каждого направления улучшения
+                for (int b = 0; b < coreTechnology.DirectionsOfImprovement.Length; b++)
+                {
+                    //Берём направление улучшения
+                    ContentObjectLink directionOfImprovementLink = coreTechnology.DirectionsOfImprovement[b];
+
+                    //Определяем индексы набора контента и направления улучшения
+                    int gameContentSetIndex = contentData.Value.wDContentSets[directionOfImprovementLink.ContentSetIndex].gameContentSetIndex;
+                    int gameDirectionOfImprovementIndex = contentData.Value.wDContentSets[directionOfImprovementLink.ContentSetIndex]
+                        .shipPartDirectionsOfImprovement[directionOfImprovementLink.ObjectIndex].GameObjectIndex;
+
+                    //Здесь мы должны давать самому направлению улучшения ссылку на ключевые технологии, использующие его
+
+                    //Обновляем ссылку
+                    directionOfImprovementLink.ContentSetIndex = gameContentSetIndex;
+                    directionOfImprovementLink.ObjectIndex = gameDirectionOfImprovementIndex;
+                }
+            }
+        }
+
+        void GameLinkCalculatingDirectionsOfImprovement(
+            ref DShipPartDirectionOfImprovement[] directionsOfImprovement)
+        {
+            //Для каждого направления улучшения части корабля
+            for (int a = 0; a < directionsOfImprovement.Length; a++)
+            {
+                //Берём направление улучшения
+                ref DShipPartDirectionOfImprovement directionOfImprovement = ref directionsOfImprovement[a];
+
+                //Для каждого улучшения
+                for (int b = 0; b < directionOfImprovement.Improvements.Length; b++)
+                {
+                    //Берём улучшение
+                    ContentObjectLink directionOfImprovementLink = directionOfImprovement.Improvements[b];
+
+                    //Определяем индексы набора контента и улучшения
+                    int gameContentSetIndex = contentData.Value.wDContentSets[directionOfImprovementLink.ContentSetIndex].gameContentSetIndex;
+                    int gameImprovementIndex = contentData.Value.wDContentSets[directionOfImprovementLink.ContentSetIndex]
+                        .shipPartDirectionsOfImprovement[directionOfImprovementLink.ObjectIndex].GameObjectIndex;
+
+                    //Здесь мы должны давать самому улучшению ссылку на направления улучшения, использующие его
+
+                    //Обновляем ссылку
+                    directionOfImprovementLink.ContentSetIndex = gameContentSetIndex;
+                    directionOfImprovementLink.ObjectIndex = gameImprovementIndex;
                 }
             }
         }
@@ -2095,6 +3009,8 @@ namespace SandOcean
                 }
             }
         }
+        #endregion
+        #endregion
 
         void GameLoadComponentCoreTechnologies(
             in WDComponentCoreTechnology[] loadingCoreTechnologiesArray,
@@ -2116,6 +3032,31 @@ namespace SandOcean
                     //Заносим её на соответствующую позицию массива
                     coreTechnologies[a]
                         = coreTechnology;
+                }
+            }
+        }
+
+        void GameLoadContentObjectLink(
+            ContentObjectLink[] loadingContentObjectLinks,
+            List<ContentObjectLink> contentObjectLinks)
+        {
+            //Для каждой ссылки на объект
+            for (int a = 0; a < loadingContentObjectLinks.Length; a++)
+            {
+                //Пытаемся привести ссылку к WDContentObjectLink
+                if (loadingContentObjectLinks[a] is WorkshopContentObjectLink workshopLink)
+                {
+                    //Если ссылка является верной
+                    if (workshopLink.IsValidLink == true)
+                    {
+                        //Записываем загруженные данные ссылки
+                        ContentObjectLink contentObjectLink = new(
+                            workshopLink.ContentSetIndex,
+                            workshopLink.ObjectIndex);
+
+                        //Заносим её в список
+                        contentObjectLinks.Add(contentObjectLink);
+                    }
                 }
             }
         }
@@ -2346,6 +3287,8 @@ namespace SandOcean
                 = new();
             List<DShipClassComponent> shipClassEnergyGuns
                 = new();
+            List<DShipClassPart> shipParts = new();
+            List<ContentObjectLink> shipPartImprovements = new();
 
             //Для каждого загружаемого класса
             for (int a = 0; a < loadingShipClasses.Length; a++)
@@ -2393,6 +3336,42 @@ namespace SandOcean
                         in loadingShipClass.energyGuns,
                         shipClassEnergyGuns);
 
+                    //Очищаем временный список частей корабля
+                    shipParts.Clear();
+                    //Для каждой загружаемой части корабля
+                    for (int b = 0; b < loadingShipClass.shipParts.Length; b++)
+                    {
+                        //Если часть верна
+                        if (loadingShipClass.shipParts[b].IsValidLink == true)
+                        {
+                            //Берём загружаемую часть корабля
+                            WDShipClassPart loadingShipPart = loadingShipClass.shipParts[b];
+
+                            //Очищаем временный список улучшений
+                            shipPartImprovements.Clear();
+
+                            //Для каждого загружаемого улучшения
+                            for (int c = 0; c < loadingShipPart.Improvements.Length; c++)
+                            {
+                                //Записываем загружаемые данные улучшения
+                                ContentObjectLink shipPartImprovement = new(
+                                    loadingShipPart.Improvements[c].ContentSetIndex, loadingShipPart.Improvements[c].ObjectIndex);
+
+                                //Заносим его в список
+                                shipPartImprovements.Add(shipPartImprovement);
+                            }
+
+                            //Записываем загружаемые данные части корабля
+                            DShipClassPart shipPart = new(
+                                new ContentObjectLink(loadingShipPart.Part.ContentSetIndex, loadingShipPart.Part.ObjectIndex),
+                                new ContentObjectLink(loadingShipPart.CoreTechnology.ContentSetIndex, loadingShipPart.CoreTechnology.ObjectIndex),
+                                shipPartImprovements.ToArray());
+
+                            //Заносим её в список
+                            shipParts.Add(shipPart);
+                        }
+                    }
+
                     //Записываем данные класса корабля
                     DShipClass shipClass
                         = new(
@@ -2401,7 +3380,8 @@ namespace SandOcean
                             shipClassReactors.ToArray(),
                             shipClassFuelTanks.ToArray(),
                             shipClassExtractionEquipmentSolids.ToArray(),
-                            shipClassEnergyGuns.ToArray());
+                            shipClassEnergyGuns.ToArray(),
+                            shipParts.ToArray());
 
                     //Заносим загруженные данные во временный список
                     tempLoadingData.shipClasses.Add(
@@ -2484,6 +3464,53 @@ namespace SandOcean
                     contentSetIndex,
                     a,
                     ShipComponentType.GunEnergy);
+
+                //Для каждой части корабля
+                for (int b = 0; b < shipClass.shipParts.Length; b++)
+                {
+                    //Берём часть корабля
+                    DShipClassPart shipPart = shipClass.shipParts[b];
+
+                    //Берём часть корабля
+                    ContentObjectLink shipPartLink = shipPart.Part;
+
+                    //Определяем индексы набора контента и части корабля
+                    int gameShipPartContentSetIndex = contentData.Value.wDContentSets[shipPartLink.ContentSetIndex].gameContentSetIndex;
+                    int gameShipPartIndex = contentData.Value.wDContentSets[shipPartLink.ContentSetIndex].
+                        shipParts[shipPartLink.ObjectIndex].GameObjectIndex;
+
+                    //Обновляем ссылку на часть корабля
+                    shipPartLink.ContentSetIndex = gameShipPartContentSetIndex;
+                    shipPartLink.ObjectIndex = gameShipPartIndex;
+
+                    //Берём ключевую технологию
+                    ContentObjectLink coreTechnologyLink = shipPart.CoreTechnology;
+
+                    //Определяем индексы набора контента и ключевой технологии
+                    int gameCoreTechnologyContentSetIndex = contentData.Value.wDContentSets[coreTechnologyLink.ContentSetIndex].gameContentSetIndex;
+                    int gameCoreTechnologyIndex = contentData.Value.wDContentSets[coreTechnologyLink.ContentSetIndex].
+                        shipPartCoreTechnologies[coreTechnologyLink.ObjectIndex].GameObjectIndex;
+
+                    //Обновляем ссылку на ключевую технологию
+                    coreTechnologyLink.ContentSetIndex = gameCoreTechnologyContentSetIndex;
+                    coreTechnologyLink.ObjectIndex = gameCoreTechnologyIndex;
+
+                    //Для каждого улучшения
+                    for (int c = 0; c < shipPart.Improvements.Length; c++)
+                    {
+                        //Берём улучшение
+                        ContentObjectLink improvementLink = shipPart.Improvements[c];
+
+                        //Определяем индексы набора контента и улучшения
+                        int gameImprovementContentSetIndex = contentData.Value.wDContentSets[improvementLink.ContentSetIndex].gameContentSetIndex;
+                        int gameImprovementIndex = contentData.Value.wDContentSets[improvementLink.ContentSetIndex].
+                            shipPartImprovements[improvementLink.ObjectIndex].GameObjectIndex;
+
+                        //Обновляем ссылку
+                        improvementLink.ContentSetIndex = gameImprovementContentSetIndex;
+                        improvementLink.ObjectIndex = gameImprovementIndex;
+                    }
+                }
 
                 //Рассчитываем характеристики класса корабля
                 shipClass.CalculateCharacteristics(
@@ -2632,6 +3659,21 @@ namespace SandOcean
 
             //Возвращаем пустой тип основного модификатора компонента
             return TechnologyComponentCoreModifierType.None;
+        }
+
+        BuildingCategory BuildingDefineBuildingCategory(
+            string buildingCategoryName)
+        {
+            //Если назнавание категории соответствует названию тестовой группы
+            if (buildingCategoryName == "Test")
+            {
+                return BuildingCategory.Test;
+            }
+            //Иначе возвращаем стандартную категорию - 
+            else
+            {
+                return BuildingCategory.Test;
+            }
         }
 
         TaskForceBattleGroup ShipTypeDefineTaskForceBattleGroup(

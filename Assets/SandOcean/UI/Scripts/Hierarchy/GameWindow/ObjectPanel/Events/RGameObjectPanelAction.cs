@@ -20,6 +20,10 @@ namespace SandOcean.UI.GameWindow.Object.Events
 
         ORAEO,
         ORAEOOverview,
+        ORAEOBuildings,
+
+        Building,
+        BuildingOverview,
 
         CloseObjectPanel
     }

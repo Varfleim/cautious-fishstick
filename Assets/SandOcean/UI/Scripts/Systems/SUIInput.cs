@@ -28,6 +28,8 @@ using SandOcean.UI.GameWindow.Object.FleetManager.Fleets;
 using SandOcean.UI.GameWindow.Object.FleetManager.TaskForceTemplates;
 using SandOcean.UI.GameWindow.Object.FleetManager.TaskForceTemplates.Designer;
 using SandOcean.UI.GameWindow.Object.Region.ORAEOs;
+using SandOcean.UI.GameWindow.Object.ORAEO;
+using SandOcean.UI.GameWindow.Object.ORAEO.Buildings;
 using SandOcean.Player;
 using SandOcean.Organization;
 using SandOcean.Map;
@@ -389,7 +391,7 @@ namespace SandOcean.UI
                 ref CHexRegion region = ref regionPool.Value.Get(regionEntity);
                 ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
-                RegionSetColor(ref region, MapGenerationData.DefaultShadedColor);
+                //RegionSetColor(ref region, MapGenerationData.DefaultShadedColor);
 
                 /*if (region.Elevation < mapGenerationData.Value.waterLevel)
                 {
@@ -427,7 +429,7 @@ namespace SandOcean.UI
                     {
                         RegionSetColor(ref region, Color.blue);
 
-                        /*List<int> regions = RegionsData.GetRegionIndicesWithinSteps(
+                        List<int> regions = RegionsData.GetRegionIndicesWithinSteps(
                             world.Value,
                             regionFilter.Value, regionPool.Value,
                             ref region, 2);
@@ -438,7 +440,7 @@ namespace SandOcean.UI
                             ref CHexRegion neighbourRegion = ref regionPool.Value.Get(neighbourRegionEntity);
 
                             RegionSetColor(ref neighbourRegion, Color.blue);
-                        }*/
+                        }
                     }
                 }
             }
@@ -567,13 +569,13 @@ namespace SandOcean.UI
             else if (clickEvent.WidgetName == "WorkshopOpenDesigner")
             {
                 //Берём активный переключатель в списке контента
-                Toggle activeToggle = workshopWindow.contentInfoToggleGroup.GetFirstActiveToggle();
+                Toggle activeToggle = workshopWindow.contentObjectCountToggleGroup.GetFirstActiveToggle();
 
                 //Если он не пуст
                 if (activeToggle != null)
                 {
                     //Пытаемся получить панель выбранного вида контента
-                    if (activeToggle.TryGetComponent(out UIWorkshopContentInfoPanel workshopContentInfoPanel))
+                    if (activeToggle.TryGetComponent(out UIWorkshopContentObjectCountPanel workshopContentInfoPanel))
                     {
                         //Запрашиваем отображение выбранного дизайнера в текущем наборе контента
                         WorkshopActionRequest(
@@ -1420,7 +1422,7 @@ namespace SandOcean.UI
             else if (clickEvent.WidgetName == "OpenFleetManager")
             {
                 //Запрашиваем открытие подпанели менеджера флотов
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.FleetManager,
                     playerOrganization.selfPE);
             }
@@ -1430,12 +1432,12 @@ namespace SandOcean.UI
             if (gameWindow.activeMainPanelType == MainPanelType.Object)
             {
                 //Проверяем клики в панели объекта
-                ClickActionGameObject(ref clickEvent);
+                ClickActionObject(ref clickEvent);
             }
         }
 
         #region GameObject
-        void ClickActionGameObject(
+        void ClickActionObject(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём организацию игрока
@@ -1450,7 +1452,7 @@ namespace SandOcean.UI
             if (clickEvent.WidgetName == "CloseObjectPanel")
             {
                 //Запрашиваем закрытие панели объекта
-                GameObjectPanelActionRequest(ObjectPanelActionRequestType.CloseObjectPanel);
+                ObjectActionRequest(ObjectPanelActionRequestType.CloseObjectPanel);
             }
             //ТЕСТ
 
@@ -1458,30 +1460,36 @@ namespace SandOcean.UI
             else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.FleetManager)
             {
                 //Проверяем клики в подпанели менеджера флотов
-                ClickActionGameObjectFleetManager(ref clickEvent);
+                ClickActionFleetManager(ref clickEvent);
             }
             //Иначе, если активна подпанель организации
             else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Organization)
             {
                 //Проверяем клики в подпанели организации
-                ClickActionGameObjectOrganization(ref clickEvent);
+                ClickActionOrganization(ref clickEvent);
             }
             //Иначе, если активна подпанель региона
             else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Region)
             {
                 //Проверяем клики в подпанели региона
-                ClickActionGameObjectRegion(ref clickEvent);
+                ClickActionRegion(ref clickEvent);
             }
             //Иначе, если активна подпанель ORAEO
             else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.ORAEO)
             {
                 //Проверяем клики в подпанели ORAEO
-                ClickActionGameObjectORAEO(ref clickEvent);
+                ClickActionORAEO(ref clickEvent);
+            }
+            //Иначе, если активна подпанель сооружения
+            else if (objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Building)
+            {
+                //Проверяем клики в подпанели сооружения
+                ClickActionBuilding(ref clickEvent);
             }
         }
 
         #region GameObjectFleetManager
-        void ClickActionGameObjectFleetManager(
+        void ClickActionFleetManager(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём организацию игрока
@@ -1498,7 +1506,7 @@ namespace SandOcean.UI
             if (clickEvent.WidgetName == "FleetManagerFleetsTab")
             {
                 //Запрашиваем отображение вкладки флотов
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.FleetManagerFleets,
                     objectPanel.activeObjectPE);
             }
@@ -1506,7 +1514,7 @@ namespace SandOcean.UI
             else if (clickEvent.WidgetName == "FleetManagerTaskForceTemplatesTab")
             {
                 //Запрашиваем отображение вкладки шаблонов групп
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.FleetManagerTaskForceTemplates,
                     objectPanel.activeObjectPE);
             }
@@ -1515,17 +1523,17 @@ namespace SandOcean.UI
             else if (fleetManagerSubpanel.tabGroup.selectedTab == fleetManagerSubpanel.fleetsTab.selfTabButton)
             {
                 //Проверяем клики во вкладке флотов
-                ClickActionGameObjectFleetManagerFleets(ref clickEvent);
+                ClickActionFleetManagerFleets(ref clickEvent);
             }
             //Иначе, если активна вкладка шаблонов групп
             else if (fleetManagerSubpanel.tabGroup.selectedTab == fleetManagerSubpanel.taskForceTemplatesTab.selfTabButton)
             {
                 //Проверяем клики во вкладке шаблонов групп
-                ClickActionGameObjectFleetManagerTaskForceTemplates(ref clickEvent);
+                ClickActionFleetManagerTFTemplates(ref clickEvent);
             }
         }
 
-        void ClickActionGameObjectFleetManagerFleets(
+        void ClickActionFleetManagerFleets(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём организацию игрока
@@ -1725,7 +1733,7 @@ namespace SandOcean.UI
                     if (fleetsTab.templatesChangingList.isActiveAndEnabled == true)
                     {
                         //Запрашиваем заполнение списка для смены шаблона группы
-                        GameFleetManagerSubpanelActionRequest(
+                        FleetManagerActionRequest(
                             FleetManagerSubpanelActionRequestType.FleetsTabFillTemplatesChangeList,
                             objectPanel.activeObjectPE,
                             taskForceSummaryPanel2.selfPE);
@@ -1773,7 +1781,7 @@ namespace SandOcean.UI
                 if (fleetsTab.templatesCreatingList.isActiveAndEnabled == true)
                 {
                     //Запрашиваем заполнение списка для создания группы
-                    GameFleetManagerSubpanelActionRequest(
+                    FleetManagerActionRequest(
                         FleetManagerSubpanelActionRequestType.FleetsTabFillTemplatesNewList,
                         objectPanel.activeObjectPE);
                 }
@@ -1786,7 +1794,7 @@ namespace SandOcean.UI
             }
         }
 
-        void ClickActionGameObjectFleetManagerTaskForceTemplates(
+        void ClickActionFleetManagerTFTemplates(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём панель объекта
@@ -1812,7 +1820,7 @@ namespace SandOcean.UI
                     tFTemplatesTab.designerSubtab.template = null;
 
                     //Запрашиваем отображение подвкладки дизайнера шаблона группы
-                    GameObjectPanelActionRequest(
+                    ObjectActionRequest(
                         ObjectPanelActionRequestType.FleetManagerTaskForceTemplatesDesigner,
                         objectPanel.activeObjectPE);
                 }
@@ -1830,7 +1838,7 @@ namespace SandOcean.UI
                             tFTemplatesTab.designerSubtab.template = tFTemplateSummaryPanel.template;
 
                             //Запрашиваем отображение подвкладки дизайнера шаблона группы
-                            GameObjectPanelActionRequest(
+                            ObjectActionRequest(
                                 ObjectPanelActionRequestType.FleetManagerTaskForceTemplatesDesigner,
                                 objectPanel.activeObjectPE);
                         }
@@ -1901,7 +1909,7 @@ namespace SandOcean.UI
                         }
 
                         //Запрашиваем отображение подвкладки списка шаблонов групп
-                        GameObjectPanelActionRequest(
+                        ObjectActionRequest(
                             ObjectPanelActionRequestType.FleetManagerTaskForceTemplatesList,
                             objectPanel.activeObjectPE);
                     }
@@ -1910,7 +1918,7 @@ namespace SandOcean.UI
         }
 
         readonly EcsPoolInject<RGameFleetManagerSubpanelAction> gameFleetManagerSubpanelActionRequestPool = default;
-        void GameFleetManagerSubpanelActionRequest(
+        void FleetManagerActionRequest(
             FleetManagerSubpanelActionRequestType requestType,
             EcsPackedEntity organizationPE,
             EcsPackedEntity taskForcePE = default)
@@ -1928,7 +1936,7 @@ namespace SandOcean.UI
         #endregion
 
         #region GameObjectOrganization
-        void ClickActionGameObjectOrganization(
+        void ClickActionOrganization(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём панель объекта
@@ -1941,7 +1949,7 @@ namespace SandOcean.UI
             if (clickEvent.WidgetName == "OrganizationOverviewTab")
             {
                 //Запрашиваем отображение обзорной вкладки
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.OrganizationOverview,
                     objectPanel.activeObjectPE);
             }
@@ -1949,7 +1957,7 @@ namespace SandOcean.UI
         #endregion
 
         #region GameObjectRegion
-        void ClickActionGameObjectRegion(
+        void ClickActionRegion(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём организацию игрока
@@ -1966,7 +1974,7 @@ namespace SandOcean.UI
             if (clickEvent.WidgetName == "RegionOverviewTab")
             {
                 //Запрашиваем отображение обзорной вкладки
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.RegionOverview,
                     objectPanel.activeObjectPE);
             }
@@ -1974,7 +1982,7 @@ namespace SandOcean.UI
             else if (clickEvent.WidgetName == "RegionORAEOsTab")
             {
                 //Запрашиваем отображение вкладки организаций
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.RegionOrganizations,
                     objectPanel.activeObjectPE);
             }
@@ -1983,17 +1991,17 @@ namespace SandOcean.UI
             else if (regionSubpanel.tabGroup.selectedTab == regionSubpanel.overviewTab.selfTabButton)
             {
                 //Проверяем клики в обзорной вкладке
-                ClickActionGameObjectRegionOverview(ref clickEvent);
+                ClickActionRegionOverview(ref clickEvent);
             }
             //Иначе, если активна вкладка организаций
             else if (regionSubpanel.tabGroup.selectedTab == regionSubpanel.oRAEOsTab.selfTabButton)
             {
                 //Проверяем клики во вкладке ORAEO
-                ClickActionGameObjectRegionORAEOs(ref clickEvent);
+                ClickActionRegionORAEOs(ref clickEvent);
             }
         }
 
-        void ClickActionGameObjectRegionOverview(
+        void ClickActionRegionOverview(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём организацию игрока
@@ -2022,22 +2030,22 @@ namespace SandOcean.UI
             }
         }
 
-        void ClickActionGameObjectRegionORAEOs(
+        void ClickActionRegionORAEOs(
             ref EcsUguiClickEvent clickEvent)
         {
-            //Если источник события имееет компонент ORAEOBriefInfoPanel
-            if (clickEvent.Sender.TryGetComponent(out UIORAEOSummaryPanel briefInfoPanel))
+            //Если источник события имееет компонент ORAEOSummaryPanel
+            if (clickEvent.Sender.TryGetComponent(out UIORAEOSummaryPanel oRAEOSummaryPanel))
             {
                 //Запрашиваем отображение подпанели ORAEO
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.ORAEO,
-                    briefInfoPanel.selfPE);
+                    oRAEOSummaryPanel.selfPE);
             }
         }
         #endregion
 
         #region GameObjectORAEO
-        void ClickActionGameObjectORAEO(
+        void ClickActionORAEO(
             ref EcsUguiClickEvent clickEvent)
         {
             //Берём панель объекта
@@ -2050,20 +2058,90 @@ namespace SandOcean.UI
             if (clickEvent.WidgetName == "ORAEOOverviewTab")
             {
                 //Запрашиваем отображение обзорной вкладки
-                GameObjectPanelActionRequest(
+                ObjectActionRequest(
                     ObjectPanelActionRequestType.ORAEOOverview,
+                    objectPanel.activeObjectPE);
+            }
+            //Иначе, если нажата кнопка вкладки сооружений
+            else if (clickEvent.WidgetName == "ORAEOBuildingsTab")
+            {
+                //Запрашиваем отображение вкладки сооружений
+                ObjectActionRequest(
+                    ObjectPanelActionRequestType.ORAEOBuildings,
+                    objectPanel.activeObjectPE);
+            }
+
+            //Иначе, если активна обзорная вкладка
+            else if(oRAEOSubpanel.tabGroup.selectedTab == oRAEOSubpanel.overviewTab.selfTabButton)
+            {
+                //Проверяем клики в обзорной вкладке
+                ClickActionORAEOOverview(ref clickEvent);
+            }
+            //Иначе, если активна вкладка сооружений
+            else if(oRAEOSubpanel.tabGroup.selectedTab == oRAEOSubpanel.buildingsTab.selfTabButton)
+            {
+                //Проверяем клики во вкладке сооружений
+                ClickActionORAEOBuildings(ref clickEvent);
+            }
+        }
+
+        void ClickActionORAEOOverview(
+            ref EcsUguiClickEvent clickEvent)
+        {
+
+        }
+
+        void ClickActionORAEOBuildings(
+            ref EcsUguiClickEvent clickEvent)
+        {
+            //Берём панель объекта
+            UIObjectPanel objectPanel = eUI.Value.gameWindow.objectPanel;
+
+            //Берём подпанель ORAEO
+            UIORAEOSubpanel oRAEOSubpanel = objectPanel.oRAEOSubpanel;
+
+            //Берём вкладку сооружений
+            UIBuildingsTab buildingsTab = oRAEOSubpanel.buildingsTab;
+
+            //Если источник события имеет компонент BuildingSummaryPanel
+            if (clickEvent.Sender.TryGetComponent(out UIBuildingSummaryPanel buildingSummaryPanel))
+            {
+                //Запрашиваем отображение подпанели сооружения
+                ObjectActionRequest(
+                    ObjectPanelActionRequestType.Building,
+                    buildingSummaryPanel.selfPE);
+            }
+        }
+        #endregion
+
+        #region GameObjectBuilding
+        void ClickActionBuilding(
+            ref EcsUguiClickEvent clickEvent)
+        {
+            //Берём панель объекта
+            UIObjectPanel objectPanel = eUI.Value.gameWindow.objectPanel;
+
+            //Берём подпанель сооружения
+            UIBuildingSubpanel buildingSubpanel = objectPanel.buildingSubpanel;
+
+            //Если нажата кнопка обзорной вкладки
+            if (clickEvent.WidgetName == "BuildingOverviewTab")
+            {
+                //Запрашиваем отображение обзорной вкладки
+                ObjectActionRequest(
+                    ObjectPanelActionRequestType.BuildingOverview,
                     objectPanel.activeObjectPE);
             }
         }
         #endregion
 
         readonly EcsPoolInject<RGameObjectPanelAction> gameObjectPanelActionRequestPool = default;
-        void GameObjectPanelActionRequest(
+        void ObjectActionRequest(
             ObjectPanelActionRequestType requestType,
             EcsPackedEntity objectPE = new(),
             bool isRefresh = false)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса действия панели объекта
+            //Создаём новую сущность и назначаем ей запрос действия панели объекта
             int requestEntity = world.Value.NewEntity();
             ref RGameObjectPanelAction requestComp = ref gameObjectPanelActionRequestPool.Value.Add(requestEntity);
 
@@ -2079,7 +2157,7 @@ namespace SandOcean.UI
         void GameActionRequest(
             GameActionType actionType)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса действия в игре
+            //Создаём новую сущность и назначаем ей запрос действия в игре
             int requestEntity = world.Value.NewEntity();
             ref RGameAction requestComp = ref gameActionRequestPool.Value.Add(requestEntity);
 
@@ -2092,7 +2170,7 @@ namespace SandOcean.UI
             DesignerType designerType,
             int contentSetIndex)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса открытия дизайнера в игре
+            //Создаём новую сущность и назначаем ей запрос открытия дизайнера в игре
             int requestEntity = world.Value.NewEntity();
             ref RGameOpenDesigner requestComp = ref gameOpenDesignerRequestPool.Value.Add(requestEntity);
 
@@ -2108,7 +2186,7 @@ namespace SandOcean.UI
             ChangeMapModeRequestType requestType,
             EcsPackedEntity objectPE)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса смены режима карты
+            //Создаём новую сущность и назначаем ей запрос смены режима карты
             int requestEntity = world.Value.NewEntity();
             ref RChangeMapMode requestComp = ref changeMapModeRequestPool.Value.Add(requestEntity);
 
@@ -2125,7 +2203,7 @@ namespace SandOcean.UI
             ref COrganization organization,
             bool isReserve = false)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса создания флота
+            //Создаём новую сущность и назначаем ей запрос создания флота
             int requestEntity = world.Value.NewEntity();
             ref RFleetCreating requestComp = ref fleetCreatingRequestPool.Value.Add(requestEntity);
 
@@ -2139,7 +2217,7 @@ namespace SandOcean.UI
             ref CFleet fleet,
             DTFTemplate template = null)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса создания оперативной группы
+            //Создаём новую сущность и назначаем ей запрос создания оперативной группы
             int requestEntity = world.Value.NewEntity();
             ref RTaskForceCreating requestComp = ref taskForceCreatingRequestPool.Value.Add(requestEntity);
 
@@ -2154,7 +2232,7 @@ namespace SandOcean.UI
             ref CTaskForce taskForce,
             DTFTemplate template = null)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса действия оперативной группы
+            //Создаём новую сущность и назначаем ей запрос действия оперативной группы
             int requestEntity = world.Value.NewEntity();
             ref RTaskForceAction requestComp = ref taskForceActionRequestPool.Value.Add(requestEntity);
 
@@ -2172,7 +2250,7 @@ namespace SandOcean.UI
             bool isUpdate = false,
             DTFTemplate updatingTemplate = null)
         {
-            //Создаём новую сущность и назначаем ей компонент запроса создания нового шаблона оперативной группы
+            //Создаём новую сущность и назначаем ей запрос создания нового шаблона оперативной группы
             int requestEntity = world.Value.NewEntity();
             ref RTFTemplateCreating requestComp = ref tFTemplateCreatingRequestPool.Value.Add(requestEntity);
 
@@ -2209,7 +2287,7 @@ namespace SandOcean.UI
             DTFTemplate template,
             TFTemplateActionType requestType)
         {
-            //Создаём новую сущность и назначаем ей компонент запрса действия шаблона оперативной группы
+            //Создаём новую сущность и назначаем ей запрос действия шаблона оперативной группы
             int requestEntity = world.Value.NewEntity();
             ref RTFTemplateAction requestComp = ref tFTemplateActionRequestPool.Value.Add(requestEntity);
 
@@ -2703,7 +2781,7 @@ namespace SandOcean.UI
                     else
                     {
                         //Запрашиваем отображение подпанели объекта региона
-                        GameObjectPanelActionRequest(
+                        ObjectActionRequest(
                             ObjectPanelActionRequestType.Region,
                             currentRegion.selfPE);
                     }

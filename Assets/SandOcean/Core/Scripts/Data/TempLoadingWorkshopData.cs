@@ -1,6 +1,8 @@
 
 using System.Collections.Generic;
 
+using SandOcean.Warfare.Ship;
+
 namespace SandOcean.Designer.Workshop
 {
     public struct TempLoadingWorkshopData
@@ -10,8 +12,15 @@ namespace SandOcean.Designer.Workshop
         {
             technologies = new();
 
+            buildingTypes = new();
 
             shipTypes = new();
+
+            shipParts = new();
+            shipPartCoreTechnologies = new();
+            shipPartDirectionsOfImprovement = new();
+            shipPartImprovements = new();
+
             shipClasses = new();
 
             engines = new();
@@ -23,8 +32,15 @@ namespace SandOcean.Designer.Workshop
 
         public List<WDTechnology> technologies;
 
+        public List<WDBuildingType> buildingTypes;
 
         public List<WDShipType> shipTypes;
+
+        public List<WDShipPart> shipParts;
+        public List<WDShipPartCoreTechnology> shipPartCoreTechnologies;
+        public List<WDShipPartDirectionOfImprovement> shipPartDirectionsOfImprovement;
+        public List<WDShipPartImprovement> shipPartImprovements;
+
         public List<WDShipClass> shipClasses;
 
         public List<WDEngine> engines;

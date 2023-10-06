@@ -4,7 +4,7 @@ using System;
 namespace SandOcean.Designer.Workshop
 {
     [Serializable]
-    public struct WDShipClassComponent : IContentObjectLink, IWorkshopContentObjectLink
+    public struct WDShipClassComponent : IContentObjectLink
     {
         public WDShipClassComponent(
             string contentSetName,

@@ -11,6 +11,7 @@ using SandOcean.Designer;
 using SandOcean.Designer.Save;
 using SandOcean.Designer.Workshop;
 using SandOcean.Designer.Game;
+using SandOcean.Warfare.Ship;
 
 namespace SandOcean
 {
@@ -73,7 +74,12 @@ namespace SandOcean
                 {
                     contentSet = new(
                         new SDTechnology[contentSet.technologies.Length],
+                        new SDBuildingType[contentSet.buildingTypes.Length],
                         new SDShipType[contentSet.shipTypes.Length],
+                        new SDShipPart[contentSet.shipParts.Length],
+                        new SDShipPartCoreTechnology[contentSet.shipPartCoreTechnologies.Length],
+                        new SDShipPartTypeDirectionOfImprovement[contentSet.shipPartDirectionsOfImprovement.Length],
+                        new SDShipPartImprovement[contentSet.shipPartImprovements.Length],
                         new SDShipClass[contentSet.shipClasses.Length],
                         new SDEngine[contentSet.engines.Length],
                         new SDReactor[contentSet.reactors.Length],
@@ -87,11 +93,35 @@ namespace SandOcean
                 in contentSet.technologies,
                 ref contentSetClass.contentSet.technologies);
 
+            //Сохраняем типы сооружений
+            WorkshopSaveBuildingTypes(
+                in contentSet.buildingTypes,
+                ref contentSetClass.contentSet.buildingTypes);
 
             //Сохраняем типы кораблей
             WorkshopSaveShipTypes(
                 in contentSet.shipTypes,
                 ref contentSetClass.contentSet.shipTypes);
+
+            //Сохраняем части кораблей
+            WorkshopSaveShipPart(
+                contentSet.shipParts,
+                ref contentSetClass.contentSet.shipParts);
+
+            //Сохраняем ключевые технологии частей кораблей
+            WorkshopSaveShipPartCoreTechnologies(
+                contentSet.shipPartCoreTechnologies,
+                ref contentSetClass.contentSet.shipPartCoreTechnologies);
+
+            //Сохраняем направления улучшения частей кораблей
+            WorkshopSaveShipPartDirectionsOfImprovement(
+                contentSet.shipPartDirectionsOfImprovement,
+                ref contentSetClass.contentSet.shipPartDirectionsOfImprovement);
+
+            //Сохраняем улучшения частей кораблей
+            WorkshopSaveShipPartImprovements(
+                contentSet.shipPartImprovements,
+                ref contentSetClass.contentSet.shipPartImprovements);
 
             //Сохраняем классы кораблей
             WorkshopSaveShipClasses(
@@ -197,7 +227,42 @@ namespace SandOcean
             }
         }
 
+        //Типы сооружений
+        void WorkshopSaveBuildingTypes(
+            in WDBuildingType[] savingBuildingTypes,
+            ref SDBuildingType[] buildingTypes)
+        {
+            //Для каждого сохраняемого типа сооружения
+            for (int a = 0; a < savingBuildingTypes.Length; a++)
+            {
+                //Берём ссылку на сохраняемый тип
+                ref readonly WDBuildingType savingBuildingType = ref savingBuildingTypes[a];
 
+                //Определяем категорию типа
+                string buildingCategoryName;
+
+                //Если тип относится к тестовой категории
+                if (savingBuildingType.BuildingCategory == BuildingCategory.Test)
+                {
+                    buildingCategoryName = "Test";
+                }
+                //Иначе тип относится к тестовой категории
+                else
+                {
+                    buildingCategoryName = "Test";
+                }
+
+                //Записываем данные типа
+                SDBuildingType buildingType = new(
+                    savingBuildingType.ObjectName,
+                    buildingCategoryName);
+
+                //Заносим его в сохраняемый массив по соответствующему индексу
+                buildingTypes[a] = buildingType;
+            }
+        }
+
+        #region Ships
         //Типы кораблей
         void WorkshopSaveShipTypes(
             in WDShipType[] savingShipTypes,
@@ -238,6 +303,153 @@ namespace SandOcean
             }
         }
 
+        #region ShipParts
+        void WorkshopSaveShipPart(
+            WDShipPart[] savingShipParts,
+            ref SDShipPart[] shipParts)
+        {
+            //Создаём список для временных данных
+            List<SDContentObjectLink> coreTechnologies = new();
+
+            //Для каждой сохраняемой части корабля
+            for (int a = 0; a < savingShipParts.Length; a++)
+            {
+                //Берём сохраняемую часть корабля
+                WDShipPart savingShipPart = savingShipParts[a];
+
+                //Очищаем временный список
+                coreTechnologies.Clear();
+
+                //Для каждой ключевой технологии
+                for (int b = 0; b < savingShipPart.CoreTechnologies.Length; b++)
+                {
+                    //Пытаемся привести ссылку к WDContentObjectLink
+                    if (savingShipPart.CoreTechnologies[b] is WorkshopContentObjectLink savingCoreTechnologyLink)
+                    {
+                        //Записываем сохраняемые данные ключевой технологии
+                        SDContentObjectLink coreTechnologyLink = new(
+                            savingCoreTechnologyLink.ContentSetName,
+                            savingCoreTechnologyLink.ObjectName);
+
+                        //Заносим её во временный список
+                        coreTechnologies.Add(coreTechnologyLink);
+                    }
+                }
+
+                //Записываем сохраняемые данные части корабля
+                SDShipPart shipPart = new(
+                    savingShipPart.ObjectName,
+                    coreTechnologies.ToArray());
+
+                //Заносим её в сохраняемый список по соответствующему индексу
+                shipParts[a] = shipPart;
+            } 
+        }
+
+        void WorkshopSaveShipPartCoreTechnologies(
+            WDShipPartCoreTechnology[] savingCoreTechnologies,
+            ref SDShipPartCoreTechnology[] coreTechnologies)
+        {
+            //Создаём список для временных данных
+            List<SDContentObjectLink> directionsOfImprovement = new();
+
+            //Для каждой сохраняемой ключевой технологии части корабля
+            for (int a = 0; a < savingCoreTechnologies.Length; a++)
+            {
+                //Берём сохраняемую ключевую технологию
+                WDShipPartCoreTechnology savingCoreTechnology = savingCoreTechnologies[a];
+
+                //Очищаем временный список
+                directionsOfImprovement.Clear();
+
+                //Для каждого направления улучшения
+                for (int b = 0; b < savingCoreTechnology.DirectionsOfImprovement.Length; b++)
+                {
+                    //Пытаемся привести ссылку к WDContentObjectLink
+                    if (savingCoreTechnology.DirectionsOfImprovement[b] is WorkshopContentObjectLink savingDirectionOfImprovementLink)
+                    {
+                        //Записываем сохраняемые данные направления улучшения
+                        SDContentObjectLink coreTechnologyLink = new(
+                            savingDirectionOfImprovementLink.ContentSetName,
+                            savingDirectionOfImprovementLink.ObjectName);
+
+                        //Заносим его во временный список
+                        directionsOfImprovement.Add(coreTechnologyLink);
+                    }
+                }
+
+                //Записываем сохраняемые данные ключевой технологии
+                SDShipPartCoreTechnology coreTechnology = new(
+                    savingCoreTechnology.ObjectName,
+                    directionsOfImprovement.ToArray());
+
+                //Заносим её в сохраняемый список по соответствующему индексу
+                coreTechnologies[a] = coreTechnology;
+            }
+        }
+
+        void WorkshopSaveShipPartDirectionsOfImprovement(
+            WDShipPartDirectionOfImprovement[] savingDirectionsOfImprovement,
+            ref SDShipPartTypeDirectionOfImprovement[] directionsOfImprovement)
+        {
+            //Создаём список для временных данных
+            List<SDContentObjectLink> improvements = new();
+
+            //Для каждого сохраняемого направления улучшения части корабля
+            for (int a = 0; a < savingDirectionsOfImprovement.Length; a++)
+            {
+                //Берём сохраняемое направление улучшения
+                WDShipPartDirectionOfImprovement savingDirectionOfImprovement = savingDirectionsOfImprovement[a];
+
+                //Очищаем временный список
+                improvements.Clear();
+
+                //Для каждого улучшения
+                for (int b = 0; b < savingDirectionOfImprovement.Improvements.Length; b++)
+                {
+                    //Пытаемся привести ссылку к WDContentObjectLink
+                    if (savingDirectionOfImprovement.Improvements[b] is WorkshopContentObjectLink savingImprovementLink)
+                    {
+                        //Записываем сохраняемые данные улучшения
+                        SDContentObjectLink coreTechnologyLink = new(
+                            savingImprovementLink.ContentSetName,
+                            savingImprovementLink.ObjectName);
+
+                        //Заносим его во временный список
+                        improvements.Add(coreTechnologyLink);
+                    }
+                }
+
+                //Записываем сохраняемые данные направления улучшения
+                SDShipPartTypeDirectionOfImprovement directionOfImprovement = new(
+                    savingDirectionOfImprovement.ObjectName,
+                    improvements.ToArray());
+
+                //Заносим его в сохраняемый список по соответствующему индексу
+                directionsOfImprovement[a] = directionOfImprovement;
+            }
+        }
+
+        void WorkshopSaveShipPartImprovements(
+            WDShipPartImprovement[] savingImprovements,
+            ref SDShipPartImprovement[] improvements)
+        {
+            //Для каждого сохраняемого улучшения части корабля
+            for (int a = 0; a < savingImprovements.Length; a++)
+            {
+                //Берём сохраняемое улучшение
+                WDShipPartImprovement savingImprovement = savingImprovements[a];
+
+                //Записываем сохраняемые данные направления улучшения
+                SDShipPartImprovement improvement = new(
+                    savingImprovement.ObjectName);
+
+                //Заносим его в сохраняемый список по соответствующему индексу
+                improvements[a] = improvement;
+            }
+        }
+        #endregion
+
         //Классы кораблей
         void WorkshopSaveShipClasses(
             in WDShipClass[] savingShipClasses,
@@ -254,6 +466,8 @@ namespace SandOcean
                 = new();
             List<SDShipClassComponent> installedEnergyGuns
                 = new();
+            List<SDShipClassPart> shipParts = new();
+            List<SDContentObjectLink> shipPartImprovements = new();
 
             //Для каждого сохраняемого класса корабля
             for (int a = 0; a < savingShipClasses.Length; a++)
@@ -347,6 +561,42 @@ namespace SandOcean
                         energyGun);
                 }
 
+                //Очищаем временный список частей корабля
+                shipParts.Clear();
+                //Для каждой части корабля
+                for (int b = 0; b < savingShipClass.shipParts.Length; b++)
+                {
+                    //Берём сохраняемую часть корабля
+                    WDShipClassPart savingShipPart = savingShipClass.shipParts[b];
+
+                    //Очищаем временный список улучшений части корабля
+                    shipPartImprovements.Clear();
+
+                    //Для каждого сохраняемого улучшения
+                    for (int c = 0; c < savingShipClass.shipParts[b].Improvements.Length; c++)
+                    {
+                        //Пытаемся привести ссылку к WDContentObjectLink
+                        if (savingShipClass.shipParts[b].Improvements[c] is WorkshopContentObjectLink savingImprovementLink)
+                        {
+                            //Записываем сохраняемые данные улучшения
+                            SDContentObjectLink improvement = new(
+                                savingImprovementLink.ContentSetName, savingImprovementLink.ObjectName);
+
+                            //Заносим его в список
+                            shipPartImprovements.Add(improvement);
+                        }
+                    }
+
+                    //Записываем сохраняемые данные части корабля
+                    SDShipClassPart shipPart = new(
+                        new SDContentObjectLink((savingShipPart.Part as WorkshopContentObjectLink).ContentSetName, (savingShipPart.Part as WorkshopContentObjectLink).ObjectName),
+                        new SDContentObjectLink((savingShipPart.CoreTechnology as WorkshopContentObjectLink).ContentSetName, (savingShipPart.CoreTechnology as WorkshopContentObjectLink).ObjectName),
+                        shipPartImprovements.ToArray());
+
+                    //Заносим её в список
+                    shipParts.Add(shipPart);
+                }
+
                 //Записываем сохраняемые данные корабля
                 SDShipClass shipClass
                     = new(
@@ -355,7 +605,8 @@ namespace SandOcean
                         installedReactors.ToArray(),
                         installedFuelTanks.ToArray(),
                         installedSolidExtractionEquipments.ToArray(),
-                        installedEnergyGuns.ToArray());
+                        installedEnergyGuns.ToArray(),
+                        shipParts.ToArray());
 
                 //Заносим его в сохраняемый массив по соответствующему индексу
                 shipClasses[a]
@@ -636,5 +887,6 @@ namespace SandOcean
                 }
             }
         }
+        #endregion
     }
 }

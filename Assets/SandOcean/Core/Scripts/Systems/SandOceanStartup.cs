@@ -14,6 +14,7 @@ using SandOcean.Player;
 using SandOcean.Map;
 using SandOcean.Organization;
 using SandOcean.AEO.RAEO;
+using SandOcean.Economy.Building;
 using SandOcean.Technology;
 using SandOcean.Designer;
 using SandOcean.Warfare.Fleet;
@@ -135,8 +136,10 @@ namespace SandOcean
 
             //—истемы, работающие каждый тик
             perTickSystems
-                //—мена владельца RAEO
-                .Add(new SRAEOChangeOwner())
+                //”правление RAEO
+                .Add(new SRAEOControl())
+                //”правление сооружени€ми
+                .Add(new SBuildingControl())
 
                 //”правление флотами, оперативными группами и шаблонами
                 .Add(new SFleetControl())

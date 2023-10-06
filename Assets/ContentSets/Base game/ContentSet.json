@@ -134,14 +134,47 @@
                 ]
             }
         ],
+        "buildingTypes": [
+            {
+                "typeName": "contruction_factory",
+                "buildingCategory": "Test"
+            },
+            {
+                "typeName": "shipyard",
+                "buildingCategory": "Test"
+            }
+        ],
         "shipTypes": [
             {
-                "shipTypeName": "Destroyer",
+                "typeName": "Destroyer",
                 "battleGroupName": "ShortRange"
             },
             {
-                "shipTypeName": "Frigate",
+                "typeName": "Frigate",
                 "battleGroupName": "ShortRange"
+            }
+        ],
+        "shipParts": [
+            {
+                "partName": "Engine",
+                "coreTechnologies": []
+            }
+        ],
+        "shipPartCoreTechnologies": [
+            {
+                "coreTechnologyName": "Diesel",
+                "directionsOfImprovement": []
+            }
+        ],
+        "shipPartDirectionsOfImprovement": [
+            {
+                "directionOfImprovementName": "Boost",
+                "improvements": []
+            }
+        ],
+        "shipPartImprovements": [
+            {
+                "improvementName": "Level 1"
             }
         ],
         "shipClasses": [
@@ -157,7 +190,8 @@
                 "reactors": [],
                 "fuelTanks": [],
                 "extractionEquipmentSolids": [],
-                "energyGuns": []
+                "energyGuns": [],
+                "shipParts": []
             },
             {
                 "className": "A4",
@@ -181,7 +215,8 @@
                 "reactors": [],
                 "fuelTanks": [],
                 "extractionEquipmentSolids": [],
-                "energyGuns": []
+                "energyGuns": [],
+                "shipParts": []
             },
             {
                 "className": "Ship class 1",
@@ -212,7 +247,8 @@
                     }
                 ],
                 "extractionEquipmentSolids": [],
-                "energyGuns": []
+                "energyGuns": [],
+                "shipParts": []
             },
             {
                 "className": "Ship class 2",
@@ -244,7 +280,8 @@
                         "numberOfComponents": 3
                     }
                 ],
-                "energyGuns": []
+                "energyGuns": [],
+                "shipParts": []
             },
             {
                 "className": "Ship class 3",
@@ -282,7 +319,8 @@
                         "componentName": "Energy gun 1",
                         "numberOfComponents": 10
                     }
-                ]
+                ],
+                "shipParts": []
             }
         ],
         "engines": [

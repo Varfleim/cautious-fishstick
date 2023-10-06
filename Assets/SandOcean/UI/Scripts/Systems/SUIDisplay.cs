@@ -25,17 +25,21 @@ using SandOcean.UI.DesignerWindow.ExtractionEquipmentDesigner;
 using SandOcean.UI.DesignerWindow.GunDesigner;
 using SandOcean.UI.GameWindow;
 using SandOcean.UI.GameWindow.Object;
-using SandOcean.UI.GameWindow.Object.Events;
 using SandOcean.UI.GameWindow.Object.FleetManager;
-using SandOcean.UI.GameWindow.Object.FleetManager.Events;
 using SandOcean.UI.GameWindow.Object.FleetManager.Fleets;
 using SandOcean.UI.GameWindow.Object.FleetManager.TaskForceTemplates;
+using SandOcean.UI.GameWindow.Object.FleetManager.Events;
 using SandOcean.UI.GameWindow.Object.Region;
-using SandOcean.UI.GameWindow.Object.Region.Events;
 using SandOcean.UI.GameWindow.Object.Region.ORAEOs;
+using SandOcean.UI.GameWindow.Object.Region.Events;
+using SandOcean.UI.GameWindow.Object.ORAEO;
+using SandOcean.UI.GameWindow.Object.ORAEO.Buildings;
+using SandOcean.UI.GameWindow.Object.Events;
+
 using SandOcean.Player;
 using SandOcean.Organization;
 using SandOcean.AEO.RAEO;
+using SandOcean.Economy.Building;
 using SandOcean.Technology;
 using SandOcean.Designer;
 using SandOcean.Designer.Workshop;
@@ -57,17 +61,21 @@ namespace SandOcean.UI
 
         //Игроки
 
-        //Дипломатия
-        readonly EcsPoolInject<COrganization> organizationPool = default;
-
         //Карта
         readonly EcsPoolInject<CHexRegion> regionPool = default;
 
-        //Административно-экономические объекты
+        //Организации
+        readonly EcsPoolInject<COrganization> organizationPool = default;
+
+        //Экономика
         readonly EcsPoolInject<CRegionAEO> regionAEOPool = default;
 
         readonly EcsPoolInject<CExplorationORAEO> explorationORAEOPool = default;
         readonly EcsPoolInject<CEconomicORAEO> economicORAEOPool = default;
+
+        readonly EcsPoolInject<CBuilding> buildingPool = default;
+        readonly EcsFilterInject<Inc<CBuilding, CBuildingDisplayedSummaryPanel>> buildingDisplayedSummaryPanelFilter = default;
+        readonly EcsPoolInject<CBuildingDisplayedSummaryPanel> buildingDisplayedSummaryPanelPool = default;
 
         //Флоты
         readonly EcsPoolInject<CFleet> fleetPool = default;
@@ -77,13 +85,9 @@ namespace SandOcean.UI
         readonly EcsPoolInject<CTaskForce> taskForcePool = default;
         readonly EcsFilterInject<Inc<CTaskForce, CTaskForceDisplayedSummaryPanel>> tFDisplayedSummaryPanelFilter = default;
         readonly EcsPoolInject<CTaskForceDisplayedSummaryPanel> tFDisplayedSummaryPanelPool = default;
-        readonly EcsFilterInject<Inc<CTaskForceDisplayedSummaryPanel, SRTaskForceRefreshUI>> tFRefreshUISelfRequestFilter = default;
-        readonly EcsPoolInject<SRTaskForceRefreshUI> taskForceRefreshUISelfRequestPool = default;
 
         readonly EcsFilterInject<Inc<CTFTemplateDisplayedSummaryPanel>> tFTemplateDisplayedSummaryPanelFilter = default;
         readonly EcsPoolInject<CTFTemplateDisplayedSummaryPanel> tFTemplateDisplayedSummaryPanelPool = default;
-        readonly EcsFilterInject<Inc<CTFTemplateDisplayedSummaryPanel, SRTFTemplateRefreshUI>> tFTemplateRefreshUISelfRequestFilter = default;
-        readonly EcsPoolInject<SRTFTemplateRefreshUI> tFTemplateRefreshUISelfRequestPool = default;
 
         //События административно-экономических объектов
         readonly EcsFilterInject<Inc<SRRefreshRAEOObjectPanel, CRegionAEO>> refreshRAEOObjectPanelSelfRequestFilter = default;
@@ -480,7 +484,7 @@ namespace SandOcean.UI
 
 
             //Выключаем выбранный переключатель в списке содержимого набора
-            workshopWindow.contentInfoToggleGroup.SetAllTogglesOff();
+            workshopWindow.contentObjectCountToggleGroup.SetAllTogglesOff();
 
             //Отображаем информацию о кораблях в данном наборе контента
             workshopWindow.shipsInfoPanel.contentAmount.text
@@ -4280,7 +4284,8 @@ namespace SandOcean.UI
                             (DShipClassComponent[])shipClass.reactors.Clone(),
                             (DShipClassComponent[])shipClass.fuelTanks.Clone(),
                             (DShipClassComponent[])shipClass.extractionEquipmentSolids.Clone(),
-                            (DShipClassComponent[])shipClass.energyGuns.Clone());
+                            (DShipClassComponent[])shipClass.energyGuns.Clone(),
+                            new DShipClassPart[0]);
 
                     //Обнуляем название текущего класса корабля
                     /*shipDesignerWindow.currentGameShipClass.ObjectName
@@ -4303,7 +4308,8 @@ namespace SandOcean.UI
                             (WDShipClassComponent[])shipClass.reactors.Clone(),
                             (WDShipClassComponent[])shipClass.fuelTanks.Clone(),
                             (WDShipClassComponent[])shipClass.extractionEquipmentSolids.Clone(),
-                            (WDShipClassComponent[])shipClass.energyGuns.Clone());
+                            (WDShipClassComponent[])shipClass.energyGuns.Clone(),
+                            new WDShipClassPart[0]);
 
                     //Обнуляем название текущего класса корабля
                     /*shipDesignerWindow.currentWorkshopShipClass.ObjectName
@@ -5154,7 +5160,8 @@ namespace SandOcean.UI
                         new DShipClassComponent[0],
                         new DShipClassComponent[0],
                         new DShipClassComponent[0],
-                        new DShipClassComponent[0]);
+                        new DShipClassComponent[0],
+                        new DShipClassPart[0]);
             }
             //Иначе
             else
@@ -5178,7 +5185,8 @@ namespace SandOcean.UI
                         new WDShipClassComponent[0],
                         new WDShipClassComponent[0],
                         new WDShipClassComponent[0],
-                        new WDShipClassComponent[0]);
+                        new WDShipClassComponent[0],
+                        new WDShipClassPart[0]);
             }
 
             //Пересчитываем и отображаем характеристики корабля
@@ -8443,7 +8451,7 @@ namespace SandOcean.UI
                 if (requestComp.creatingPanelType == CreatingPanelType.ORAEOBriefInfoPanel)
                 {
                     //Создаём обзорную панель ORAEO
-                    ORAEOCreateBriefInfoPanel(ref requestComp);
+                    RegionORAEOsCreateORAEOSummaryPanel(ref requestComp);
                 }
                 //Иначе, если запрашивается создание обзорной панели флота
                 else if (requestComp.creatingPanelType == CreatingPanelType.FleetOverviewPanel)
@@ -8453,8 +8461,7 @@ namespace SandOcean.UI
                     ref CFleet fleet = ref fleetPool.Value.Get(fleetEntity);
 
                     //Создаём обзорную панель флота
-                    FleetManagerFleetsTabCreateFleetSummaryPanel(ref fleet);
-                    Debug.LogWarning("Fleet created!");
+                    FleetManagerFleetsCreateFleetSummaryPanel(ref fleet);
                 }
                 //Иначе, если запрашивается создание обзорной панели оперативной группы
                 else if (requestComp.creatingPanelType == CreatingPanelType.TaskForceOverviewPanel)
@@ -8464,8 +8471,7 @@ namespace SandOcean.UI
                     ref CTaskForce taskForce = ref taskForcePool.Value.Get(taskForceEntity);
 
                     //Создаём обзорную панель группы
-                    FleetManagerFleetsTabCreateTaskForceSummaryPanel(ref taskForce);
-                    Debug.LogWarning("Task Force created!");
+                    FleetManagerFleetsCreateTaskForceSummaryPanel(ref taskForce);
                 }
 
                 world.Value.DelEntity(requestEntity);
@@ -8538,7 +8544,7 @@ namespace SandOcean.UI
                         if (RAEOSubpanel.tabGroup.selectedTab == RAEOSubpanel.overviewTab.selfTabButton)
                         {
                             //Отображаем обзорную вкладку RAEO
-                            GameShowRegionOSbPOverviewTab(
+                            RegionShowOverview(
                                 ref region,
                                 ref rAEO,
                                 false);
@@ -8547,7 +8553,7 @@ namespace SandOcean.UI
                         else if (RAEOSubpanel.tabGroup.selectedTab == RAEOSubpanel.oRAEOsTab.selfTabButton)
                         {
                             //Отображаем вкладку организаций RAEO
-                            GameShowRegionOSbPOrganizationsTab(
+                            RegionShowORAEOs(
                                 ref rAEO,
                                 false);
                         }
@@ -8559,8 +8565,15 @@ namespace SandOcean.UI
             }
         }
 
+        readonly EcsFilterInject<Inc<CBuildingDisplayedSummaryPanel, SRObjectRefreshUI>> buildingRefreshUISelfRequestFilter = default;
+        readonly EcsFilterInject<Inc<CTaskForceDisplayedSummaryPanel, SRObjectRefreshUI>> taskForceRefreshUISelfRequestFilter = default;
+        readonly EcsFilterInject<Inc<CTFTemplateDisplayedSummaryPanel, SRObjectRefreshUI>> tFTemplateRefreshUISelfRequestFilter = default;
+        readonly EcsPoolInject<SRObjectRefreshUI> objectRefreshUISelfRequestPool = default;
         void GameRefreshUISelfRequest()
         {
+            //Обновляем интерфейс сооружений
+            GameRefreshUIBuiliding();
+
             //Обновляем интерфейс оперативных групп
             GameRefreshUITaskForce();
 
@@ -8568,17 +8581,60 @@ namespace SandOcean.UI
             GameRefreshUITFTemplate();
         }
 
+        void GameRefreshUIBuiliding()
+        {
+            //Для каждого сооружения, имеющей отображаемую панель и самозапрос обновления интерфейса
+            foreach (int buildingEntity in buildingRefreshUISelfRequestFilter.Value)
+            {
+                //Берём компонент отображаемой панели и самозапрос
+                ref CBuildingDisplayedSummaryPanel buildingDisplayedSummaryPanel = ref buildingDisplayedSummaryPanelPool.Value.Get(buildingEntity);
+                ref SRObjectRefreshUI selfRequestComp = ref objectRefreshUISelfRequestPool.Value.Get(buildingEntity);
+
+                //Если запрашивается обновление интерфейса
+                if (selfRequestComp.requestType == RefreshUIType.Refresh)
+                {
+                    //Берём сооружение
+                    ref CBuilding building = ref buildingPool.Value.Get(buildingEntity);
+
+                    //Если сооружение имеет отображаемую обзорную панель
+                    if (buildingDisplayedSummaryPanel.buildingSummaryPanel != null)
+                    {
+                        //Обновляем её
+                        buildingDisplayedSummaryPanel.buildingSummaryPanel.parentBuildingCategoryPanel.parentBuildingsTab.RefreshBuildingSummaryPanel(
+                            ref building, buildingDisplayedSummaryPanel.buildingSummaryPanel);
+                    }
+                }
+                //Иначе, если запрашивается удаление интерфейса
+                else if (selfRequestComp.requestType == RefreshUIType.Delete)
+                {
+                    //Если сооружение имеет отображаемую обзорную панель
+                    if (buildingDisplayedSummaryPanel.buildingSummaryPanel != null)
+                    {
+                        //Удаляем её
+                        buildingDisplayedSummaryPanel.buildingSummaryPanel.parentBuildingCategoryPanel.parentBuildingsTab.CacheBuildingSummaryPanel(
+                            ref buildingDisplayedSummaryPanel);
+                    }
+
+                    //Удаляем компонент отображаемой обзорной панели
+                    buildingDisplayedSummaryPanelPool.Value.Del(buildingEntity);
+                }
+
+                //Удаляем самозапро обновления интерфейса
+                objectRefreshUISelfRequestPool.Value.Del(buildingEntity);
+            }
+        }
+
         void GameRefreshUITaskForce()
         {
             //Для каждой оперативной группы, имеющей отображаемую панель и самозапрос обновления интерфейса
-            foreach (int taskForceEntity in tFRefreshUISelfRequestFilter.Value)
+            foreach (int taskForceEntity in taskForceRefreshUISelfRequestFilter.Value)
             {
                 //Берём компонент отображаемой панели и самозапрос
                 ref CTaskForceDisplayedSummaryPanel tFDisplayedSummaryPanel = ref tFDisplayedSummaryPanelPool.Value.Get(taskForceEntity);
-                ref SRTaskForceRefreshUI selfRequestComp = ref taskForceRefreshUISelfRequestPool.Value.Get(taskForceEntity);
+                ref SRObjectRefreshUI selfRequestComp = ref objectRefreshUISelfRequestPool.Value.Get(taskForceEntity);
 
                 //Если запрашивается обновление интерфейса
-                if (selfRequestComp.requestType == RefresUIType.Refresh)
+                if (selfRequestComp.requestType == RefreshUIType.Refresh)
                 {
                     //Берём группу
                     ref CTaskForce taskForce = ref taskForcePool.Value.Get(taskForceEntity);
@@ -8592,7 +8648,7 @@ namespace SandOcean.UI
                     }
                 }
                 //Иначе, если запрашивается удаление интерфейса
-                else if(selfRequestComp.requestType == RefresUIType.Delete)
+                else if(selfRequestComp.requestType == RefreshUIType.Delete)
                 {
                     //Если группа имеет отображаемую обзорную панель
                     if (tFDisplayedSummaryPanel.taskForceSummaryPanel != null)
@@ -8600,14 +8656,14 @@ namespace SandOcean.UI
                         //Удаляем её
                         tFDisplayedSummaryPanel.taskForceSummaryPanel.parentFleetSummaryPanel.parentFleetsTab.CacheTaskForceSummaryPanel(
                             ref tFDisplayedSummaryPanel);
-
-                        //Удаляем компонент отображаемой обзорной панели
-                        tFDisplayedSummaryPanelPool.Value.Del(taskForceEntity);
                     }
+
+                    //Удаляем компонент отображаемой обзорной панели
+                    tFDisplayedSummaryPanelPool.Value.Del(taskForceEntity);
                 }
 
                 //Удаляем самозапрос обновления интерфейса
-                taskForceRefreshUISelfRequestPool.Value.Del(taskForceEntity);
+                objectRefreshUISelfRequestPool.Value.Del(taskForceEntity);
             }
         }
 
@@ -8618,10 +8674,10 @@ namespace SandOcean.UI
             {
                 //Берём компонент отображаемой панели и самозапрос
                 ref CTFTemplateDisplayedSummaryPanel templateDisplayedSummaryPanel = ref tFTemplateDisplayedSummaryPanelPool.Value.Get(templateEntity);
-                ref SRTFTemplateRefreshUI selfRequestComp = ref tFTemplateRefreshUISelfRequestPool.Value.Get(templateEntity);
+                ref SRObjectRefreshUI selfRequestComp = ref objectRefreshUISelfRequestPool.Value.Get(templateEntity);
 
                 //Если запрашивается удаление интерфейса
-                if (selfRequestComp.requestType == RefresUIType.Delete)
+                if (selfRequestComp.requestType == RefreshUIType.Delete)
                 {
                     //Если панель вкладки флотов не пуста
                     if (templateDisplayedSummaryPanel.fleetsTemplateSummaryPanel != null)
@@ -8644,7 +8700,7 @@ namespace SandOcean.UI
                 }
 
                 //Удаляем самозапрос обновления интерфейса
-                tFTemplateRefreshUISelfRequestPool.Value.Del(templateEntity);
+                objectRefreshUISelfRequestPool.Value.Del(templateEntity);
             }
         }
 
@@ -8669,25 +8725,31 @@ namespace SandOcean.UI
                 if (requestComp.requestType == ObjectPanelActionRequestType.FleetManager)
                 {
                     //Отображаем подпанель менеджера флотов
-                    FleetManagerShowSubpanel(ref requestComp);
+                    FleetManagerShow(ref requestComp);
                 }
                 //Иначе, если запрашивается отображение подпанели организации
                 else if (requestComp.requestType == ObjectPanelActionRequestType.Organization)
                 {
                     //Отображаем подпанель организации
-                    GameShowOrganizationObjectSubpanel(ref requestComp);
+                    OrganizationShow(ref requestComp);
                 }
                 //Иначе, если запрашивается отображение подпанели региона
                 else if (requestComp.requestType == ObjectPanelActionRequestType.Region)
                 {
                     //Отображаем подпанель региона
-                    GameShowRegionObjectSubpanel(ref requestComp);
+                    RegionShow(ref requestComp);
                 }
                 //Иначе, если запрашивается отображение подпанели ORAEO
                 else if (requestComp.requestType == ObjectPanelActionRequestType.ORAEO)
                 {
                     //Отображаем подпанель ORAEO
-                    GameShowORAEOObjectSubpanel(ref requestComp);
+                    ORAEOShow(ref requestComp);
+                }
+                //Иначе, если запрашивается отображение подпанели сооружения
+                else if (requestComp.requestType == ObjectPanelActionRequestType.Building)
+                {
+                    //Отображаем панель сооружения
+                    BuildingShow(ref requestComp);
                 }
 
                 //Иначе, если активна подпанель менеджера флотов
@@ -8702,9 +8764,9 @@ namespace SandOcean.UI
                         //Берём организацию
                         requestComp.objectPE.Unpack(world.Value, out int organizationEntity);
                         ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
-                        
+
                         //Отображаем вкладку флотов
-                        FleetManagerShowFleetsTab(
+                        FleetManagerShowFleets(
                             ref organization,
                             requestComp.isRefresh);
                     }
@@ -8716,7 +8778,7 @@ namespace SandOcean.UI
                         ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
 
                         //Отображаем вкладку шаблонов групп
-                        FleetManagerShowTFTemplatesTab(
+                        FleetManagerShowTFTemplates(
                             ref organization,
                             requestComp.isRefresh);
                     }
@@ -8724,7 +8786,7 @@ namespace SandOcean.UI
                     else if (requestComp.requestType == ObjectPanelActionRequestType.CloseObjectPanel)
                     {
                         //Скрываем подпанель менеджера флотов
-                        FleetManagerHideSubpanel();
+                        FleetManagerHide();
 
                         //Скрываем подпанель объекта
                         GameHideObjectSubpanel();
@@ -8755,7 +8817,7 @@ namespace SandOcean.UI
                             ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
 
                             //Отображаем подвкладку списка шаблонов групп
-                            FleetManagerTFTemplatesShowListSubtab(
+                            FleetManagerTFTemplatesShowList(
                                 ref organization,
                                 requestComp.isRefresh);
                         }
@@ -8767,7 +8829,7 @@ namespace SandOcean.UI
                             ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
 
                             //Отображаем подвкладку дизайнера шаблонов групп
-                            FleetManagerTFTemplatesShowDesignerSubtab(
+                            FleetManagerTFTemplatesShowDesigner(
                                 ref organization,
                                 requestComp.isRefresh);
                         }
@@ -8801,7 +8863,7 @@ namespace SandOcean.UI
                     else if (requestComp.requestType == ObjectPanelActionRequestType.CloseObjectPanel)
                     {
                         //Скрываем подпанель организации
-                        GameHideOrganizationObjectSubpanel();
+                        OrganizationHide();
 
                         //Скрываем подпанель объекта
                         GameHideObjectSubpanel();
@@ -8822,7 +8884,7 @@ namespace SandOcean.UI
                         ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
                         //Отображаем обзорную вкладку региона
-                        GameShowRegionOSbPOverviewTab(
+                        RegionShowOverview(
                             ref region,
                             ref rAEO,
                             requestComp.isRefresh);
@@ -8835,7 +8897,7 @@ namespace SandOcean.UI
                         ref CRegionAEO rAEO = ref regionAEOPool.Value.Get(regionEntity);
 
                         //Отображаем вкладку организаций RAEO
-                        GameShowRegionOSbPOrganizationsTab(
+                        RegionShowORAEOs(
                             ref rAEO,
                             requestComp.isRefresh);
                     }
@@ -8843,7 +8905,7 @@ namespace SandOcean.UI
                     else if (requestComp.requestType == ObjectPanelActionRequestType.CloseObjectPanel)
                     {
                         //Скрываем подпанель региона
-                        GameHideRegionObjectSubpanel();
+                        RegionHide();
 
                         //Скрываем подпанель объекта
                         GameHideObjectSubpanel();
@@ -8864,18 +8926,56 @@ namespace SandOcean.UI
                         ref CEconomicORAEO ecORAEO = ref economicORAEOPool.Value.Get(oRAEOEntity);
 
                         //Отображаем обзорную вкладку ORAEO
-                        GameShowORAEOOSbPOverviewTab(
+                        ORAEOShowOverview(
                             ref exORAEO,
                             ref ecORAEO,
                             requestComp.isRefresh);
+                    }
+                    //Иначе, если запрашивается отображение вкладки сооружений
+                    else if (requestComp.requestType == ObjectPanelActionRequestType.ORAEOBuildings)
+                    {
+                        //Берём EcORAEO
+                        requestComp.objectPE.Unpack(world.Value, out int oRAEOEntity);
+                        ref CEconomicORAEO ecORAEO = ref economicORAEOPool.Value.Get(oRAEOEntity);
 
-                        Debug.LogWarning(requestComp.requestType);
+                        //Отображаем вкладку сооружений ORAEO
+                        ORAEOShowBuildings(
+                            ref ecORAEO,
+                            requestComp.isRefresh);
                     }
                     //Иначе, если запрашивается закрытие панели объекта
                     else if (requestComp.requestType == ObjectPanelActionRequestType.CloseObjectPanel)
                     {
                         //Скрываем подпанель ORAEO
-                        GameHideORAEOObjectSubpanel();
+                        ORAEOHide();
+
+                        //Скрываем подпанель объекта
+                        GameHideObjectSubpanel();
+
+                        //Скрываем панель объекта
+                        GameHideObjectPanel();
+                    }
+                }
+                //Иначе, если активна подпанель сооружения
+                else if (gameWindow.objectPanel.activeObjectSubpanelType == ObjectSubpanelType.Building)
+                {
+                    //Если запрашивается отображение обзорной вкладки
+                    if (requestComp.requestType == ObjectPanelActionRequestType.BuildingOverview)
+                    {
+                        //Берём сооружение
+                        requestComp.objectPE.Unpack(world.Value, out int buildingEntity);
+                        ref CBuilding building = ref buildingPool.Value.Get(buildingEntity);
+
+                        //Отображаем обзорную вкладку сооружения
+                        BuildingShowOverview(
+                            ref building,
+                            requestComp.isRefresh);
+                    }
+                    //Иначе, если запрашивается закрытие панели объекта
+                    else if (requestComp.requestType == ObjectPanelActionRequestType.CloseObjectPanel)
+                    {
+                        //Скрываем подпанель сооружения
+                        BuildingHide();
 
                         //Скрываем подпанель объекта
                         GameHideObjectSubpanel();
@@ -8963,7 +9063,7 @@ namespace SandOcean.UI
                     ref CTaskForce taskForce = ref taskForcePool.Value.Get(taskForceEntity);
 
                     //Заполняем список шаблонов для смены шаблона группы
-                    FleetManagerFleetsTabFillTFTemplatesChangingList(
+                    FleetManagerFleetsFillTFTemplatesChangingList(
                         ref organization,
                         ref taskForce);
                 }
@@ -8971,14 +9071,14 @@ namespace SandOcean.UI
                 else if(requestComp.requestType == FleetManagerSubpanelActionRequestType.FleetsTabFillTemplatesNewList)
                 {
                     //Заполняем список шаблонов для создания новой группы
-                    FleetManagerFleetsTabFillTFTemplatesCreatingList(ref organization);
+                    FleetManagerFleetsFillTFTemplatesCreatingList(ref organization);
                 }
 
                 world.Value.DelEntity(requestEntity);
             }
         }
 
-        void FleetManagerShowSubpanel(
+        void FleetManagerShow(
             ref RGameObjectPanelAction gameObjectPanelActionRequest)
         {
             //Берём компонент организации
@@ -9011,12 +9111,12 @@ namespace SandOcean.UI
             objectPanel.objectName.text = "Fleet Manager";
 
             //Отображаем вкладку флотов
-            FleetManagerShowFleetsTab(
+            FleetManagerShowFleets(
                 ref organization,
                 false);
         }
 
-        void FleetManagerHideSubpanel()
+        void FleetManagerHide()
         {
             //Берём подпанель менеджера флотов
             UIFleetManagerSubpanel fleetManagerSubpanel = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel;
@@ -9031,7 +9131,7 @@ namespace SandOcean.UI
             fleetManagerSubpanel.fleetsTab.HideTFTemplatesChangingList();
         }
 
-        void FleetManagerShowFleetsTab(
+        void FleetManagerShowFleets(
             ref COrganization organization,
             bool isRefresh)
         {
@@ -9081,7 +9181,7 @@ namespace SandOcean.UI
                     ref CFleet fleet = ref fleetPool.Value.Get(fleetEntity);
 
                     //Создаём обзорную панель флота
-                    FleetManagerFleetsTabCreateFleetSummaryPanel(ref fleet);
+                    FleetManagerFleetsCreateFleetSummaryPanel(ref fleet);
                 }
 
                 //Скрываем список для создания группы
@@ -9092,7 +9192,7 @@ namespace SandOcean.UI
             }
         }
 
-        void FleetManagerFleetsTabCreateFleetSummaryPanel(
+        void FleetManagerFleetsCreateFleetSummaryPanel(
             ref CFleet fleet)
         {
             //Берём сущность флота
@@ -9105,7 +9205,7 @@ namespace SandOcean.UI
             UIFleetsTab fleetsTab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.fleetsTab;
 
             //Создаём панель
-            UIFleetSummaryPanel fleetSummaryPanel = fleetsTab.InstantiateFleetSummaryPanel(ref fleet, ref fleetDisplayedSummaryPanel);
+            fleetsTab.InstantiateFleetSummaryPanel(ref fleet, ref fleetDisplayedSummaryPanel);
 
             //Для каждой оперативной группы флота
             for (int a = 0; a < fleet.ownedTaskForcePEs.Count; a++)
@@ -9115,11 +9215,11 @@ namespace SandOcean.UI
                 ref CTaskForce taskForce = ref taskForcePool.Value.Get(taskForceEntity);
 
                 //Создаём обзорную панель группы
-                FleetManagerFleetsTabCreateTaskForceSummaryPanel(ref taskForce);
+                FleetManagerFleetsCreateTaskForceSummaryPanel(ref taskForce);
             }
         }
 
-        void FleetManagerFleetsTabCreateTaskForceSummaryPanel(
+        void FleetManagerFleetsCreateTaskForceSummaryPanel(
             ref CTaskForce taskForce)
         {
             //Берём компонент отображаемой обзорной панели флота-владельца
@@ -9136,12 +9236,12 @@ namespace SandOcean.UI
             UIFleetsTab fleetsTab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.fleetsTab;
 
             //Создаём панель
-            UITaskForceSummaryPanel taskForceSummaryPanel = fleetsTab.InstantiateTaskForceSummaryPanel(
+            fleetsTab.InstantiateTaskForceSummaryPanel(
                 fleetDisplayedSummaryPanel.fleetSummaryPanel,
                 ref taskForce, ref taskForceDisplayedOverviewPanel);
         }
 
-        void FleetManagerFleetsTabFillTFTemplatesChangingList(
+        void FleetManagerFleetsFillTFTemplatesChangingList(
             ref COrganization organization,
             ref CTaskForce taskForce)
         {
@@ -9185,7 +9285,7 @@ namespace SandOcean.UI
                 if(taskForce.template != template)
                 {
                     //Создаём обзорную панель шаблона группы
-                    FleetManagerFleetsTabCreateTFTemplateSummaryPanel(
+                    FleetManagerFleetsCreateTFTemplateSummaryPanel(
                         template,
                         templatesList);
                 }
@@ -9217,7 +9317,7 @@ namespace SandOcean.UI
             }
         }
 
-        void FleetManagerFleetsTabFillTFTemplatesCreatingList(
+        void FleetManagerFleetsFillTFTemplatesCreatingList(
             ref COrganization organization)
         {
             //Берём вкладку флотов менеджера флотов
@@ -9257,7 +9357,7 @@ namespace SandOcean.UI
                 DTFTemplate template = OrganizationsData.organizationData[organization.selfIndex].tFTemplates[a];
 
                 //Создаём обзорную панель шаблона группы
-                FleetManagerFleetsTabCreateTFTemplateSummaryPanel(
+                FleetManagerFleetsCreateTFTemplateSummaryPanel(
                     template,
                     templatesList);
             }
@@ -9288,7 +9388,7 @@ namespace SandOcean.UI
             }
         }
 
-        void FleetManagerFleetsTabCreateTFTemplateSummaryPanel(
+        void FleetManagerFleetsCreateTFTemplateSummaryPanel(
             DTFTemplate template,
             UITFTemplateSummaryPanelsList templatesList)
         {
@@ -9315,14 +9415,14 @@ namespace SandOcean.UI
                 }
             }
 
+            //Берём вкладку флотов
+            UIFleetsTab fleetsTab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.fleetsTab;
+
             //Если панель существует
             if (isPanelExist == true)
             {
                 //Берём компонент отображаемой панели
                 ref CTFTemplateDisplayedSummaryPanel templateDisplayedSummaryPanel = ref tFTemplateDisplayedSummaryPanelPool.Value.Get(existTemplateEntity);
-
-                //Берём вкладку флотов
-                UIFleetsTab fleetsTab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.fleetsTab;
 
                 //Создаём панель
                 fleetsTab.InstantiateTFTemplateSummaryPanel(
@@ -9337,8 +9437,8 @@ namespace SandOcean.UI
                 int templateEntity = world.Value.NewEntity();
                 ref CTFTemplateDisplayedSummaryPanel templateDisplayedSummaryPanel = ref tFTemplateDisplayedSummaryPanelPool.Value.Add(templateEntity);
 
-                //Берём вкладку флотов
-                UIFleetsTab fleetsTab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.fleetsTab;
+                //Заполняем данные компонента
+                templateDisplayedSummaryPanel = new(world.Value.PackEntity(templateEntity));
 
                 //Создаём панель
                 fleetsTab.InstantiateTFTemplateSummaryPanel(
@@ -9348,7 +9448,7 @@ namespace SandOcean.UI
             }
         }
 
-        void FleetManagerShowTFTemplatesTab(
+        void FleetManagerShowTFTemplates(
             ref COrganization organization,
             bool isRefresh)
         {
@@ -9365,13 +9465,13 @@ namespace SandOcean.UI
                 fleetManagerSubpanel.tabGroup.OnTabSelected(taskForceTemplatesTab.selfTabButton);
 
                 //Отображаем список групп
-                FleetManagerTFTemplatesShowListSubtab(
+                FleetManagerTFTemplatesShowList(
                     ref organization,
                     isRefresh);
             }
         }
 
-        void FleetManagerTFTemplatesShowListSubtab(
+        void FleetManagerTFTemplatesShowList(
             ref COrganization organization,
             bool isRefresh)
         {
@@ -9421,13 +9521,13 @@ namespace SandOcean.UI
                     DTFTemplate template = OrganizationsData.organizationData[organization.selfIndex].tFTemplates[a];
 
                     //Создаём обзорную панель шаблона группы
-                    FleetManagerTFTemplatesListSubtabCreateTFTemplateSummaryPanel(
+                    FleetManagerTFTemplatesListCreateTFTemplateSummaryPanel(
                         template);
                 }
             }
         }
 
-        void FleetManagerTFTemplatesListSubtabCreateTFTemplateSummaryPanel(
+        void FleetManagerTFTemplatesListCreateTFTemplateSummaryPanel(
             DTFTemplate template)
         {
             //Определяем, не существует ли уже панели для данного шаблона
@@ -9453,14 +9553,14 @@ namespace SandOcean.UI
                 }
             }
 
+            //Берём подвкладку списка шаблонов групп
+            UIListSubtab listSubtab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.taskForceTemplatesTab.listSubtab;
+
             //Если панель существует
             if (isPanelExist == true)
             {
                 //Берём компонент отображаемой панели
                 ref CTFTemplateDisplayedSummaryPanel templateDisplayedSummaryPanel = ref tFTemplateDisplayedSummaryPanelPool.Value.Get(existTemplateEntity);
-
-                //Берём подвкладку списка шаблонов групп
-                UIListSubtab listSubtab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.taskForceTemplatesTab.listSubtab;
 
                 //Создаём панель
                 listSubtab.InstantiateTFTemplateSummaryPanel(
@@ -9474,8 +9574,9 @@ namespace SandOcean.UI
                 int templateEntity = world.Value.NewEntity();
                 ref CTFTemplateDisplayedSummaryPanel templateDisplayedSummaryPanel = ref tFTemplateDisplayedSummaryPanelPool.Value.Add(templateEntity);
 
-                //Берём подвкладку списка шаблонов групп
-                UIListSubtab listSubtab = eUI.Value.gameWindow.objectPanel.fleetManagerSubpanel.taskForceTemplatesTab.listSubtab;
+
+                //Заполняем данные компонента
+                templateDisplayedSummaryPanel = new(world.Value.PackEntity(templateEntity));
 
                 //Создаём панель
                 listSubtab.InstantiateTFTemplateSummaryPanel(
@@ -9484,7 +9585,7 @@ namespace SandOcean.UI
             }
         }
 
-        void FleetManagerTFTemplatesShowDesignerSubtab(
+        void FleetManagerTFTemplatesShowDesigner(
             ref COrganization organization,
             bool isRefresh)
         {
@@ -9565,20 +9666,20 @@ namespace SandOcean.UI
         #endregion
 
         #region GameObjectOrganization
-        void GameShowOrganizationObjectSubpanel(
+        void OrganizationShow(
             ref RGameObjectPanelAction gameObjectPanelActionRequest)
         {
 
         }
 
-        void GameHideOrganizationObjectSubpanel()
+        void OrganizationHide()
         {
 
         }
         #endregion
 
         #region GameObjectRegion
-        void GameShowRegionObjectSubpanel(
+        void RegionShow(
         ref RGameObjectPanelAction gameObjectPanelActionRequest)
         {
             //Берём компонент региона и RAEO
@@ -9612,18 +9713,18 @@ namespace SandOcean.UI
             objectPanel.objectName.text = region.centerPoint.ToString();
 
             //Отображаем обзорную вкладку региона
-            GameShowRegionOSbPOverviewTab(
+            RegionShowOverview(
                 ref region,
                 ref rAEO,
                 false);
         }
 
-        void GameHideRegionObjectSubpanel()
+        void RegionHide()
         {
 
         }
 
-        void GameShowRegionOSbPOverviewTab(
+        void RegionShowOverview(
             ref CHexRegion region,
             ref CRegionAEO rAEO,
             bool isRefresh)
@@ -9667,15 +9768,15 @@ namespace SandOcean.UI
             }
         }
 
-        void GameShowRegionOSbPOrganizationsTab(
+        void RegionShowORAEOs(
             ref CRegionAEO regionRAEO,
             bool isRefresh)
         {
             //Берём подпанель региона
             UIRegionSubpanel regionSubpanel = eUI.Value.gameWindow.objectPanel.regionSubpanel;
 
-            //Берём вкладку организаций
-            UIORAEOsTab organizationsTab = regionSubpanel.oRAEOsTab;
+            //Берём вкладку ORAEO
+            UIORAEOsTab oRAEOsTab = regionSubpanel.oRAEOsTab;
 
             //Для каждого ORAEO в RAEO
             for (int a = 0; a < regionRAEO.organizationRAEOs.Length; a++)
@@ -9684,7 +9785,7 @@ namespace SandOcean.UI
                 if (isRefresh == false)
                 {
                     //Берём панель ORAEO 
-                    UIORAEOSummaryPanel briefInfoPanel = organizationsTab.panelsList[a];
+                    UIORAEOSummaryPanel briefInfoPanel = oRAEOsTab.panelsList[a];
 
                     //Если у организации есть EcORAEO
                     if (regionRAEO.organizationRAEOs[a].organizationRAEOType == ORAEOType.Economic)
@@ -9717,33 +9818,33 @@ namespace SandOcean.UI
             if (isRefresh == false)
             {
                 //Отображаем вкладку организаций
-                regionSubpanel.tabGroup.OnTabSelected(organizationsTab.selfTabButton);
+                regionSubpanel.tabGroup.OnTabSelected(oRAEOsTab.selfTabButton);
             }
         }
 
-        void ORAEOCreateBriefInfoPanel(
+        void RegionORAEOsCreateORAEOSummaryPanel(
             ref RGameCreatePanel requestComp)
         {
             //Берём организацию
             requestComp.objectPE.Unpack(world.Value, out int organizationEntity);
             ref COrganization organization = ref organizationPool.Value.Get(organizationEntity);
 
-            //Берём вкладку организаций подпанели региона
+            //Берём вкладку ORAEO подпанели региона
             UIORAEOsTab organizationsTab = eUI.Value.gameWindow.objectPanel.regionSubpanel.oRAEOsTab;
 
-            //Создаём панель
-            UIORAEOSummaryPanel briefInfoPanel = organizationsTab.InstantiateORAEOSummaryPanel(ref organization);
+            //Создаём обзорную панель
+            UIORAEOSummaryPanel oRAEOSummaryPanel = organizationsTab.InstantiateORAEOSummaryPanel(ref organization);
 
             //Скрываем панель
-            briefInfoPanel.gameObject.SetActive(false);
+            oRAEOSummaryPanel.gameObject.SetActive(false);
         }
         #endregion
 
         #region GameObjectORAEO
-        void GameShowORAEOObjectSubpanel(
+        void ORAEOShow(
             ref RGameObjectPanelAction gameObjectPanelActionRequest)
         {
-            //Берём компонент ExORAEO и EcORAEO
+            //Берём ExORAEO и EcORAEO
             gameObjectPanelActionRequest.objectPE.Unpack(world.Value, out int oRAEOEntity);
             ref CExplorationORAEO exORAEO = ref explorationORAEOPool.Value.Get(oRAEOEntity);
             ref CEconomicORAEO ecORAEO = ref economicORAEOPool.Value.Get(oRAEOEntity);
@@ -9774,18 +9875,18 @@ namespace SandOcean.UI
             objectPanel.objectName.text = exORAEO.selfPE.ToString();
 
             //Отображаем обзорную вкладку ORAEO
-            GameShowORAEOOSbPOverviewTab(
+            ORAEOShowOverview(
                 ref exORAEO,
                 ref ecORAEO,
                 false);
         }
 
-        void GameHideORAEOObjectSubpanel()
+        void ORAEOHide()
         {
 
         }
 
-        void GameShowORAEOOSbPOverviewTab(
+        void ORAEOShowOverview(
             ref CExplorationORAEO exORAEO,
             ref CEconomicORAEO ecORAEO,
             bool isRefresh)
@@ -9804,6 +9905,129 @@ namespace SandOcean.UI
             }
 
             overviewTab.testText.text = "! ! !";
+        }
+
+        void ORAEOShowBuildings(
+            ref CEconomicORAEO ecORAEO,
+            bool isRefresh)
+        {
+            //Берём подпанель ORAEO
+            UIORAEOSubpanel oRAEOSubpanel = eUI.Value.gameWindow.objectPanel.oRAEOSubpanel;
+
+            //Берём вкладку сооружений
+            UIBuildingsTab buildingsTab = oRAEOSubpanel.buildingsTab;
+
+            //Если производится не обновление
+            if (isRefresh == false)
+            {
+                //Отображаем вкладку сооружений
+                oRAEOSubpanel.tabGroup.OnTabSelected(buildingsTab.selfTabButton);
+
+                //Для каждого сооружения, имеющего обзорную панель
+                foreach (int buildingEntity in buildingDisplayedSummaryPanelFilter.Value)
+                {
+                    //Берём компонент отображаемой обзорной панели
+                    ref CBuildingDisplayedSummaryPanel buildingDisplayedSummaryPanel = ref buildingDisplayedSummaryPanelPool.Value.Get(buildingEntity);
+
+                    //Кэшируем обзорную панель
+                    buildingsTab.CacheBuildingSummaryPanel(ref buildingDisplayedSummaryPanel);
+
+                    //Удаляем компонент с сущности
+                    buildingDisplayedSummaryPanelPool.Value.Del(buildingEntity);
+                }
+
+                //Для каждого сооружения EcORAEO
+                for (int a = 0; a < ecORAEO.ownedBuildings.Count; a++)
+                {
+                    //Берём сооружение
+                    ecORAEO.ownedBuildings[a].buildingPE.Unpack(world.Value, out int buildingEntity);
+                    ref CBuilding building = ref buildingPool.Value.Get(buildingEntity);
+
+                    //Создаём обзорную панель сооружения
+                    ORAEOBuildingsCreateBuildingSummaryPanel(ref building);
+                }
+            }
+        }
+
+        void ORAEOBuildingsCreateBuildingSummaryPanel(
+            ref CBuilding building)
+        {
+            //Берём сущность сооружения
+            building.selfPE.Unpack(world.Value, out int buildingEntity);
+
+            //Назначаем сооружению компонент отображаемой обзорной панели
+            ref CBuildingDisplayedSummaryPanel buildingDisplayedSummaryPanel = ref buildingDisplayedSummaryPanelPool.Value.Add(buildingEntity);
+
+            //Берём вкладку сооружений
+            UIBuildingsTab buildingsTab = eUI.Value.gameWindow.objectPanel.oRAEOSubpanel.buildingsTab;
+
+            //Создаём панель
+            buildingsTab.InstantiateBuildingSummaryPanel(ref building, ref buildingDisplayedSummaryPanel);
+        }
+        #endregion
+
+        #region GameObjectBuilding
+        void BuildingShow(
+            ref RGameObjectPanelAction gameObjectPanelActionRequest)
+        {
+            //Берём сооружение
+            gameObjectPanelActionRequest.objectPE.Unpack(world.Value, out int buildingEntity);
+            ref CBuilding building = ref buildingPool.Value.Get(buildingEntity);
+
+            //Берём панель объекта
+            UIObjectPanel objectPanel = eUI.Value.gameWindow.objectPanel;
+
+            //Если какая-либо подпанель активна, скрываем её
+            if (objectPanel.activeObjectSubpanelType != ObjectSubpanelType.None)
+            {
+                objectPanel.activeObjectSubpanel.gameObject.SetActive(false);
+            }
+
+            //Делаем подпанель сооружения активной
+            objectPanel.buildingSubpanel.gameObject.SetActive(true);
+
+            //Указываем её как активную подпанель
+            objectPanel.activeObjectSubpanelType = ObjectSubpanelType.Building;
+            objectPanel.activeObjectSubpanel = objectPanel.buildingSubpanel;
+            //Указываем, какое сооружение отображает панель
+            objectPanel.activeObjectPE = gameObjectPanelActionRequest.objectPE;
+
+            //Берём подпанель сооружения
+            UIBuildingSubpanel buildingSubpanel = objectPanel.buildingSubpanel;
+
+
+            //Отображаем название сооружения
+            objectPanel.objectName.text = building.buildingType.ObjectName;
+
+            //Отображаем обзорную вкладку сооружения
+            BuildingShowOverview(
+                ref building,
+                false);
+        }
+
+        void BuildingHide()
+        {
+
+        }
+
+        void BuildingShowOverview(
+            ref CBuilding building,
+            bool isRefresh)
+        {
+            //Берём подпанель сооружения
+            UIBuildingSubpanel buildingSubpanel = eUI.Value.gameWindow.objectPanel.buildingSubpanel;
+
+            //Берём обзорную вкладку
+            GameWindow.Object.Building.UIOverviewTab overviewTab = buildingSubpanel.overviewTab;
+
+            //Если производится не обновление
+            if (isRefresh == false)
+            {
+                //Отображаем обзорную вкладку
+                buildingSubpanel.tabGroup.OnTabSelected(overviewTab.selfTabButton);
+            }
+
+            
         }
         #endregion
         #endregion

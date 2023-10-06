@@ -15,6 +15,8 @@ namespace SandOcean.UI.DesignerWindow
 {
     public class UIShipClassDesignerWindow : MonoBehaviour
     {
+
+
         public TMP_Dropdown availableComponentTypeDropdown;
         public ShipComponentType currentAvailableComponentsType;
 
@@ -45,7 +47,8 @@ namespace SandOcean.UI.DesignerWindow
                 new WDShipClassComponent[0],
                 new WDShipClassComponent[0],
                 new WDShipClassComponent[0],
-                new WDShipClassComponent[0]);
+                new WDShipClassComponent[0],
+                new Warfare.Ship.WDShipClassPart[0]);
         public DShipClass currentGameShipClass
             = new(
                 "",
@@ -53,7 +56,8 @@ namespace SandOcean.UI.DesignerWindow
                 new DShipClassComponent[0],
                 new DShipClassComponent[0],
                 new DShipClassComponent[0],
-                new DShipClassComponent[0]);
+                new DShipClassComponent[0], 
+                new Warfare.Ship.DShipClassPart[0]);
 
 
         public UIInstalledComponentBriefInfoPanel installedComponentBriefInfoPanelPrefab;

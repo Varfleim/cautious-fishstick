@@ -70,7 +70,7 @@ namespace SandOcean.UI.GameWindow.Object.FleetManager
             taskForceDisplayedSummaryPanel.taskForceSummaryPanel = null;
         }
 
-        public UIFleetSummaryPanel InstantiateFleetSummaryPanel(
+        public void InstantiateFleetSummaryPanel(
             ref CFleet fleet, ref CFleetDisplayedSummaryPanel fleetDisplayedSummaryPanel)
         {
             //Создаём пустую переменную для панели
@@ -103,11 +103,9 @@ namespace SandOcean.UI.GameWindow.Object.FleetManager
             fleetDisplayedSummaryPanel.fleetSummaryPanel = fleetSummaryPanel;
 
             activeFleetPanels.Add(fleetSummaryPanel);
-
-            return fleetSummaryPanel;
         }
 
-        public UITaskForceSummaryPanel InstantiateTaskForceSummaryPanel(
+        public void InstantiateTaskForceSummaryPanel(
             UIFleetSummaryPanel fleetSummaryPanel,
             ref CTaskForce taskForce, ref CTaskForceDisplayedSummaryPanel taskForceDisplayedSummaryPanel)
         {
@@ -151,8 +149,6 @@ namespace SandOcean.UI.GameWindow.Object.FleetManager
             taskForceDisplayedSummaryPanel.taskForceSummaryPanel = taskForceSummaryPanel;
 
             fleetSummaryPanel.taskForceSummaryPanels.Add(taskForceSummaryPanel);
-
-            return taskForceSummaryPanel;
         }
 
         public void RefreshTaskForceSummaryPanel(

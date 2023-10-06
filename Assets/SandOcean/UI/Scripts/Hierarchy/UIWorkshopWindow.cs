@@ -28,14 +28,18 @@ namespace SandOcean.UI
         public TextMeshProUGUI currentContentSetVersion;
 
 
-        public ToggleGroup contentInfoToggleGroup;
+        public ToggleGroup contentObjectCountToggleGroup;
 
-        public UIWorkshopContentInfoPanel shipsInfoPanel;
-        public UIWorkshopContentInfoPanel enginesInfoPanel;
-        public UIWorkshopContentInfoPanel reactorsInfoPanel;
-        public UIWorkshopContentInfoPanel fuelTanksInfoPanel;
-        public UIWorkshopContentInfoPanel solidExtractionEquipmentsInfoPanel;
-        public UIWorkshopContentInfoPanel energyGunsInfoPanel;
+        public UIWorkshopContentObjectCountPanel shipsInfoPanel;
+        public UIWorkshopContentObjectCountPanel enginesInfoPanel;
+        public UIWorkshopContentObjectCountPanel reactorsInfoPanel;
+        public UIWorkshopContentObjectCountPanel fuelTanksInfoPanel;
+        public UIWorkshopContentObjectCountPanel solidExtractionEquipmentsInfoPanel;
+        public UIWorkshopContentObjectCountPanel energyGunsInfoPanel;
+        public UIWorkshopContentObjectCountPanel shipPartsCountPanel;
+        public UIWorkshopContentObjectCountPanel shipPartCoreTechnologiesCountPanel;
+        public UIWorkshopContentObjectCountPanel shipPartDirectionsOfImprovementCountPanel;
+        public UIWorkshopContentObjectCountPanel shipPartImprovementsCountPanel;
 
         public void ClearContentSetPanels()
         {
